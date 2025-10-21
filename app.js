@@ -144,12 +144,20 @@ class Mesmer {
         const playBtn = document.getElementById('playBtn');
         playBtn.addEventListener('click', () => this.togglePlay());
 
-        // Volume slider
-        const volumeSlider = document.getElementById('volumeSlider');
-        volumeSlider.addEventListener('input', (e) => {
+        // Synth Volume slider
+        const synthVolumeSlider = document.getElementById('synthVolumeSlider');
+        synthVolumeSlider.addEventListener('input', (e) => {
             const value = parseInt(e.target.value);
             this.musicEngine.setVolume(value);
-            document.querySelector('#volumeSlider + .value').textContent = `${value}%`;
+            document.querySelector('#synthVolumeSlider + .value').textContent = `${value}%`;
+        });
+
+        // Drum Volume slider
+        const drumVolumeSlider = document.getElementById('drumVolumeSlider');
+        drumVolumeSlider.addEventListener('input', (e) => {
+            const value = parseInt(e.target.value);
+            this.musicEngine.setDrumMasterVolume(value);
+            document.querySelector('#drumVolumeSlider + .value').textContent = `${value}%`;
         });
 
         // Reverb slider
@@ -160,11 +168,107 @@ class Mesmer {
             document.querySelector('#reverbSlider + .value').textContent = `${value}%`;
         });
 
+        // Delay slider
+        const delaySlider = document.getElementById('delaySlider');
+        delaySlider.addEventListener('input', (e) => {
+            const value = parseInt(e.target.value);
+            this.musicEngine.setDelay(value);
+            document.querySelector('#delaySlider + .value').textContent = `${value}%`;
+        });
+
+        // BPM slider
+        const bpmSlider = document.getElementById('bpmSlider');
+        bpmSlider.addEventListener('input', (e) => {
+            const value = parseInt(e.target.value);
+            this.musicEngine.setBPM(value);
+            document.querySelector('#bpmSlider + .value').textContent = `${value}`;
+        });
+
         // Genre selector
         const genreSelect = document.getElementById('genreSelect');
         genreSelect.addEventListener('change', (e) => {
             this.musicEngine.setGenre(e.target.value);
         });
+
+        // Scale selector
+        const scaleSelect = document.getElementById('scaleSelect');
+        scaleSelect.addEventListener('change', (e) => {
+            this.musicEngine.setScale(e.target.value);
+        });
+
+        // Drum machine toggle
+        const drumsToggle = document.getElementById('drumsToggle');
+        drumsToggle.addEventListener('change', (e) => {
+            this.musicEngine.setDrums(e.target.checked);
+        });
+
+        // Populate drum machine dropdown
+        const drumMachineSelect = document.getElementById('drumMachineSelect');
+        const drumMachines = this.musicEngine.getDrumMachines();
+        drumMachines.forEach(machine => {
+            const option = document.createElement('option');
+            option.value = machine.value;
+            option.textContent = machine.label;
+            if (machine.value === this.musicEngine.currentDrumMachine) {
+                option.selected = true;
+            }
+            drumMachineSelect.appendChild(option);
+        });
+
+        // Drum machine selector
+        drumMachineSelect.addEventListener('change', (e) => {
+            this.musicEngine.changeDrumMachine(e.target.value);
+        });
+
+        // Populate drum pattern dropdown
+        const drumPatternSelect = document.getElementById('drumPatternSelect');
+        const drumPatterns = this.musicEngine.getDrumPatterns();
+        drumPatterns.forEach(pattern => {
+            const option = document.createElement('option');
+            option.value = pattern.value;
+            option.textContent = pattern.label;
+            if (pattern.value === this.musicEngine.currentPattern) {
+                option.selected = true;
+            }
+            drumPatternSelect.appendChild(option);
+        });
+
+        // Drum pattern selector
+        drumPatternSelect.addEventListener('change', (e) => {
+            this.musicEngine.changeDrumPattern(e.target.value);
+            this.updateSequencerDisplay();
+        });
+
+        // Open sequencer button
+        const openSequencerBtn = document.getElementById('openSequencerBtn');
+        openSequencerBtn.addEventListener('click', () => {
+            document.getElementById('drumSequencer').style.display = 'block';
+            this.initializeSequencer();
+        });
+
+        // Close sequencer button
+        const closeSequencerBtn = document.getElementById('closeDrumSequencer');
+        closeSequencerBtn.addEventListener('click', () => {
+            document.getElementById('drumSequencer').style.display = 'none';
+        });
+
+        // Toggle sequencer expand/collapse
+        const toggleSequencerBtn = document.getElementById('toggleSequencerBtn');
+        const drumSequencer = document.getElementById('drumSequencer');
+        toggleSequencerBtn.addEventListener('click', () => {
+            drumSequencer.classList.toggle('collapsed');
+            const icon = toggleSequencerBtn.querySelector('path');
+            if (drumSequencer.classList.contains('collapsed')) {
+                // Change to expand icon (chevron up)
+                icon.setAttribute('d', 'M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6 1.41 1.41z');
+            } else {
+                // Change to collapse icon (chevron down)
+                icon.setAttribute('d', 'M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z');
+            }
+        });
+
+        // Make drum sequencer draggable
+        this.setupDraggable();
 
         // Layer toggles
         const mainToggle = document.getElementById('mainToggle');
@@ -405,6 +509,136 @@ class Mesmer {
 
             document.getElementById('fpsValue').textContent = this.fps;
         }
+    }
+
+    initializeSequencer() {
+        // Create step buttons for each drum channel
+        const channels = ['kick', 'snare', 'hihat', 'openhat'];
+        channels.forEach(drumType => {
+            const channel = document.querySelector(`[data-drum="${drumType}"]`);
+            const stepGrid = channel.querySelector('.step-grid');
+            stepGrid.innerHTML = ''; // Clear existing
+
+            for (let i = 0; i < 16; i++) {
+                const button = document.createElement('button');
+                button.className = 'step-button';
+                button.dataset.drum = drumType;
+                button.dataset.step = i;
+
+                // Mark every 4th step (beat markers)
+                if (i % 4 === 0) {
+                    button.classList.add('beat-marker');
+                }
+
+                button.addEventListener('click', () => {
+                    const pattern = this.musicEngine.getCurrentPattern();
+                    const currentValue = pattern[drumType][i];
+                    this.musicEngine.updatePatternStep(drumType, i, !currentValue);
+                    button.classList.toggle('active');
+                });
+
+                stepGrid.appendChild(button);
+            }
+        });
+
+        // Setup volume sliders
+        document.querySelectorAll('.drum-volume').forEach(slider => {
+            const channel = slider.dataset.channel;
+            const valueDisplay = slider.nextElementSibling;
+
+            slider.addEventListener('input', (e) => {
+                const value = parseInt(e.target.value) / 100;
+                this.musicEngine.setDrumVolume(channel, value);
+                valueDisplay.textContent = e.target.value;
+            });
+        });
+
+        // Setup master drum volume
+        const masterVolume = document.getElementById('drumMasterVolume');
+        const masterValue = document.getElementById('drumMasterValue');
+        masterVolume.addEventListener('input', (e) => {
+            const value = parseInt(e.target.value) / 100;
+            this.musicEngine.setDrumVolume('master', value);
+            masterValue.textContent = `${e.target.value}%`;
+        });
+
+        // Update display with current pattern
+        this.updateSequencerDisplay();
+    }
+
+    updateSequencerDisplay() {
+        const pattern = this.musicEngine.getCurrentPattern();
+        if (!pattern) return;
+
+        ['kick', 'snare', 'hihat', 'openhat'].forEach(drumType => {
+            const buttons = document.querySelectorAll(`[data-drum="${drumType}"][data-step]`);
+            buttons.forEach((button, index) => {
+                if (pattern[drumType] && pattern[drumType][index] === 1) {
+                    button.classList.add('active');
+                } else {
+                    button.classList.remove('active');
+                }
+            });
+        });
+    }
+
+    setupDraggable() {
+        const sequencer = document.getElementById('drumSequencer');
+        const header = document.getElementById('sequencerHeader');
+
+        let isDragging = false;
+        let startX;
+        let startY;
+        let startLeft;
+        let startTop;
+
+        header.addEventListener('mousedown', (e) => {
+            // Don't start drag if clicking on buttons
+            if (e.target.closest('button')) return;
+
+            isDragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+
+            // Get current position
+            const rect = sequencer.getBoundingClientRect();
+            startLeft = rect.left;
+            startTop = rect.top;
+
+            // Convert from bottom/right to top/left positioning
+            sequencer.style.bottom = 'auto';
+            sequencer.style.right = 'auto';
+            sequencer.style.left = `${startLeft}px`;
+            sequencer.style.top = `${startTop}px`;
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                e.preventDefault();
+
+                // Calculate new position
+                const deltaX = e.clientX - startX;
+                const deltaY = e.clientY - startY;
+
+                let newLeft = startLeft + deltaX;
+                let newTop = startTop + deltaY;
+
+                // Constrain to window bounds
+                const rect = sequencer.getBoundingClientRect();
+                const maxX = window.innerWidth - rect.width;
+                const maxY = window.innerHeight - rect.height;
+
+                newLeft = Math.max(0, Math.min(newLeft, maxX));
+                newTop = Math.max(0, Math.min(newTop, maxY));
+
+                sequencer.style.left = `${newLeft}px`;
+                sequencer.style.top = `${newTop}px`;
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
     }
 }
 

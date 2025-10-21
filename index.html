@@ -20,7 +20,7 @@
         </div>
 
         <!-- Shader Editor Panel (Left Side) -->
-        <div class="shader-editor-left" id="shaderEditorLeft">
+        <div class="shader-editor-left collapsed" id="shaderEditorLeft">
             <div class="editor-header">
                 <h3>
                     <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
@@ -110,6 +110,82 @@
             </div>
         </div>
 
+        <!-- Drum Sequencer Panel -->
+        <div class="drum-sequencer" id="drumSequencer" style="display: none;">
+            <div class="sequencer-header" id="sequencerHeader">
+                <h3>🥁 DRUM SEQUENCER</h3>
+                <div style="display: flex; gap: 10px;">
+                    <button id="toggleSequencerBtn" class="btn-icon" title="Collapse/Expand">
+                        <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/>
+                        </svg>
+                    </button>
+                    <button id="closeDrumSequencer" class="btn-icon">
+                        <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="sequencer-controls">
+                <div class="drum-channel" data-drum="kick">
+                    <div class="channel-header">
+                        <span class="channel-name">KICK</span>
+                        <input type="range" class="drum-volume" min="0" max="100" value="100" data-channel="kick">
+                        <span class="volume-value">100</span>
+                    </div>
+                    <div class="step-grid">
+                        <!-- 16 steps will be created dynamically -->
+                    </div>
+                </div>
+
+                <div class="drum-channel" data-drum="snare">
+                    <div class="channel-header">
+                        <span class="channel-name">SNARE</span>
+                        <input type="range" class="drum-volume" min="0" max="100" value="80" data-channel="snare">
+                        <span class="volume-value">80</span>
+                    </div>
+                    <div class="step-grid">
+                        <!-- 16 steps will be created dynamically -->
+                    </div>
+                </div>
+
+                <div class="drum-channel" data-drum="hihat">
+                    <div class="channel-header">
+                        <span class="channel-name">HI-HAT</span>
+                        <input type="range" class="drum-volume" min="0" max="100" value="60" data-channel="hihat">
+                        <span class="volume-value">60</span>
+                    </div>
+                    <div class="step-grid">
+                        <!-- 16 steps will be created dynamically -->
+                    </div>
+                </div>
+
+                <div class="drum-channel" data-drum="openhat">
+                    <div class="channel-header">
+                        <span class="channel-name">OPEN HAT</span>
+                        <input type="range" class="drum-volume" min="0" max="100" value="50" data-channel="openhat">
+                        <span class="volume-value">50</span>
+                    </div>
+                    <div class="step-grid">
+                        <!-- 16 steps will be created dynamically -->
+                    </div>
+                </div>
+
+                <div class="master-controls">
+                    <label>
+                        <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/>
+                        </svg>
+                        MASTER DRUM VOLUME
+                    </label>
+                    <input type="range" id="drumMasterVolume" min="0" max="100" value="100">
+                    <span class="value" id="drumMasterValue">100%</span>
+                </div>
+            </div>
+        </div>
+
         <!-- UI Controls -->
         <div id="controls">
             <div class="control-panel">
@@ -129,11 +205,21 @@
                     <div class="slider-group">
                         <label>
                             <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/>
+                                <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
                             </svg>
-                            Volume
+                            Synth Volume
                         </label>
-                        <input type="range" id="volumeSlider" min="0" max="100" value="70">
+                        <input type="range" id="synthVolumeSlider" min="0" max="100" value="70">
+                        <span class="value">70%</span>
+                    </div>
+                    <div class="slider-group">
+                        <label>
+                            <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-5-9h2v2H7zm8 0h2v2h-2zm-4 0h2v2h-2z"/>
+                            </svg>
+                            Drum Volume
+                        </label>
+                        <input type="range" id="drumVolumeSlider" min="0" max="100" value="70">
                         <span class="value">70%</span>
                     </div>
                     <div class="slider-group">
@@ -145,6 +231,26 @@
                         </label>
                         <input type="range" id="reverbSlider" min="0" max="100" value="30">
                         <span class="value">30%</span>
+                    </div>
+                    <div class="slider-group">
+                        <label>
+                            <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 1v8l6-6-6-2zm0 10v10l10-10H12zM2 12h10L2 22V12z"/>
+                            </svg>
+                            Delay
+                        </label>
+                        <input type="range" id="delaySlider" min="0" max="100" value="20">
+                        <span class="value">20%</span>
+                    </div>
+                    <div class="slider-group">
+                        <label>
+                            <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M9 3v15h3V3H9zm-4 2v11h3V5H5zm8 5v6h3v-6h-3zm4-3v9h3V7h-3z"/>
+                            </svg>
+                            BPM
+                        </label>
+                        <input type="range" id="bpmSlider" min="40" max="180" value="80">
+                        <span class="value">80</span>
                     </div>
                     <div class="shader-selector">
                         <label>
@@ -158,6 +264,61 @@
                             <option value="techno">Techno</option>
                             <option value="jazz">Jazz</option>
                             <option value="drone">Drone</option>
+                        </select>
+                    </div>
+                    <div class="shader-selector">
+                        <label>
+                            <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2l-5.5 9h11L12 2zm0 3.84L13.93 9h-3.87L12 5.84zM17.5 13c-2.49 0-4.5 2.01-4.5 4.5s2.01 4.5 4.5 4.5 4.5-2.01 4.5-4.5-2.01-4.5-4.5-4.5zm0 7c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5zM3 21.5h8v-8H3v8zm2-6h4v4H5v-4z"/>
+                            </svg>
+                            Musical Scale
+                        </label>
+                        <select id="scaleSelect">
+                            <option value="minor" selected>Minor (Natural)</option>
+                            <option value="major">Major</option>
+                            <option value="pentatonic">Pentatonic</option>
+                            <option value="dorian">Dorian</option>
+                            <option value="phrygian">Phrygian</option>
+                        </select>
+                    </div>
+                    <div class="toggle-group">
+                        <label class="toggle">
+                            <input type="checkbox" id="drumsToggle">
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">
+                                <svg class="icon" viewBox="0 0 24 24" fill="currentColor" style="width: 16px; height: 16px; margin-right: 5px;">
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-5-9h2v2H7zm8 0h2v2h-2zm-4 0h2v2h-2z"/>
+                                </svg>
+                                Drum Machine
+                            </span>
+                        </label>
+                        <button id="openSequencerBtn" class="btn-secondary" style="margin-top: 10px; width: 100%;">
+                            <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M3 5v14h18V5H3zm4 12H5v-2h2v2zm0-4H5v-2h2v2zm0-4H5V7h2v2zm4 8H9v-2h2v2zm0-4H9v-2h2v2zm0-4H9V7h2v2zm4 8h-2v-2h2v2zm0-4h-2v-2h2v2zm0-4h-2V7h2v2zm4 8h-2v-2h2v2zm0-4h-2v-2h2v2zm0-4h-2V7h2v2z"/>
+                            </svg>
+                            Pattern Editor
+                        </button>
+                    </div>
+                    <div class="shader-selector">
+                        <label>
+                            <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z"/>
+                            </svg>
+                            Drum Machine
+                        </label>
+                        <select id="drumMachineSelect">
+                            <!-- Dynamically populated -->
+                        </select>
+                    </div>
+                    <div class="shader-selector">
+                        <label>
+                            <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+                            </svg>
+                            Drum Pattern
+                        </label>
+                        <select id="drumPatternSelect">
+                            <!-- Dynamically populated -->
                         </select>
                     </div>
                 </div>
