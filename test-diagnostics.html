@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mesmer Diagnostics</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #0f0;
+            padding: 20px;
+        }
+        .test {
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #0f0;
+        }
+        .pass { color: #0f0; }
+        .fail { color: #f00; }
+        .warn { color: #ff0; }
+    </style>
+</head>
+<body>
+    <h1>MESMER DIAGNOSTICS</h1>
+    <div id="results"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <script>
+        const results = document.getElementById('results');
+
+        function log(message, status = 'pass') {
+            const div = document.createElement('div');
+            div.className = `test ${status}`;
+            div.textContent = message;
+            results.appendChild(div);
+        }
+
+        // Test 1: WebGL Support
+        try {
+            const canvas = document.createElement('canvas');
+            const gl = canvas.getContext('webgl2');
+            if (gl) {
+                log('✓ WebGL 2.0 supported', 'pass');
+                log(`  Vendor: ${gl.getParameter(gl.VENDOR)}`, 'pass');
+                log(`  Renderer: ${gl.getParameter(gl.RENDERER)}`, 'pass');
+            } else {
+                log('✗ WebGL 2.0 NOT supported', 'fail');
+            }
+        } catch (e) {
+            log('✗ WebGL error: ' + e.message, 'fail');
+        }
+
+        // Test 2: Tone.js Loading
+        setTimeout(() => {
+            if (typeof Tone !== 'undefined') {
+                log('✓ Tone.js loaded successfully', 'pass');
+                log(`  Version: ${Tone.version || 'unknown'}`, 'pass');
+            } else {
+                log('✗ Tone.js FAILED to load', 'fail');
+            }
+        }, 1000);
+
+        // Test 3: Check shader files
+        const shaderFiles = [
+            '/Users/unitar/Desktop/ClaudeCode/mesmer/src/visuals/osmos-shaders.js',
+            '/Users/unitar/Desktop/ClaudeCode/mesmer/src/visuals/tron-shaders.js',
+            '/Users/unitar/Desktop/ClaudeCode/mesmer/src/visuals/shader-presets.js'
+        ];
+
+        // Test 4: Audio Context
+        try {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            log('✓ AudioContext created', 'pass');
+            log(`  State: ${audioContext.state}`, audioContext.state === 'suspended' ? 'warn' : 'pass');
+            if (audioContext.state === 'suspended') {
+                log('  (This is normal - will start on user gesture)', 'warn');
+            }
+        } catch (e) {
+            log('✗ AudioContext error: ' + e.message, 'fail');
+        }
+
+        // Test 5: Canvas elements
+        log('Testing if we can create canvases...', 'pass');
+        const testCanvas = document.createElement('canvas');
+        testCanvas.width = 1920;
+        testCanvas.height = 1080;
+        const ctx2d = testCanvas.getContext('2d');
+        if (ctx2d) {
+            log('✓ 2D Canvas context works', 'pass');
+        }
+
+        // Test 6: Check for console errors
+        const originalError = console.error;
+        const errors = [];
+        console.error = function(...args) {
+            errors.push(args.join(' '));
+            originalError.apply(console, args);
+        };
+
+        setTimeout(() => {
+            if (errors.length > 0) {
+                log(`✗ Found ${errors.length} console errors:`, 'fail');
+                errors.forEach(err => log(`  ${err}`, 'fail'));
+            } else {
+                log('✓ No console errors detected', 'pass');
+            }
+        }, 2000);
+
+        // Summary
+        setTimeout(() => {
+            log('', 'pass');
+            log('========================================', 'pass');
+            log('DIAGNOSTICS COMPLETE', 'pass');
+            log('If all tests pass, try hard refresh:', 'warn');
+            log('  Mac: Cmd+Shift+R', 'warn');
+            log('  Windows: Ctrl+Shift+F5', 'warn');
+            log('========================================', 'pass');
+        }, 3000);
+    </script>
+</body>
+</html>

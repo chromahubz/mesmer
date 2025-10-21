@@ -1,0 +1,23 @@
+{
+  "name": "mesmer",
+  "version": "1.0.0",
+  "description": "Generative Audiovisual Engine - Browser-based GLSL and Web Audio synthesis",
+  "main": "index.html",
+  "scripts": {
+    "dev": "npx http-server -p 8300 -o",
+    "start": "npx http-server -p 8300"
+  },
+  "keywords": [
+    "generative",
+    "audiovisual",
+    "webgl",
+    "glsl",
+    "tone.js",
+    "shader",
+    "creative-coding"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {}
+}
