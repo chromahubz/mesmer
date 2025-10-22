@@ -19,6 +19,64 @@
             <button onclick="document.getElementById('debugOverlay').style.display='none'" style="margin-top: 10px; padding: 5px 10px; background: #f00; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 10px;">Hide</button>
         </div>
 
+        <!-- Hand Tracking Panel -->
+        <div id="handTrackingPanel" style="position: fixed; top: 20px; right: 20px; width: 400px; background: rgba(0,0,0,0.85); border: 2px solid #00ff00; border-radius: 12px; padding: 15px; z-index: 1000; display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h3 style="margin: 0; color: #00ff00; font-family: monospace; font-size: 18px;">👋 Hand Tracking</h3>
+                <button id="closeHandTracking" style="background: #ff0000; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer; font-size: 12px;">Close</button>
+            </div>
+
+            <!-- Video container -->
+            <div style="position: relative; width: 100%; aspect-ratio: 16/9; background: #000; border-radius: 8px; overflow: hidden; margin-bottom: 10px;">
+                <video id="handTrackingVideo" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none;"></video>
+                <canvas id="handTrackingCanvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></canvas>
+            </div>
+
+            <!-- Status display -->
+            <div id="handTrackingStatus" style="font-family: monospace; font-size: 12px; color: #ffff00; margin-bottom: 10px; min-height: 60px;">
+                <div id="gestureStatus">Waiting for initialization...</div>
+            </div>
+
+            <!-- Controls -->
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button id="startHandTracking" style="flex: 1; background: #00ff00; color: #000; border: none; border-radius: 4px; padding: 8px; cursor: pointer; font-weight: bold; font-size: 13px;">▶️ Start</button>
+                <button id="stopHandTracking" style="flex: 1; background: #ff6600; color: #fff; border: none; border-radius: 4px; padding: 8px; cursor: pointer; font-weight: bold; font-size: 13px; display: none;">⏸️ Stop</button>
+                <button id="toggleVideo" style="flex: 1; background: #0099ff; color: #fff; border: none; border-radius: 4px; padding: 8px; cursor: pointer; font-size: 13px;">📹 Video</button>
+                <button id="toggleSkeleton" style="flex: 1; background: #ff00ff; color: #fff; border: none; border-radius: 4px; padding: 8px; cursor: pointer; font-size: 13px;">✋ Skeleton</button>
+            </div>
+
+            <!-- Gesture Guide -->
+            <details style="margin-top: 10px;">
+                <summary style="color: #00ff00; cursor: pointer; font-family: monospace; font-size: 12px; padding: 5px;">📖 Gesture Guide</summary>
+                <div style="margin-top: 10px; font-family: monospace; font-size: 11px; color: #fff; line-height: 1.6; max-height: 300px; overflow-y: auto;">
+                    <div style="color: #00ff00; font-weight: bold; margin-bottom: 5px;">LEFT HAND (Chords):</div>
+                    <div>👍 Thumbs-Up → I chord</div>
+                    <div>☝️ Index → II chord</div>
+                    <div>✌️ Peace → III chord</div>
+                    <div>🤟 Three Fingers → IV chord</div>
+                    <div>🖐️ Open Palm → V chord</div>
+                    <div>🤙 Shaka → VI chord</div>
+                    <div>🤘 Horn → VII chord</div>
+                    <div>🤏 Pinch → Change synth</div>
+                    <div>✊ Fist → Cycle scales</div>
+                    <div>👌 OK Sign → Toggle mode</div>
+
+                    <div style="color: #ff00ff; font-weight: bold; margin-top: 10px; margin-bottom: 5px;">RIGHT HAND (Rhythm):</div>
+                    <div>👍 Thumbs-Up → Basic beat</div>
+                    <div>✌️ Peace → Techno beat</div>
+                    <div>✊ Fist → Breakbeat</div>
+                    <div>🤙 Shaka → Toggle filter</div>
+                    <div>🤏 Pinch → Hi-hat</div>
+                    <div>🖐️ Open + Move → Drums</div>
+                    <div>🤘 Horn → Cowbell</div>
+
+                    <div style="color: #ffff00; font-weight: bold; margin-top: 10px; margin-bottom: 5px;">TWO HANDS:</div>
+                    <div>🖐️ Left + ☝️ Right → Octave up</div>
+                    <div>🖐️ Both → Cycle drum patterns</div>
+                </div>
+            </details>
+        </div>
+
         <!-- Shader Editor Panel (Left Side) -->
         <div class="shader-editor-left collapsed" id="shaderEditorLeft">
             <div class="editor-header">
@@ -1587,6 +1645,13 @@
                         </svg>
                         Synth Sequencer
                     </button>
+                    <button id="openHandTracking" class="btn-secondary" style="background: linear-gradient(135deg, #00ff00 0%, #00cc00 100%);">
+                        <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M23.5 17l-5 5-3.5-3.5 1.5-1.5 2 2 3.5-3.5 1.5 1.5zM13 17.5h-2v2h2v-2zM13 2C8.03 2 4 6.03 4 11h2c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7h-2v2h2c4.97 0 9-4.03 9-9s-4.03-9-9-9z"/>
+                            <path d="M7 11l2 4.5h2L9 11zm0 0l-2-1c-.83-.83-.83-2.17 0-3l1-1c.83-.83 2.17-.83 3 0l1 1 1-1c.83-.83 2.17-.83 3 0l1 1c.83.83.83 2.17 0 3l-2 1"/>
+                        </svg>
+                        👋 Hand Tracking
+                    </button>
                     <button id="openSequencerBtn" class="btn-secondary">
                         <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M3 5v14h18V5H3zm4 12H5v-2h2v2zm0-4H5v-2h2v2zm0-4H5V7h2v2zm4 8H9v-2h2v2zm0-4H9v-2h2v2zm0-4H9V7h2v2zm4 8h-2v-2h2v2zm0-4h-2v-2h2v2zm0-4h-2V7h2v2zm4 8h-2v-2h2v2zm0-4h-2v-2h2v2zm0-4h-2V7h2v2z"/>
@@ -1969,6 +2034,10 @@
     <script src="src/audio/wad-synth-engine.js"></script>
     <script src="src/audio/dirt-sample-engine.js"></script>
     <script src="src/audio/generative-music.js"></script>
+    <script src="src/audio/chord-engine.js"></script>
+    <script src="src/audio/gesture-music-mapper.js"></script>
+    <script src="src/input/gesture-recognizer.js"></script>
+    <script src="src/input/hand-tracking.js"></script>
     <script src="src/visuals/shader-editor.js"></script>
     <script src="app.js"></script>
 

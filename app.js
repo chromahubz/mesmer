@@ -19,6 +19,12 @@ class Mesmer {
         this.audioEngine = null;
         this.musicEngine = null;
 
+        // Hand tracking engines
+        this.chordEngine = null;
+        this.gestureRecognizer = null;
+        this.musicMapper = null;
+        this.handTracking = null;
+
         // State
         this.isPlaying = false;
         this.mainLayerEnabled = true;
@@ -71,6 +77,16 @@ class Mesmer {
             await this.musicEngine.init();
             console.log('✓ Music engine ready');
             if (window.DEBUG) DEBUG.success('Music engine ready');
+
+            // Initialize hand tracking engines
+            console.log('👋 Setting up hand tracking...');
+            if (window.DEBUG) DEBUG.info('Setting up hand tracking...');
+            this.chordEngine = new ChordEngine();
+            this.gestureRecognizer = new GestureRecognizer();
+            this.musicMapper = new GestureMusicMapper(this.musicEngine, this.chordEngine);
+            this.handTracking = new HandTracking(this.gestureRecognizer, this.musicMapper);
+            console.log('✓ Hand tracking modules ready');
+            if (window.DEBUG) DEBUG.success('Hand tracking modules ready');
 
             // Connect audio for analysis
             this.connectAudio();
@@ -580,6 +596,97 @@ class Mesmer {
 
         // Mode Toggle
         this.setupModeToggle();
+
+        // Hand Tracking
+        this.setupHandTracking();
+    }
+
+    setupHandTracking() {
+        console.log('👋 Setting up Hand Tracking UI...');
+
+        const openHandTrackingBtn = document.getElementById('openHandTracking');
+        const handTrackingPanel = document.getElementById('handTrackingPanel');
+        const closeHandTrackingBtn = document.getElementById('closeHandTracking');
+        const startHandTrackingBtn = document.getElementById('startHandTracking');
+        const stopHandTrackingBtn = document.getElementById('stopHandTracking');
+        const toggleVideoBtn = document.getElementById('toggleVideo');
+        const toggleSkeletonBtn = document.getElementById('toggleSkeleton');
+        const videoElement = document.getElementById('handTrackingVideo');
+        const canvasElement = document.getElementById('handTrackingCanvas');
+        const statusElement = document.getElementById('gestureStatus');
+
+        // Open hand tracking panel
+        openHandTrackingBtn.addEventListener('click', () => {
+            handTrackingPanel.style.display = 'block';
+            console.log('👋 Hand tracking panel opened');
+        });
+
+        // Close hand tracking panel
+        closeHandTrackingBtn.addEventListener('click', () => {
+            handTrackingPanel.style.display = 'none';
+            console.log('👋 Hand tracking panel closed');
+        });
+
+        // Start hand tracking
+        startHandTrackingBtn.addEventListener('click', async () => {
+            try {
+                startHandTrackingBtn.disabled = true;
+                statusElement.textContent = 'Initializing MediaPipe...';
+
+                // Initialize MediaPipe if not already done
+                if (!this.handTracking.isInitialized) {
+                    await this.handTracking.init();
+                }
+
+                statusElement.textContent = 'Requesting camera access...';
+
+                // Setup video and start tracking
+                await this.handTracking.setupVideo(videoElement, canvasElement);
+                this.handTracking.start();
+
+                // Update UI
+                startHandTrackingBtn.style.display = 'none';
+                stopHandTrackingBtn.style.display = 'block';
+                statusElement.innerHTML = '<div style="color: #00ff00;">✅ Hand tracking active!</div>';
+
+                console.log('✅ Hand tracking started');
+            } catch (error) {
+                console.error('❌ Failed to start hand tracking:', error);
+                statusElement.innerHTML = `<div style="color: #ff0000;">❌ Error: ${error.message}</div>`;
+                startHandTrackingBtn.disabled = false;
+            }
+        });
+
+        // Stop hand tracking
+        stopHandTrackingBtn.addEventListener('click', () => {
+            this.handTracking.stop();
+
+            // Update UI
+            stopHandTrackingBtn.style.display = 'none';
+            startHandTrackingBtn.style.display = 'block';
+            startHandTrackingBtn.disabled = false;
+            statusElement.innerHTML = '<div style="color: #ffff00;">⏸️ Hand tracking stopped</div>';
+
+            console.log('⏸️ Hand tracking stopped');
+        });
+
+        // Toggle video visibility
+        toggleVideoBtn.addEventListener('click', () => {
+            this.handTracking.toggleVideo();
+            const status = this.handTracking.getStatus();
+            toggleVideoBtn.style.opacity = status.showVideo ? '1' : '0.5';
+            console.log(`📹 Video ${status.showVideo ? 'shown' : 'hidden'}`);
+        });
+
+        // Toggle skeleton visibility
+        toggleSkeletonBtn.addEventListener('click', () => {
+            this.handTracking.toggleLandmarks();
+            const status = this.handTracking.getStatus();
+            toggleSkeletonBtn.style.opacity = status.drawLandmarks ? '1' : '0.5';
+            console.log(`✋ Skeleton ${status.drawLandmarks ? 'shown' : 'hidden'}`);
+        });
+
+        console.log('✅ Hand tracking UI setup complete');
     }
 
     setupMPCPads() {
