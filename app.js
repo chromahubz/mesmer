@@ -162,6 +162,14 @@ class Mesmer {
             document.querySelector('#drumVolumeSlider + .value').textContent = `${value}%`;
         });
 
+        // Note Density slider (Generative Music)
+        const noteDensitySlider = document.getElementById('noteDensitySlider');
+        noteDensitySlider.addEventListener('input', (e) => {
+            const value = parseInt(e.target.value);
+            this.musicEngine.setNoteDensity(value);
+            document.querySelector('#noteDensitySlider + .value').textContent = `${value}%`;
+        });
+
         // Reverb slider
         const reverbSlider = document.getElementById('reverbSlider');
         reverbSlider.addEventListener('input', (e) => {
@@ -176,6 +184,38 @@ class Mesmer {
             const value = parseInt(e.target.value);
             this.musicEngine.setDelay(value);
             document.querySelector('#delaySlider + .value').textContent = `${value}%`;
+        });
+
+        // Synth Reverb slider
+        const synthReverbSlider = document.getElementById('synthReverbSlider');
+        synthReverbSlider.addEventListener('input', (e) => {
+            const value = parseInt(e.target.value);
+            this.musicEngine.setSynthReverb(value);
+            document.querySelector('#synthReverbSlider + .value').textContent = `${value}%`;
+        });
+
+        // Synth Delay slider
+        const synthDelaySlider = document.getElementById('synthDelaySlider');
+        synthDelaySlider.addEventListener('input', (e) => {
+            const value = parseInt(e.target.value);
+            this.musicEngine.setSynthDelay(value);
+            document.querySelector('#synthDelaySlider + .value').textContent = `${value}%`;
+        });
+
+        // Drum Reverb slider
+        const drumReverbSlider = document.getElementById('drumReverbSlider');
+        drumReverbSlider.addEventListener('input', (e) => {
+            const value = parseInt(e.target.value);
+            this.musicEngine.setDrumReverb(value);
+            document.querySelector('#drumReverbSlider + .value').textContent = `${value}%`;
+        });
+
+        // Drum Delay slider
+        const drumDelaySlider = document.getElementById('drumDelaySlider');
+        drumDelaySlider.addEventListener('input', (e) => {
+            const value = parseInt(e.target.value);
+            this.musicEngine.setDrumDelay(value);
+            document.querySelector('#drumDelaySlider + .value').textContent = `${value}%`;
         });
 
         // BPM slider
@@ -271,12 +311,24 @@ class Mesmer {
         const scaleSelect = document.getElementById('scaleSelect');
         scaleSelect.addEventListener('change', (e) => {
             this.musicEngine.setScale(e.target.value);
+            // Update piano roll if synth sequencer is visible
+            const synthSeqPanel = document.getElementById('synthSequencerPanel');
+            if (synthSeqPanel && synthSeqPanel.style.display !== 'none') {
+                this.renderPianoRoll();
+                console.log('🎹 Piano roll updated to reflect new scale');
+            }
         });
 
         // Key selector (root note)
         const keySelect = document.getElementById('keySelect');
         keySelect.addEventListener('change', (e) => {
             this.musicEngine.setKey(e.target.value);
+            // Update piano roll if synth sequencer is visible
+            const synthSeqPanel = document.getElementById('synthSequencerPanel');
+            if (synthSeqPanel && synthSeqPanel.style.display !== 'none') {
+                this.renderPianoRoll();
+                console.log('🎹 Piano roll updated to reflect new key');
+            }
         });
 
         // Reverb type selector
@@ -392,9 +444,7 @@ class Mesmer {
         mainOpacitySlider.addEventListener('input', (e) => {
             this.mainOpacity = e.target.value / 100;
             mainOpacityValue.textContent = e.target.value;
-            if (this.mainLayerEnabled) {
-                this.mainCanvas.style.opacity = this.mainOpacity;
-            }
+            this.mainCanvas.style.opacity = this.mainOpacity;
         });
 
         const toyOpacitySlider = document.getElementById('toyOpacity');
@@ -402,23 +452,13 @@ class Mesmer {
         toyOpacitySlider.addEventListener('input', (e) => {
             this.toyOpacity = e.target.value / 100;
             toyOpacityValue.textContent = e.target.value;
-            if (this.toyLayerEnabled) {
-                this.toyCanvas.style.opacity = this.toyOpacity;
-            }
+            this.toyCanvas.style.opacity = this.toyOpacity;
         });
 
-        // Layer toggles
-        const mainToggle = document.getElementById('mainToggle');
-        mainToggle.addEventListener('change', (e) => {
-            this.mainLayerEnabled = e.target.checked;
-            this.mainCanvas.style.opacity = e.target.checked ? this.mainOpacity : '0';
-        });
-
-        const toyToggle = document.getElementById('toyToggle');
-        toyToggle.addEventListener('change', (e) => {
-            this.toyLayerEnabled = e.target.checked;
-            this.toyCanvas.style.opacity = e.target.checked ? this.toyOpacity : '0';
-        });
+        // Layer toggles removed - now controlled only by opacity sliders
+        // Layers are always enabled, use opacity sliders to control visibility
+        this.mainLayerEnabled = true;
+        this.toyLayerEnabled = true;
 
         // Populate shader dropdowns dynamically
         console.log('🎨 Populating shader dropdowns...');
@@ -1095,17 +1135,29 @@ class Mesmer {
         const pianoKeys = document.getElementById('pianoKeys');
         const pianoGrid = document.getElementById('pianoRollGrid');
 
-        // Get current scale notes
-        const scaleNotes = this.scales[this.synthSeqState.scale];
+        // Get current scale notes from music engine (semitone intervals)
+        const scaleIntervals = this.musicEngine && this.musicEngine.currentScale ?
+            this.musicEngine.currentScale : [0, 2, 4, 5, 7, 9, 11];
+        const rootNoteWithOctave = this.musicEngine && this.musicEngine.rootNote ?
+            this.musicEngine.rootNote : 'C3';
         const octave = this.synthSeqState.octave;
 
-        // Build full note array (2 octaves)
+        // Extract root note without octave (e.g., "C3" -> "C")
+        const rootNote = rootNoteWithOctave.replace(/[0-9]/g, '');
+
+        // Build full note array (2 octaves) - convert intervals to note names
         const notes = [];
         for (let o = octave + 1; o >= octave; o--) {
-            for (let i = scaleNotes.length - 1; i >= 0; i--) {
-                notes.push(`${scaleNotes[i]}${o}`);
+            for (let i = scaleIntervals.length - 1; i >= 0; i--) {
+                // Convert semitone interval to actual note name
+                const semitone = scaleIntervals[i];
+                const noteFreq = Tone.Frequency(rootNote + '0').transpose(semitone).transpose(o * 12);
+                const noteName = noteFreq.toNote();
+                notes.push(noteName);
             }
         }
+
+        console.log('🎹 Rendering piano roll with', notes.length, 'notes:', notes.slice(0, 5), '...');
 
         // Render piano keys
         pianoKeys.innerHTML = notes.map(note => {
@@ -1478,11 +1530,24 @@ class Mesmer {
         const keyDisplay = document.getElementById('synthSeqKeyDisplay');
         if (!keyDisplay) return;
 
-        const root = this.synthSeqState.rootNote;
-        const scale = this.synthSeqState.scale;
+        // Get key and scale from music engine
+        const rootNote = this.musicEngine ? this.musicEngine.rootNote : 'C3';
+        const scaleIntervals = this.musicEngine ? this.musicEngine.currentScale : [0, 2, 4, 5, 7, 9, 11];
 
-        // Capitalize scale name
-        const scaleName = scale.charAt(0).toUpperCase() + scale.slice(1);
+        // Extract just the note name without octave
+        const root = rootNote.replace(/[0-9]/g, '');
+
+        // Determine scale name from intervals
+        const scaleIntervalsStr = JSON.stringify(scaleIntervals);
+        const scaleMap = {
+            '[0,2,4,5,7,9,11]': 'Major',
+            '[0,2,3,5,7,8,10]': 'Minor',
+            '[0,2,4,7,9]': 'Pentatonic',
+            '[0,2,3,5,7,9,10]': 'Dorian',
+            '[0,1,3,5,7,8,10]': 'Phrygian'
+        };
+
+        const scaleName = scaleMap[scaleIntervalsStr] || 'Scale';
 
         keyDisplay.innerHTML = `Key: <strong>${root} ${scaleName}</strong>`;
     }
@@ -1603,12 +1668,12 @@ class Mesmer {
                                     time,
                                     noteData.velocity
                                 );
-                            } else if (engine === 'wad' && this.wadEngine) {
-                                // Use WAD engine
-                                this.wadEngine.play(track, noteData.note, durationSeconds, noteData.velocity);
-                            } else if (engine === 'dirt' && this.dirtEngine) {
-                                // Use Dirt samples
-                                this.dirtEngine.play(track, noteData.note, durationSeconds, noteData.velocity);
+                            } else if (engine === 'wad' && this.musicEngine && this.musicEngine.wadEngine) {
+                                // Use WAD engine from music engine
+                                this.musicEngine.wadEngine.play(track, noteData.note, durationSeconds, noteData.velocity);
+                            } else if (engine === 'dirt' && this.musicEngine && this.musicEngine.dirtEngine) {
+                                // Use Dirt samples from music engine
+                                this.musicEngine.dirtEngine.play(track, noteData.note, durationSeconds, noteData.velocity);
                             }
                         });
                     }
@@ -1648,14 +1713,242 @@ class Mesmer {
         });
     }
 
-    exportPatternMidi() {
-        console.log('🎵 MIDI export not yet implemented - requires midi-writer-js library');
-        alert('MIDI export coming soon! Will require midi-writer-js library.');
+    async exportPatternMidi() {
+        const track = this.synthSeqState.currentTrack;
+        const pattern = this.synthSeqState.patterns[track];
+
+        if (!pattern || pattern.length === 0) {
+            alert('⚠️ No notes in current pattern to export!');
+            return;
+        }
+
+        console.log('🎵 Exporting MIDI for track:', track);
+
+        // Create basic MIDI file structure
+        const midiEvents = [];
+        const ppq = 480; // Pulses per quarter note
+        const stepDuration = ppq / 4; // 16th note
+
+        // Convert pattern to MIDI events
+        pattern.forEach(stepData => {
+            stepData.notes.forEach(noteData => {
+                const noteNumber = this.noteToMidiNumber(noteData.note);
+                const startTime = stepData.step * stepDuration;
+                const duration = noteData.duration * stepDuration;
+                const velocity = Math.round(noteData.velocity * 127);
+
+                midiEvents.push({
+                    time: startTime,
+                    type: 'noteOn',
+                    note: noteNumber,
+                    velocity: velocity
+                });
+
+                midiEvents.push({
+                    time: startTime + duration,
+                    type: 'noteOff',
+                    note: noteNumber,
+                    velocity: 0
+                });
+            });
+        });
+
+        // Sort events by time
+        midiEvents.sort((a, b) => a.time - b.time);
+
+        // Create MIDI file using simple format
+        const midiData = this.createMidiFile(midiEvents, ppq);
+
+        // Download
+        const blob = new Blob([midiData], { type: 'audio/midi' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `mesmer-${track}-pattern.mid`;
+        a.click();
+        URL.revokeObjectURL(url);
+
+        console.log('✅ MIDI exported:', midiEvents.length, 'events');
+        alert(`✅ MIDI file exported!\n${pattern.length} steps, ${midiEvents.length / 2} notes`);
     }
 
-    exportPatternWav() {
-        console.log('🎵 WAV export not yet implemented - requires offline rendering');
-        alert('WAV export coming soon! Will use Tone.Offline() rendering.');
+    noteToMidiNumber(note) {
+        // Convert note name (e.g. "C4") to MIDI number (e.g. 60)
+        const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+        const noteName = note.replace(/[0-9]/g, '');
+        const octave = parseInt(note.match(/[0-9]/)[0]);
+        const noteIndex = noteNames.indexOf(noteName);
+        return (octave + 1) * 12 + noteIndex;
+    }
+
+    createMidiFile(events, ppq) {
+        // Simple MIDI file format (Format 0, 1 track)
+        const header = new Uint8Array([
+            0x4D, 0x54, 0x68, 0x64, // "MThd"
+            0x00, 0x00, 0x00, 0x06, // Header length
+            0x00, 0x00, // Format 0
+            0x00, 0x01, // 1 track
+            (ppq >> 8) & 0xFF, ppq & 0xFF // Ticks per quarter note
+        ]);
+
+        // Track data
+        const trackEvents = [];
+        let lastTime = 0;
+
+        events.forEach(event => {
+            const deltaTime = event.time - lastTime;
+            lastTime = event.time;
+
+            // Variable length delta time
+            const deltaBytes = this.encodeVariableLength(deltaTime);
+
+            if (event.type === 'noteOn') {
+                trackEvents.push(...deltaBytes, 0x90, event.note, event.velocity);
+            } else if (event.type === 'noteOff') {
+                trackEvents.push(...deltaBytes, 0x80, event.note, 0);
+            }
+        });
+
+        // End of track
+        trackEvents.push(0x00, 0xFF, 0x2F, 0x00);
+
+        const trackLength = trackEvents.length;
+        const trackHeader = new Uint8Array([
+            0x4D, 0x54, 0x72, 0x6B, // "MTrk"
+            (trackLength >> 24) & 0xFF,
+            (trackLength >> 16) & 0xFF,
+            (trackLength >> 8) & 0xFF,
+            trackLength & 0xFF
+        ]);
+
+        // Combine header + track
+        const midiFile = new Uint8Array(header.length + trackHeader.length + trackEvents.length);
+        midiFile.set(header, 0);
+        midiFile.set(trackHeader, header.length);
+        midiFile.set(trackEvents, header.length + trackHeader.length);
+
+        return midiFile;
+    }
+
+    encodeVariableLength(value) {
+        const bytes = [];
+        bytes.push(value & 0x7F);
+        value >>= 7;
+        while (value > 0) {
+            bytes.unshift((value & 0x7F) | 0x80);
+            value >>= 7;
+        }
+        return bytes;
+    }
+
+    async exportPatternWav() {
+        const track = this.synthSeqState.currentTrack;
+        const pattern = this.synthSeqState.patterns[track];
+
+        if (!pattern || pattern.length === 0) {
+            alert('⚠️ No notes in current pattern to export!');
+            return;
+        }
+
+        console.log('🎵 Exporting WAV for track:', track);
+        alert('🎵 Rendering audio... This may take a moment.');
+
+        try {
+            // Calculate total duration (steps * 16th note duration)
+            const maxStep = Math.max(...pattern.map(p => p.step));
+            const duration = ((maxStep + 4) / 4) * (60 / Tone.Transport.bpm.value);
+
+            // Render offline
+            const buffer = await Tone.Offline(({ transport }) => {
+                // Create synth for offline rendering
+                const synth = new Tone.PolySynth(Tone.Synth).toDestination();
+
+                // Schedule all notes
+                pattern.forEach(stepData => {
+                    const time = (stepData.step / 4) * (60 / Tone.Transport.bpm.value);
+
+                    stepData.notes.forEach(noteData => {
+                        const noteDuration = (noteData.duration / 4) * (60 / Tone.Transport.bpm.value);
+                        synth.triggerAttackRelease(
+                            noteData.note,
+                            noteDuration,
+                            time,
+                            noteData.velocity
+                        );
+                    });
+                });
+            }, duration);
+
+            // Convert to WAV
+            const wavBlob = await this.bufferToWav(buffer);
+
+            // Download
+            const url = URL.createObjectURL(wavBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `mesmer-${track}-pattern.wav`;
+            a.click();
+            URL.revokeObjectURL(url);
+
+            console.log('✅ WAV exported:', duration, 'seconds');
+            alert(`✅ WAV file exported!\n${pattern.length} steps, ${duration.toFixed(2)}s duration`);
+        } catch (error) {
+            console.error('❌ WAV export error:', error);
+            alert('❌ Error exporting WAV: ' + error.message);
+        }
+    }
+
+    async bufferToWav(audioBuffer) {
+        // Convert Tone.js buffer to WAV file
+        const numberOfChannels = audioBuffer.numberOfChannels;
+        const sampleRate = audioBuffer.sampleRate;
+        const format = 1; // PCM
+        const bitDepth = 16;
+
+        const bytesPerSample = bitDepth / 8;
+        const blockAlign = numberOfChannels * bytesPerSample;
+
+        const data = [];
+        for (let i = 0; i < audioBuffer.numberOfChannels; i++) {
+            data.push(audioBuffer.getChannelData(i));
+        }
+
+        const dataLength = data[0].length * numberOfChannels * bytesPerSample;
+        const buffer = new ArrayBuffer(44 + dataLength);
+        const view = new DataView(buffer);
+
+        // WAV header
+        this.writeString(view, 0, 'RIFF');
+        view.setUint32(4, 36 + dataLength, true);
+        this.writeString(view, 8, 'WAVE');
+        this.writeString(view, 12, 'fmt ');
+        view.setUint32(16, 16, true);
+        view.setUint16(20, format, true);
+        view.setUint16(22, numberOfChannels, true);
+        view.setUint32(24, sampleRate, true);
+        view.setUint32(28, sampleRate * blockAlign, true);
+        view.setUint16(32, blockAlign, true);
+        view.setUint16(34, bitDepth, true);
+        this.writeString(view, 36, 'data');
+        view.setUint32(40, dataLength, true);
+
+        // Write audio data
+        let offset = 44;
+        for (let i = 0; i < data[0].length; i++) {
+            for (let channel = 0; channel < numberOfChannels; channel++) {
+                const sample = Math.max(-1, Math.min(1, data[channel][i]));
+                view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+                offset += 2;
+            }
+        }
+
+        return new Blob([buffer], { type: 'audio/wav' });
+    }
+
+    writeString(view, offset, string) {
+        for (let i = 0; i < string.length; i++) {
+            view.setUint8(offset + i, string.charCodeAt(i));
+        }
     }
 
     setupModeToggle() {
@@ -1873,15 +2166,11 @@ class Mesmer {
             });
         }
 
-        // Render main shader
-        if (this.mainLayerEnabled) {
-            this.mainShader.render(audioData);
-        }
+        // Render main shader (always render, opacity controlled by CSS)
+        this.mainShader.render(audioData);
 
-        // Render toy layer
-        if (this.toyLayerEnabled) {
-            this.toyRenderer.render(audioData);
-        }
+        // Render toy layer (always render, opacity controlled by CSS)
+        this.toyRenderer.render(audioData);
 
         // Update audio visualizations
         this.updateAudioViz(audioData);

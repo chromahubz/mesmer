@@ -212,6 +212,13 @@ class GenerativeMusic {
         this.synthEngine = 'tonejs'; // 'tonejs', 'wad', or 'dirt'
         this.useWadSynths = false; // Backward compatibility
 
+        // Prod mode state
+        this.isProdMode = false;
+        this.customPatterns = null;
+
+        // Note density (0-100, controls how many notes play in generative mode)
+        this.noteDensity = 50; // Default 50%
+
         // Load MIDI drum patterns
         await this.loadMidiPatterns();
 
@@ -264,7 +271,7 @@ class GenerativeMusic {
         };
         this.currentDelayType = 'eighth';
 
-        // Master reverb
+        // Master reverb (global)
         const reverbConfig = this.reverbPresets[this.currentReverbType];
         this.effects.reverb = new Tone.Reverb({
             decay: reverbConfig.decay,
@@ -272,7 +279,7 @@ class GenerativeMusic {
             preDelay: reverbConfig.preDelay
         }).toDestination();
 
-        // Master delay
+        // Master delay (global)
         const delayConfig = this.delayPresets[this.currentDelayType];
         this.effects.delay = new Tone.FeedbackDelay({
             delayTime: delayConfig.delayTime,
@@ -280,9 +287,35 @@ class GenerativeMusic {
             wet: delayConfig.wet
         }).connect(this.effects.reverb);
 
-        // Separate volume controls for synth and drums
-        this.synthVolume = new Tone.Volume(-6).connect(this.effects.delay);
-        this.drumVolume = new Tone.Volume(-6).connect(this.effects.delay);
+        // === SEPARATE FX CHAINS FOR SYNTH AND DRUMS ===
+
+        // Synth FX Chain
+        this.effects.synthReverb = new Tone.Reverb({
+            decay: reverbConfig.decay,
+            wet: 0.5  // Default 50%
+        }).connect(this.effects.delay);
+
+        this.effects.synthDelay = new Tone.FeedbackDelay({
+            delayTime: delayConfig.delayTime,
+            feedback: delayConfig.feedback,
+            wet: 0.5  // Default 50%
+        }).connect(this.effects.synthReverb);
+
+        this.synthVolume = new Tone.Volume(-6).connect(this.effects.synthDelay);
+
+        // Drum FX Chain
+        this.effects.drumReverb = new Tone.Reverb({
+            decay: reverbConfig.decay,
+            wet: 0.5  // Default 50%
+        }).connect(this.effects.delay);
+
+        this.effects.drumDelay = new Tone.FeedbackDelay({
+            delayTime: delayConfig.delayTime,
+            feedback: delayConfig.feedback,
+            wet: 0.5  // Default 50%
+        }).connect(this.effects.drumReverb);
+
+        this.drumVolume = new Tone.Volume(-6).connect(this.effects.drumDelay);
 
         // Master volume (kept for backwards compatibility)
         this.masterVolume = this.synthVolume;
@@ -291,8 +324,9 @@ class GenerativeMusic {
         this.synthVolumeMultiplier = 0.5; // Default to 50%
         this.drumVolumeMultiplier = 0.5; // Default to 50%
 
-        console.log('Effects chain created with separate synth/drum volumes');
-        console.log(`Reverb: ${reverbConfig.name}, Delay: ${delayConfig.name}`);
+        console.log('✅ Effects chain created with separate synth/drum FX');
+        console.log(`Master Reverb: ${reverbConfig.name}, Master Delay: ${delayConfig.name}`);
+        console.log('Synth & Drum individual FX: 50% wet each (default)');
     }
 
     setupInstruments() {
@@ -544,6 +578,23 @@ class GenerativeMusic {
         this.isPlaying = true;
         Tone.Transport.start();
 
+        // Check if we're in Prod mode with custom patterns
+        if (this.isProdMode && this.customPatterns) {
+            console.log('🎛️ Starting in PROD mode with custom patterns');
+            this.useCustomPatterns(this.customPatterns);
+
+            // Still start drums if enabled
+            if (this.drumsEnabled) {
+                this.startDrums();
+            }
+
+            console.log('Music started in PROD mode' + (this.drumsEnabled ? ' (with drums)' : ''));
+            return;
+        }
+
+        // Otherwise, use generative mode
+        console.log('🎛️ Starting in GENERATIVE mode');
+
         // Pad sequence (slow atmospheric chords)
         this.sequences.pad = new Tone.Sequence((time, index) => {
             const chord = this.generateChord(this.rootNote, 3);
@@ -584,9 +635,12 @@ class GenerativeMusic {
             }
         }, [0, null, 1, null], '2n').start(0);
 
-        // Lead melody (random melodic patterns)
+        // Lead melody (random melodic patterns) - Uses note density
         this.sequences.lead = new Tone.Loop((time) => {
-            if (Math.random() > 0.3) {
+            // Density threshold: 0% = 0.9 (sparse), 50% = 0.5 (moderate), 100% = 0.1 (dense)
+            const densityThreshold = 0.9 - (this.noteDensity / 100) * 0.8;
+
+            if (Math.random() > densityThreshold) {
                 const note = this.generateNote(4 + Math.floor(Math.random() * 2));
                 const duration = Math.random() > 0.5 ? 0.125 : 0.0625; // 8n or 16n in seconds
 
@@ -604,9 +658,12 @@ class GenerativeMusic {
             }
         }, '8n').start(0);
 
-        // Arpeggio pattern
+        // Arpeggio pattern - Uses note density
         this.sequences.arp = new Tone.Pattern((time, note) => {
-            if (Math.random() > 0.4) {
+            // Density threshold: 0% = 0.9 (sparse), 50% = 0.5 (moderate), 100% = 0.1 (dense)
+            const densityThreshold = 0.9 - (this.noteDensity / 100) * 0.8;
+
+            if (Math.random() > densityThreshold) {
                 const arpNote = this.generateNote(3 + Math.floor(Math.random() * 2));
 
                 if (this.synthEngine === 'wad' && this.wadEngine) {
@@ -883,7 +940,7 @@ class GenerativeMusic {
     }
 
     /**
-     * Set reverb amount
+     * Set master reverb amount (global)
      */
     setReverb(value) {
         if (this.effects.reverb) {
@@ -893,12 +950,56 @@ class GenerativeMusic {
     }
 
     /**
-     * Set delay amount
+     * Set master delay amount (global)
      */
     setDelay(value) {
         if (this.effects.delay) {
             const wet = value / 100;
             this.effects.delay.wet.rampTo(wet, 0.5);
+        }
+    }
+
+    /**
+     * Set synth reverb amount
+     */
+    setSynthReverb(value) {
+        if (this.effects.synthReverb) {
+            const wet = value / 100;
+            this.effects.synthReverb.wet.rampTo(wet, 0.5);
+            console.log(`🎚️ Synth Reverb: ${value}%`);
+        }
+    }
+
+    /**
+     * Set synth delay amount
+     */
+    setSynthDelay(value) {
+        if (this.effects.synthDelay) {
+            const wet = value / 100;
+            this.effects.synthDelay.wet.rampTo(wet, 0.5);
+            console.log(`🎚️ Synth Delay: ${value}%`);
+        }
+    }
+
+    /**
+     * Set drum reverb amount
+     */
+    setDrumReverb(value) {
+        if (this.effects.drumReverb) {
+            const wet = value / 100;
+            this.effects.drumReverb.wet.rampTo(wet, 0.5);
+            console.log(`🎚️ Drum Reverb: ${value}%`);
+        }
+    }
+
+    /**
+     * Set drum delay amount
+     */
+    setDrumDelay(value) {
+        if (this.effects.drumDelay) {
+            const wet = value / 100;
+            this.effects.drumDelay.wet.rampTo(wet, 0.5);
+            console.log(`🎚️ Drum Delay: ${value}%`);
         }
     }
 
@@ -1150,19 +1251,164 @@ class GenerativeMusic {
     }
 
     /**
-     * Update drum pattern step
+     * Update drum pattern step (now supports built-in patterns)
      */
     updatePatternStep(drumType, stepIndex, value) {
-        if (this.drumPatterns[this.currentPattern] && this.drumPatterns[this.currentPattern][drumType]) {
-            this.drumPatterns[this.currentPattern][drumType][stepIndex] = value ? 1 : 0;
+        // Get current pattern (MIDI or built-in)
+        const currentPattern = this.currentMidiPattern || this.drumPatterns[this.currentPattern];
+
+        if (currentPattern && currentPattern[drumType]) {
+            currentPattern[drumType][stepIndex] = value ? 1 : 0;
             console.log(`🎛️ Pattern updated: ${drumType} step ${stepIndex} = ${value}`);
 
-            // Restart drums if playing
-            if (this.isPlaying && this.drumsEnabled) {
-                this.stopDrums();
-                setTimeout(() => this.startDrums(), 10);
+            // Mark built-in pattern as modified
+            if (!this.currentMidiPattern && this.drumPatterns[this.currentPattern]) {
+                if (!this.drumPatterns[this.currentPattern].isModified) {
+                    this.drumPatterns[this.currentPattern].isModified = true;
+                    console.log(`📝 Built-in pattern "${this.currentPattern}" has been modified`);
+                }
             }
+
+            // Restart drums if playing (no need to restart, patterns are checked dynamically)
+            // The sequences already check the current pattern on each step
         }
+    }
+
+    /**
+     * Save modified built-in pattern as custom pattern
+     */
+    saveModifiedPattern(customName) {
+        if (!this.currentPattern || this.currentMidiPattern) {
+            console.warn('Can only save modified built-in patterns');
+            return false;
+        }
+
+        const pattern = this.drumPatterns[this.currentPattern];
+        if (!pattern.isModified) {
+            console.warn('Pattern has not been modified');
+            return false;
+        }
+
+        // Create deep copy of pattern
+        const customPattern = JSON.parse(JSON.stringify(pattern));
+        customPattern.name = customName;
+        customPattern.isCustom = true;
+        customPattern.isModified = false;
+        customPattern.originalPattern = this.currentPattern;
+
+        // Add to custom patterns (stored in localStorage)
+        const customPatterns = JSON.parse(localStorage.getItem('mesmer_custom_drum_patterns') || '{}');
+        const patternKey = 'custom_' + customName.toLowerCase().replace(/\s+/g, '_');
+        customPatterns[patternKey] = customPattern;
+        localStorage.setItem('mesmer_custom_drum_patterns', JSON.stringify(customPatterns));
+
+        console.log(`✅ Saved custom pattern: ${customName}`);
+        return patternKey;
+    }
+
+    /**
+     * Reset built-in pattern to default
+     */
+    resetPatternToDefault(patternKey) {
+        const defaultPatterns = this.getDefaultPatterns();
+        if (defaultPatterns[patternKey]) {
+            this.drumPatterns[patternKey] = JSON.parse(JSON.stringify(defaultPatterns[patternKey]));
+            console.log(`🔄 Reset pattern "${patternKey}" to default`);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Get default (unmodified) patterns
+     */
+    getDefaultPatterns() {
+        return {
+            'basic': {
+                name: 'Basic Rock',
+                kick: [1, 0, 0, 0, 1, 0, 0, 0],
+                snare: [0, 0, 1, 0, 0, 0, 1, 0],
+                hihat: [1, 1, 1, 1, 1, 1, 1, 1],
+                openhat: [0, 0, 0, 0, 0, 0, 1, 0],
+                clap: [0, 0, 0, 0, 0, 0, 0, 0],
+                rim: [0, 0, 0, 0, 0, 0, 0, 0],
+                cowbell: [0, 0, 0, 0, 0, 0, 0, 0],
+                crash: [1, 0, 0, 0, 0, 0, 0, 0],
+                tom1: [0, 0, 0, 0, 0, 0, 0, 0],
+                tom2: [0, 0, 0, 0, 0, 0, 0, 0],
+                tom3: [0, 0, 0, 1, 0, 0, 0, 0]
+            },
+            'techno': {
+                name: 'Techno 4/4',
+                kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
+                snare: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+                hihat: [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
+                openhat: [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1],
+                clap: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+                rim: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                cowbell: [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0],
+                crash: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                tom1: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                tom2: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                tom3: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            },
+            'breakbeat': {
+                name: 'Breakbeat',
+                kick: [1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0],
+                snare: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1],
+                hihat: [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0],
+                openhat: [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+                clap: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                rim: [0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0],
+                cowbell: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                crash: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                tom1: [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+                tom2: [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
+                tom3: [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            },
+            'hiphop': {
+                name: 'Hip-Hop',
+                kick: [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0],
+                snare: [0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0],
+                hihat: [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0],
+                openhat: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+                clap: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+                rim: [0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0],
+                cowbell: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                crash: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                tom1: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                tom2: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                tom3: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            },
+            'ambient': {
+                name: 'Ambient',
+                kick: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                snare: [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+                hihat: [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+                openhat: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+                clap: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                rim: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                cowbell: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                crash: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                tom1: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                tom2: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                tom3: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            },
+            'jungle': {
+                name: 'Jungle/DnB',
+                kick: [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0],
+                snare: [0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0],
+                hihat: [1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1],
+                openhat: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
+                clap: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                rim: [0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1],
+                cowbell: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                crash: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                tom1: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                tom2: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                tom3: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            }
+        };
     }
 
     /**
@@ -1305,5 +1551,193 @@ class GenerativeMusic {
             value: key,
             label: this.delayPresets[key].name
         }));
+    }
+
+    /**
+     * Use custom patterns from sequencer (Prod mode)
+     */
+    useCustomPatterns(patterns) {
+        console.log('🎛️ Switching to PROD mode with custom patterns');
+
+        if (!this.isPlaying) {
+            console.warn('⚠️ Music not playing, patterns will be used when started');
+            this.customPatterns = patterns;
+            this.isProdMode = true;
+            return;
+        }
+
+        // Store patterns and mode
+        this.customPatterns = patterns;
+        this.isProdMode = true;
+
+        // Stop current sequences
+        Object.values(this.sequences).forEach(seq => {
+            if (seq && seq !== this.kick && seq !== this.snare && seq !== this.hihat && seq !== this.openhat) {
+                seq.stop();
+                seq.dispose();
+            }
+        });
+
+        // Create new sequences from custom patterns
+        // Convert sequencer pattern format to playable sequences
+        ['pad', 'lead', 'bass', 'arp'].forEach(track => {
+            const pattern = patterns[track] || [];
+
+            if (pattern.length === 0) {
+                console.log(`⚠️ No pattern for ${track}, skipping`);
+                return;
+            }
+
+            // Find the maximum step to determine pattern length
+            const maxStep = Math.max(...pattern.map(p => p.step), 15);
+            const steps = Array.from({ length: maxStep + 1 }, (_, i) => i);
+
+            this.sequences[track] = new Tone.Sequence((time, step) => {
+                // Find notes for this step
+                const stepData = pattern.find(p => p.step === step);
+
+                if (stepData && stepData.notes.length > 0) {
+                    stepData.notes.forEach(noteData => {
+                        const duration = `${noteData.duration * 0.25}n`;
+                        const durationSeconds = noteData.duration * 0.25;
+
+                        // Play using current synth engine
+                        if (this.synthEngine === 'wad' && this.wadEngine) {
+                            this.wadEngine.play(track, noteData.note, durationSeconds, noteData.velocity * this.synthVolumeMultiplier);
+                        } else if (this.synthEngine === 'dirt' && this.dirtEngine) {
+                            this.dirtEngine.play(track, noteData.note, durationSeconds, noteData.velocity * this.synthVolumeMultiplier);
+                        } else {
+                            // Use Tone.js instruments
+                            if (this.instruments[track]) {
+                                if (track === 'pad') {
+                                    // Pad can be polyphonic
+                                    this.instruments[track].triggerAttackRelease(noteData.note, duration, time, noteData.velocity);
+                                } else if (track === 'bass') {
+                                    // Bass is monophonic
+                                    this.instruments[track].triggerAttackRelease(noteData.note, duration, time, noteData.velocity);
+                                } else {
+                                    // Lead and arp
+                                    this.instruments[track].triggerAttackRelease(noteData.note, duration, time, noteData.velocity);
+                                }
+                            }
+                        }
+                    });
+                }
+            }, steps, '16n').start(0);
+        });
+
+        console.log('✅ PROD mode activated with sequencer patterns');
+    }
+
+    /**
+     * Switch back to generative mode
+     */
+    switchToGenerativeMode() {
+        console.log('🎛️ Switching back to GENERATIVE mode');
+
+        if (!this.isPlaying) {
+            console.warn('⚠️ Music not playing');
+            this.customPatterns = null;
+            this.isProdMode = false;
+            return;
+        }
+
+        // Clear custom patterns
+        this.customPatterns = null;
+        this.isProdMode = false;
+
+        // Stop current sequences (except drums)
+        Object.keys(this.sequences).forEach(key => {
+            if (key !== 'kick' && key !== 'snare' && key !== 'hihat' && key !== 'openhat') {
+                if (this.sequences[key]) {
+                    this.sequences[key].stop();
+                    this.sequences[key].dispose();
+                }
+            }
+        });
+
+        // Recreate generative sequences
+        // Pad sequence (slow atmospheric chords)
+        this.sequences.pad = new Tone.Sequence((time, index) => {
+            const chord = this.generateChord(this.rootNote, 3);
+
+            if (this.synthEngine === 'wad' && this.wadEngine) {
+                chord.forEach((note, i) => {
+                    setTimeout(() => {
+                        this.wadEngine.play('pad', note, 2, 0.3 * this.synthVolumeMultiplier);
+                    }, i * 50);
+                });
+            } else if (this.synthEngine === 'dirt' && this.dirtEngine) {
+                chord.forEach((note, i) => {
+                    setTimeout(() => {
+                        this.dirtEngine.play('pad', note, 2, 0.3 * this.synthVolumeMultiplier);
+                    }, i * 50);
+                });
+            } else {
+                this.instruments.pad.triggerAttackRelease(chord, '2n', time, 0.3);
+            }
+        }, [0, 1, 2, 3], '2m').start(0);
+
+        // Bass sequence (root notes)
+        this.sequences.bass = new Tone.Sequence((time, note) => {
+            const bassNote = this.generateNote(2, 0);
+
+            if (this.synthEngine === 'wad' && this.wadEngine) {
+                this.wadEngine.play('bass', bassNote, 0.25, 0.6 * this.synthVolumeMultiplier);
+            } else if (this.synthEngine === 'dirt' && this.dirtEngine) {
+                this.dirtEngine.play('bass', bassNote, 0.25, 0.6 * this.synthVolumeMultiplier);
+            } else {
+                this.instruments.bass.triggerAttackRelease(bassNote, '4n', time, 0.6);
+            }
+        }, [0, null, 1, null], '2n').start(0);
+
+        // Lead melody (random melodic patterns) - Uses note density
+        this.sequences.lead = new Tone.Loop((time) => {
+            // Density threshold: 0% = 0.9 (sparse), 50% = 0.5 (moderate), 100% = 0.1 (dense)
+            const densityThreshold = 0.9 - (this.noteDensity / 100) * 0.8;
+
+            if (Math.random() > densityThreshold) {
+                const note = this.generateNote(4 + Math.floor(Math.random() * 2));
+                const duration = Math.random() > 0.5 ? 0.125 : 0.0625;
+
+                if (this.synthEngine === 'wad' && this.wadEngine) {
+                    this.wadEngine.play('lead', note, duration, 0.4 * this.synthVolumeMultiplier);
+                } else if (this.synthEngine === 'dirt' && this.dirtEngine) {
+                    this.dirtEngine.play('lead', note, duration, 0.4 * this.synthVolumeMultiplier);
+                } else {
+                    const toneDuration = Math.random() > 0.5 ? '8n' : '16n';
+                    this.instruments.lead.triggerAttackRelease(note, toneDuration, time, 0.4);
+                }
+            }
+        }, '8n').start(0);
+
+        // Arpeggio pattern - Uses note density
+        this.sequences.arp = new Tone.Pattern((time, note) => {
+            // Density threshold: 0% = 0.9 (sparse), 50% = 0.5 (moderate), 100% = 0.1 (dense)
+            const densityThreshold = 0.9 - (this.noteDensity / 100) * 0.8;
+
+            if (Math.random() > densityThreshold) {
+                const arpNote = this.generateNote(3 + Math.floor(Math.random() * 2));
+
+                if (this.synthEngine === 'wad' && this.wadEngine) {
+                    this.wadEngine.play('arp', arpNote, 0.0625, 0.3 * this.synthVolumeMultiplier);
+                } else if (this.synthEngine === 'dirt' && this.dirtEngine) {
+                    this.dirtEngine.play('arp', arpNote, 0.0625, 0.3 * this.synthVolumeMultiplier);
+                } else {
+                    this.instruments.arp.triggerAttackRelease(arpNote, '16n', time, 0.3);
+                }
+            }
+        }, [0, 1, 2, 3, 4, 5, 6], 'upDown').start(0);
+        this.sequences.arp.interval = '16n';
+
+        console.log('✅ GENERATIVE mode restored');
+    }
+
+    /**
+     * Set note density (0-100, controls how many notes play in generative mode)
+     */
+    setNoteDensity(value) {
+        this.noteDensity = value;
+        console.log(`🎵 Note density set to ${value}% (${value === 0 ? 'Minimal' : value === 100 ? 'Maximum' : 'Moderate'})`);
     }
 }

@@ -352,9 +352,13 @@ class WadSynthEngine {
             return;
         }
 
+        // Apply volume scaling to match Tone.js sensitivity (WAD is louder)
+        // Scale down by 40% and add minimum threshold to prevent 0 volume bug
+        const scaledVolume = velocity <= 0.01 ? 0 : Math.max(0.01, velocity * 0.4);
+
         this.synths[synthName].play({
             pitch: note,
-            volume: velocity,
+            volume: scaledVolume,
             wait: 0,
             env: {
                 hold: duration
