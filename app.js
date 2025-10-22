@@ -140,6 +140,8 @@ class Mesmer {
     }
 
     setupUI() {
+        console.log('🔧 Setting up UI and event listeners...');
+
         // Play/Pause button
         const playBtn = document.getElementById('playBtn');
         playBtn.addEventListener('click', () => this.togglePlay());
@@ -456,13 +458,26 @@ class Mesmer {
 
         // Fullscreen button
         const fullscreenBtn = document.getElementById('fullscreenBtn');
-        fullscreenBtn.addEventListener('click', () => this.toggleFullscreen());
+        console.log('📍 Fullscreen button found:', !!fullscreenBtn);
+        fullscreenBtn.addEventListener('click', () => {
+            console.log('🖱️ Fullscreen button clicked!');
+            this.toggleFullscreen();
+        });
 
         // Listen for fullscreen changes (including ESC key exit)
         // Support all browser prefixes
         const handleFullscreenChange = () => {
+            console.log('🔄 Fullscreen change event fired!');
+
             const controls = document.getElementById('controls');
             const debugOverlay = document.getElementById('debugOverlay');
+            const shaderEditor = document.getElementById('shaderEditor');
+
+            console.log('📍 Elements found:', {
+                controls: !!controls,
+                debugOverlay: !!debugOverlay,
+                shaderEditor: !!shaderEditor
+            });
 
             // Check if we're in fullscreen (works across browsers)
             const isFullscreen = !!(document.fullscreenElement ||
@@ -470,24 +485,52 @@ class Mesmer {
                                     document.mozFullScreenElement ||
                                     document.msFullscreenElement);
 
+            console.log('📊 Fullscreen state:', {
+                isFullscreen: isFullscreen,
+                fullscreenElement: document.fullscreenElement,
+                webkitFullscreenElement: document.webkitFullscreenElement
+            });
+
             if (isFullscreen) {
-                // Entering fullscreen - hide controls
-                console.log('🖥️ Entering fullscreen - hiding controls');
-                controls.style.display = 'none';
-                if (debugOverlay) debugOverlay.style.display = 'none';
+                // Entering fullscreen - hide controls and shader editor
+                console.log('🖥️ ✅ ENTERING FULLSCREEN - hiding controls and shader editor');
+                if (controls) {
+                    controls.style.display = 'none';
+                    console.log('  ↳ Controls hidden');
+                }
+                if (debugOverlay) {
+                    debugOverlay.style.display = 'none';
+                    console.log('  ↳ Debug overlay hidden');
+                }
+                if (shaderEditor) {
+                    shaderEditor.style.display = 'none';
+                    console.log('  ↳ Shader editor hidden');
+                }
             } else {
-                // Exiting fullscreen - show controls
-                console.log('🖥️ Exiting fullscreen - showing controls');
-                controls.style.display = 'block';
-                if (debugOverlay) debugOverlay.style.display = 'block';
+                // Exiting fullscreen - show controls and shader editor
+                console.log('🖥️ ✅ EXITING FULLSCREEN - showing controls and shader editor');
+                if (controls) {
+                    controls.style.display = 'block';
+                    console.log('  ↳ Controls shown');
+                }
+                if (debugOverlay) {
+                    debugOverlay.style.display = 'block';
+                    console.log('  ↳ Debug overlay shown');
+                }
+                if (shaderEditor) {
+                    shaderEditor.style.display = 'block';
+                    console.log('  ↳ Shader editor shown');
+                }
             }
         };
 
         // Add event listeners for all browser prefixes
+        console.log('📝 Registering fullscreen event listeners...');
         document.addEventListener('fullscreenchange', handleFullscreenChange);
         document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
         document.addEventListener('mozfullscreenchange', handleFullscreenChange);
         document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+        console.log('✅ Fullscreen event listeners registered');
     }
 
     async togglePlay() {
@@ -550,38 +593,69 @@ class Mesmer {
     }
 
     toggleFullscreen() {
+        console.log('🎬 toggleFullscreen() called');
+
         // Check if we're currently in fullscreen (cross-browser)
         const isFullscreen = !!(document.fullscreenElement ||
                                 document.webkitFullscreenElement ||
                                 document.mozFullScreenElement ||
                                 document.msFullscreenElement);
 
+        console.log('📊 Current fullscreen state:', {
+            isFullscreen: isFullscreen,
+            fullscreenElement: document.fullscreenElement,
+            webkitFullscreenElement: document.webkitFullscreenElement
+        });
+
         if (!isFullscreen) {
             // Enter fullscreen (try all browser prefixes)
             const elem = document.documentElement;
+            console.log('🔍 Attempting to enter fullscreen...');
+
             if (elem.requestFullscreen) {
-                elem.requestFullscreen();
+                console.log('  ↳ Using standard requestFullscreen()');
+                elem.requestFullscreen().then(() => {
+                    console.log('  ✅ requestFullscreen() promise resolved');
+                }).catch(err => {
+                    console.error('  ❌ requestFullscreen() failed:', err);
+                });
             } else if (elem.webkitRequestFullscreen) {
+                console.log('  ↳ Using webkit prefixed requestFullscreen()');
                 elem.webkitRequestFullscreen();
             } else if (elem.mozRequestFullScreen) {
+                console.log('  ↳ Using moz prefixed requestFullScreen()');
                 elem.mozRequestFullScreen();
             } else if (elem.msRequestFullscreen) {
+                console.log('  ↳ Using ms prefixed requestFullscreen()');
                 elem.msRequestFullscreen();
+            } else {
+                console.error('❌ No fullscreen API available!');
             }
-            console.log('🖥️ Requesting fullscreen...');
         } else {
             // Exit fullscreen (try all browser prefixes)
+            console.log('🔍 Attempting to exit fullscreen...');
+
             if (document.exitFullscreen) {
-                document.exitFullscreen();
+                console.log('  ↳ Using standard exitFullscreen()');
+                document.exitFullscreen().then(() => {
+                    console.log('  ✅ exitFullscreen() promise resolved');
+                }).catch(err => {
+                    console.error('  ❌ exitFullscreen() failed:', err);
+                });
             } else if (document.webkitExitFullscreen) {
+                console.log('  ↳ Using webkit prefixed exitFullscreen()');
                 document.webkitExitFullscreen();
             } else if (document.mozCancelFullScreen) {
+                console.log('  ↳ Using moz prefixed cancelFullScreen()');
                 document.mozCancelFullScreen();
             } else if (document.msExitFullscreen) {
+                console.log('  ↳ Using ms prefixed exitFullscreen()');
                 document.msExitFullscreen();
+            } else {
+                console.error('❌ No fullscreen exit API available!');
             }
-            console.log('🖥️ Exiting fullscreen...');
         }
+        console.log('⏳ Waiting for fullscreenchange event...');
         // Note: fullscreenchange event listener handles showing/hiding controls
     }
 

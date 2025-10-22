@@ -1427,6 +1427,101 @@
                     </div>
                 </div>
 
+                <!-- MPC Pad Controller -->
+                <div class="control-group mpc-controller">
+                    <h3>
+                        <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M4 6h4v4H4V6zm0 8h4v4H4v-4zm6-8h4v4h-4V6zm0 8h4v4h-4v-4zm6-8h4v4h-4V6zm0 8h4v4h-4v-4z"/>
+                        </svg>
+                        MPC Pads
+                    </h3>
+                    <div class="mpc-grid" id="mpcGrid">
+                        <!-- Row 1 -->
+                        <button class="mpc-pad" data-pad="0" data-type="drum" data-pattern="">
+                            <span class="pad-number">1</span>
+                            <span class="pad-label">Empty</span>
+                        </button>
+                        <button class="mpc-pad" data-pad="1" data-type="drum" data-pattern="">
+                            <span class="pad-number">2</span>
+                            <span class="pad-label">Empty</span>
+                        </button>
+                        <button class="mpc-pad" data-pad="2" data-type="drum" data-pattern="">
+                            <span class="pad-number">3</span>
+                            <span class="pad-label">Empty</span>
+                        </button>
+                        <button class="mpc-pad" data-pad="3" data-type="drum" data-pattern="">
+                            <span class="pad-number">4</span>
+                            <span class="pad-label">Empty</span>
+                        </button>
+
+                        <!-- Row 2 -->
+                        <button class="mpc-pad" data-pad="4" data-type="drum" data-pattern="">
+                            <span class="pad-number">5</span>
+                            <span class="pad-label">Empty</span>
+                        </button>
+                        <button class="mpc-pad" data-pad="5" data-type="drum" data-pattern="">
+                            <span class="pad-number">6</span>
+                            <span class="pad-label">Empty</span>
+                        </button>
+                        <button class="mpc-pad" data-pad="6" data-type="drum" data-pattern="">
+                            <span class="pad-number">7</span>
+                            <span class="pad-label">Empty</span>
+                        </button>
+                        <button class="mpc-pad" data-pad="7" data-type="drum" data-pattern="">
+                            <span class="pad-number">8</span>
+                            <span class="pad-label">Empty</span>
+                        </button>
+
+                        <!-- Row 3 - Synth Pads -->
+                        <button class="mpc-pad" data-pad="8" data-type="synth" data-pattern="">
+                            <span class="pad-number">9</span>
+                            <span class="pad-label">Empty</span>
+                        </button>
+                        <button class="mpc-pad" data-pad="9" data-type="synth" data-pattern="">
+                            <span class="pad-number">10</span>
+                            <span class="pad-label">Empty</span>
+                        </button>
+                        <button class="mpc-pad" data-pad="10" data-type="synth" data-pattern="">
+                            <span class="pad-number">11</span>
+                            <span class="pad-label">Empty</span>
+                        </button>
+                        <button class="mpc-pad" data-pad="11" data-type="synth" data-pattern="">
+                            <span class="pad-number">12</span>
+                            <span class="pad-label">Empty</span>
+                        </button>
+
+                        <!-- Row 4 - Synth Pads -->
+                        <button class="mpc-pad" data-pad="12" data-type="synth" data-pattern="">
+                            <span class="pad-number">13</span>
+                            <span class="pad-label">Empty</span>
+                        </button>
+                        <button class="mpc-pad" data-pad="13" data-type="synth" data-pattern="">
+                            <span class="pad-number">14</span>
+                            <span class="pad-label">Empty</span>
+                        </button>
+                        <button class="mpc-pad" data-pad="14" data-type="synth" data-pattern="">
+                            <span class="pad-number">15</span>
+                            <span class="pad-label">Empty</span>
+                        </button>
+                        <button class="mpc-pad" data-pad="15" data-type="synth" data-pattern="">
+                            <span class="pad-number">16</span>
+                            <span class="pad-label">Empty</span>
+                        </button>
+                    </div>
+
+                    <div class="mpc-assign-controls">
+                        <button id="mpcAssignMode" class="btn-secondary">
+                            <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                            </svg>
+                            Assign Mode
+                        </button>
+                        <div class="mpc-assign-hint" id="mpcAssignHint" style="display: none;">
+                            Click a pad, then select pattern to assign
+                        </div>
+                    </div>
+                </div>
+
                 <div class="control-group">
                     <h3>Visuals</h3>
                     <div class="toggle-group">
