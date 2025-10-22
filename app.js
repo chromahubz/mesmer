@@ -381,17 +381,41 @@ class Mesmer {
         // Make drum sequencer draggable
         this.setupDraggable();
 
+        // Layer opacity sliders
+        this.mainOpacity = 1.0;
+        this.toyOpacity = 0.8;
+
+        const mainOpacitySlider = document.getElementById('mainOpacity');
+        const mainOpacityValue = document.getElementById('mainOpacityValue');
+        mainOpacitySlider.addEventListener('input', (e) => {
+            this.mainOpacity = e.target.value / 100;
+            mainOpacityValue.textContent = e.target.value;
+            if (this.mainLayerEnabled) {
+                this.mainCanvas.style.opacity = this.mainOpacity;
+            }
+        });
+
+        const toyOpacitySlider = document.getElementById('toyOpacity');
+        const toyOpacityValue = document.getElementById('toyOpacityValue');
+        toyOpacitySlider.addEventListener('input', (e) => {
+            this.toyOpacity = e.target.value / 100;
+            toyOpacityValue.textContent = e.target.value;
+            if (this.toyLayerEnabled) {
+                this.toyCanvas.style.opacity = this.toyOpacity;
+            }
+        });
+
         // Layer toggles
         const mainToggle = document.getElementById('mainToggle');
         mainToggle.addEventListener('change', (e) => {
             this.mainLayerEnabled = e.target.checked;
-            this.mainCanvas.style.opacity = e.target.checked ? '1' : '0';
+            this.mainCanvas.style.opacity = e.target.checked ? this.mainOpacity : '0';
         });
 
         const toyToggle = document.getElementById('toyToggle');
         toyToggle.addEventListener('change', (e) => {
             this.toyLayerEnabled = e.target.checked;
-            this.toyCanvas.style.opacity = e.target.checked ? '0.8' : '0';
+            this.toyCanvas.style.opacity = e.target.checked ? this.toyOpacity : '0';
         });
 
         // Populate shader dropdowns dynamically
@@ -496,15 +520,18 @@ class Mesmer {
 
     toggleFullscreen() {
         const controls = document.getElementById('controls');
+        const debugOverlay = document.getElementById('debugOverlay');
 
         if (!document.fullscreenElement) {
             document.documentElement.requestFullscreen();
-            // Hide controls in fullscreen
+            // Hide controls and debug overlay in fullscreen
             controls.style.display = 'none';
+            if (debugOverlay) debugOverlay.style.display = 'none';
         } else {
             document.exitFullscreen();
-            // Show controls when exiting fullscreen
+            // Show controls and debug overlay when exiting fullscreen
             controls.style.display = 'block';
+            if (debugOverlay) debugOverlay.style.display = 'block';
         }
     }
 

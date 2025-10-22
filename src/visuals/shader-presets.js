@@ -232,6 +232,125 @@ void main() {
 
     fragColor = vec4(col, 1.0);
 }`
+        },
+        {
+            name: 'Vector Lines',
+            description: 'Flowing audio-reactive vector line patterns',
+            format: 'glsl',
+            code: `#version 300 es
+precision highp float;
+
+uniform vec2 u_resolution;
+uniform float u_time;
+uniform float u_audioLow;
+uniform float u_audioMid;
+uniform float u_audioHigh;
+
+out vec4 fragColor;
+
+float hash(float n) {
+    return fract(sin(n) * 43758.5453);
+}
+
+void main() {
+    vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution) / u_resolution.y;
+
+    vec3 col = vec3(0.0);
+    float t = u_time * 0.5;
+
+    // Multiple flowing lines
+    for (float i = 0.0; i < 12.0; i++) {
+        float offset = hash(i) * 6.28;
+        float speed = 0.5 + hash(i + 10.0) * 0.5;
+
+        // Line position
+        float y = sin(uv.x * 3.0 + t * speed + offset + u_audioLow * 2.0) * 0.3;
+        y += cos(uv.x * 5.0 - t * speed * 0.7 + offset + u_audioMid * 1.5) * 0.15;
+
+        // Audio amplitude affects line width
+        float width = 0.005 + u_audioHigh * 0.01;
+        float line = smoothstep(width, 0.0, abs(uv.y - y));
+
+        // Color varies per line
+        vec3 lineColor = vec3(
+            0.5 + 0.5 * sin(i * 0.5 + t + u_audioLow * 2.0),
+            0.5 + 0.5 * cos(i * 0.7 + t * 0.8 + u_audioMid * 2.0),
+            0.5 + 0.5 * sin(i * 0.3 + t * 0.6 + u_audioHigh * 2.0)
+        );
+
+        // Add glow
+        float glow = 0.02 / (abs(uv.y - y) + 0.02);
+        col += line * lineColor * 2.0;
+        col += glow * lineColor * 0.3 * (1.0 + u_audioMid);
+    }
+
+    fragColor = vec4(col, 1.0);
+}`
+        },
+        {
+            name: 'Colorful Swirl',
+            description: 'Hypnotic spiraling colors with audio reactivity',
+            format: 'glsl',
+            code: `#version 300 es
+precision highp float;
+
+uniform vec2 u_resolution;
+uniform float u_time;
+uniform float u_audioLow;
+uniform float u_audioMid;
+uniform float u_audioHigh;
+
+out vec4 fragColor;
+
+void main() {
+    vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution) / u_resolution.y;
+
+    float t = u_time * 0.3;
+    float audio = (u_audioLow + u_audioMid + u_audioHigh) / 3.0;
+
+    // Polar coordinates
+    float angle = atan(uv.y, uv.x);
+    float radius = length(uv);
+
+    // Spiral pattern
+    float spiral = angle + radius * 8.0 - t * 2.0;
+    spiral += sin(radius * 10.0 + t * 3.0 + u_audioLow * 3.0) * 0.5;
+
+    // Multiple color layers
+    vec3 col = vec3(0.0);
+
+    for (float i = 0.0; i < 5.0; i++) {
+        float phase = i * 1.5;
+        float wave = sin(spiral + phase + u_audioMid * 3.0);
+
+        // Color rotation with audio
+        vec3 color = vec3(
+            0.5 + 0.5 * sin(wave * 3.0 + t + i + u_audioLow * 2.0),
+            0.5 + 0.5 * cos(wave * 2.0 + t * 0.7 + i + u_audioMid * 2.0),
+            0.5 + 0.5 * sin(wave * 4.0 + t * 0.5 + i + u_audioHigh * 2.0)
+        );
+
+        // Intensity based on distance from center
+        float intensity = 1.0 / (1.0 + radius * 2.0);
+        intensity *= (0.5 + 0.5 * wave);
+        intensity *= (1.0 + audio * 0.5);
+
+        col += color * intensity * 0.4;
+    }
+
+    // Add radial glow
+    float glow = 0.1 / (radius + 0.1);
+    col += glow * vec3(
+        0.3 + u_audioLow * 0.5,
+        0.4 + u_audioMid * 0.5,
+        0.6 + u_audioHigh * 0.5
+    );
+
+    // Boost brightness
+    col = pow(col, vec3(0.9));
+
+    fragColor = vec4(col, 1.0);
+}`
         }
     ],
 
