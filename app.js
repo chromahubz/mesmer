@@ -459,20 +459,35 @@ class Mesmer {
         fullscreenBtn.addEventListener('click', () => this.toggleFullscreen());
 
         // Listen for fullscreen changes (including ESC key exit)
-        document.addEventListener('fullscreenchange', () => {
+        // Support all browser prefixes
+        const handleFullscreenChange = () => {
             const controls = document.getElementById('controls');
             const debugOverlay = document.getElementById('debugOverlay');
 
-            if (document.fullscreenElement) {
+            // Check if we're in fullscreen (works across browsers)
+            const isFullscreen = !!(document.fullscreenElement ||
+                                    document.webkitFullscreenElement ||
+                                    document.mozFullScreenElement ||
+                                    document.msFullscreenElement);
+
+            if (isFullscreen) {
                 // Entering fullscreen - hide controls
+                console.log('🖥️ Entering fullscreen - hiding controls');
                 controls.style.display = 'none';
                 if (debugOverlay) debugOverlay.style.display = 'none';
             } else {
                 // Exiting fullscreen - show controls
+                console.log('🖥️ Exiting fullscreen - showing controls');
                 controls.style.display = 'block';
                 if (debugOverlay) debugOverlay.style.display = 'block';
             }
-        });
+        };
+
+        // Add event listeners for all browser prefixes
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+        document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+        document.addEventListener('MSFullscreenChange', handleFullscreenChange);
     }
 
     async togglePlay() {
