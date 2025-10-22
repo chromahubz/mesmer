@@ -123,7 +123,8 @@ class DirtSampleEngine {
             const maxSamples = Math.min(sampleFiles.length, 12);
 
             for (let i = 0; i < maxSamples; i++) {
-                urls[i] = basePath + sampleFiles[i];
+                // URL encode filename to handle spaces and special characters (#, etc.)
+                urls[i] = basePath + encodeURIComponent(sampleFiles[i]);
             }
 
             // Dispose old player if exists
