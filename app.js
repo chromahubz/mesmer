@@ -971,6 +971,11 @@ class Mesmer {
                 this.synthSeqState.isDragging = false;
                 console.log('🖱️ Synth Sequencer drag ended');
             }
+            if (this.synthSeqState.isDraggingNote) {
+                this.synthSeqState.isDraggingNote = false;
+                this.synthSeqState.dragStartCell = null;
+                console.log('🎵 Note duration drag ended');
+            }
         });
 
         // Track selector buttons
@@ -986,6 +991,10 @@ class Mesmer {
         });
 
         // Control buttons
+        document.getElementById('synthSeqPlay').addEventListener('click', () => {
+            this.toggleSequencerPlayback();
+        });
+
         document.getElementById('synthSeqClear').addEventListener('click', () => {
             this.synthSeqState.patterns[this.synthSeqState.currentTrack] = [];
             this.renderPianoRoll();
@@ -1000,6 +1009,27 @@ class Mesmer {
         document.getElementById('synthSeqSave').addEventListener('click', () => {
             this.saveCurrentPattern();
         });
+
+        // Load preset dropdown
+        const presetLoadSelect = document.getElementById('synthSeqPresetLoad');
+        presetLoadSelect.addEventListener('change', (e) => {
+            if (e.target.value) {
+                this.loadPattern(e.target.value);
+            }
+        });
+
+        // Delete pattern button
+        document.getElementById('synthSeqDelete').addEventListener('click', () => {
+            const selectedPreset = presetLoadSelect.value;
+            if (selectedPreset) {
+                this.deletePattern(selectedPreset);
+            } else {
+                alert('⚠️ Select a pattern to delete first');
+            }
+        });
+
+        // Populate presets on init
+        this.populatePatternPresets();
 
         // Settings
         document.getElementById('synthSeqLength').addEventListener('change', (e) => {
@@ -1096,9 +1126,36 @@ class Mesmer {
                     }
                 }
 
-                // Toggle note on click
-                cell.addEventListener('click', () => {
-                    this.toggleNote(step, note);
+                // Toggle note on click (or start dragging to extend)
+                cell.addEventListener('mousedown', (e) => {
+                    if (e.button !== 0) return; // Only left click
+
+                    const isActive = cell.classList.contains('active');
+
+                    if (isActive && e.shiftKey) {
+                        // Shift+drag to extend duration
+                        this.synthSeqState.isDraggingNote = true;
+                        this.synthSeqState.dragStartCell = { step, note };
+                        cell.style.cursor = 'ew-resize';
+                        e.preventDefault();
+                    } else {
+                        // Regular click toggles note
+                        this.toggleNote(step, note);
+                    }
+                });
+
+                // Hover effect for extending
+                cell.addEventListener('mouseenter', () => {
+                    if (this.synthSeqState.isDraggingNote) {
+                        const startStep = this.synthSeqState.dragStartCell.step;
+                        const startNote = this.synthSeqState.dragStartCell.note;
+
+                        if (note === startNote && step >= startStep) {
+                            // Update duration
+                            const duration = step - startStep + 1;
+                            this.updateNoteDuration(startNote, startStep, duration);
+                        }
+                    }
                 });
 
                 column.appendChild(cell);
@@ -1150,6 +1207,25 @@ class Mesmer {
         // Update display
         this.renderPianoRoll();
         console.log('🎵 Toggled note', note, 'at step', step);
+    }
+
+    updateNoteDuration(note, step, duration) {
+        const track = this.synthSeqState.currentTrack;
+        let pattern = this.synthSeqState.patterns[track];
+
+        // Find step in pattern
+        const stepData = pattern.find(p => p.step === step);
+        if (!stepData) return;
+
+        // Find note
+        const noteData = stepData.notes.find(n => n.note === note);
+        if (!noteData) return;
+
+        // Update duration (max 4 steps)
+        noteData.duration = Math.min(duration, 4);
+
+        // Re-render to show new duration
+        this.renderPianoRoll();
     }
 
     randomizePattern() {
@@ -1208,11 +1284,121 @@ class Mesmer {
             rootNote: this.synthSeqState.rootNote
         };
 
-        localStorage.setItem(`synthPattern_${track}_${name}`, JSON.stringify(saved));
+        const key = `synthPattern_${track}_${name}`;
+        localStorage.setItem(key, JSON.stringify(saved));
         document.getElementById('synthSeqPatternName').innerHTML = `Current Pattern: <strong>${name}</strong>`;
+
+        // Refresh presets dropdown
+        this.populatePatternPresets();
 
         console.log('💾 Saved pattern:', name);
         alert(`✅ Pattern "${name}" saved!`);
+    }
+
+    populatePatternPresets() {
+        const select = document.getElementById('synthSeqPresetLoad');
+        if (!select) return;
+
+        // Clear current options except first
+        select.innerHTML = '<option value="">-- Select Pattern --</option>';
+
+        // Get all saved patterns from localStorage
+        const patterns = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith('synthPattern_')) {
+                try {
+                    const data = JSON.parse(localStorage.getItem(key));
+                    patterns.push({ key, data });
+                } catch (e) {
+                    console.warn('Failed to parse pattern:', key);
+                }
+            }
+        }
+
+        // Group by track
+        const grouped = {
+            pad: [],
+            lead: [],
+            bass: [],
+            arp: []
+        };
+
+        patterns.forEach(({ key, data }) => {
+            if (grouped[data.track]) {
+                grouped[data.track].push({ key, name: data.name });
+            }
+        });
+
+        // Add options grouped by track
+        ['pad', 'lead', 'bass', 'arp'].forEach(track => {
+            if (grouped[track].length > 0) {
+                const optgroup = document.createElement('optgroup');
+                optgroup.label = track.charAt(0).toUpperCase() + track.slice(1);
+
+                grouped[track].forEach(({ key, name }) => {
+                    const option = document.createElement('option');
+                    option.value = key;
+                    option.textContent = name;
+                    optgroup.appendChild(option);
+                });
+
+                select.appendChild(optgroup);
+            }
+        });
+
+        console.log('📋 Populated', patterns.length, 'pattern presets');
+    }
+
+    loadPattern(key) {
+        try {
+            const saved = JSON.parse(localStorage.getItem(key));
+            if (!saved) {
+                alert('⚠️ Pattern not found');
+                return;
+            }
+
+            // Load pattern data
+            this.synthSeqState.patterns[saved.track] = saved.pattern;
+            this.synthSeqState.length = saved.length || 16;
+            this.synthSeqState.scale = saved.scale || 'major';
+            this.synthSeqState.octave = saved.octave || 3;
+            this.synthSeqState.rootNote = saved.rootNote || 'C';
+
+            // Switch to the pattern's track
+            this.synthSeqState.currentTrack = saved.track;
+
+            // Update UI
+            document.querySelectorAll('.synth-track-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.track === saved.track);
+            });
+
+            document.getElementById('synthSeqLength').value = this.synthSeqState.length;
+            document.getElementById('synthSeqScale').value = this.synthSeqState.scale;
+            document.getElementById('synthSeqOctave').value = this.synthSeqState.octave;
+            document.getElementById('synthSeqPatternName').innerHTML = `Current Pattern: <strong>${saved.name}</strong>`;
+
+            this.updateKeyDisplay();
+            this.renderPianoRoll();
+
+            console.log('📂 Loaded pattern:', saved.name);
+        } catch (e) {
+            console.error('Failed to load pattern:', e);
+            alert('❌ Failed to load pattern');
+        }
+    }
+
+    deletePattern(key) {
+        const saved = JSON.parse(localStorage.getItem(key));
+        if (!saved) return;
+
+        if (confirm(`Delete pattern "${saved.name}"?`)) {
+            localStorage.removeItem(key);
+            this.populatePatternPresets();
+            document.getElementById('synthSeqPresetLoad').value = '';
+            console.log('🗑️ Deleted pattern:', saved.name);
+            alert(`✅ Pattern "${saved.name}" deleted`);
+        }
     }
 
     updateKeyDisplay() {
@@ -1226,6 +1412,107 @@ class Mesmer {
         const scaleName = scale.charAt(0).toUpperCase() + scale.slice(1);
 
         keyDisplay.innerHTML = `Key: <strong>${root} ${scaleName}</strong>`;
+    }
+
+    async toggleSequencerPlayback() {
+        const playBtn = document.getElementById('synthSeqPlay');
+        const track = this.synthSeqState.currentTrack;
+        const pattern = this.synthSeqState.patterns[track];
+
+        if (this.synthSeqState.isPlaying) {
+            // Stop playback
+            if (this.sequencerPlayback) {
+                this.sequencerPlayback.stop();
+                this.sequencerPlayback.dispose();
+                this.sequencerPlayback = null;
+            }
+
+            if (typeof Tone !== 'undefined') {
+                Tone.Transport.stop();
+            }
+
+            this.synthSeqState.isPlaying = false;
+            playBtn.innerHTML = `
+                <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M8 5v14l11-7z"/>
+                </svg>
+                Play
+            `;
+            console.log('⏹️ Stopped sequencer playback');
+        } else {
+            // Start playback
+            if (pattern.length === 0) {
+                alert('⚠️ Pattern is empty! Add some notes first or click Random.');
+                return;
+            }
+
+            // Ensure Tone.js is started
+            if (typeof Tone !== 'undefined' && Tone.context.state !== 'running') {
+                await Tone.start();
+                console.log('🎵 Started Tone.js context');
+            }
+
+            // Create simple synth for playback
+            if (!this.previewSynth) {
+                this.previewSynth = new Tone.PolySynth(Tone.Synth, {
+                    oscillator: { type: 'triangle' },
+                    envelope: {
+                        attack: 0.05,
+                        decay: 0.2,
+                        sustain: 0.5,
+                        release: 0.8
+                    }
+                }).toDestination();
+            }
+
+            // Create sequence
+            const steps = Array.from({ length: this.synthSeqState.length }, (_, i) => i);
+
+            this.sequencerPlayback = new Tone.Sequence((time, step) => {
+                // Find notes for this step
+                const stepData = pattern.find(p => p.step === step);
+
+                if (stepData && stepData.notes.length > 0) {
+                    stepData.notes.forEach(noteData => {
+                        const duration = `${noteData.duration * 0.25}n`; // Convert to Tone.js notation
+                        this.previewSynth.triggerAttackRelease(
+                            noteData.note,
+                            duration,
+                            time,
+                            noteData.velocity
+                        );
+                    });
+                }
+
+                // Visual feedback
+                this.synthSeqState.currentStep = step;
+                this.highlightCurrentStep(step);
+            }, steps, '16n');
+
+            this.sequencerPlayback.start(0);
+            Tone.Transport.start();
+
+            this.synthSeqState.isPlaying = true;
+            playBtn.innerHTML = `
+                <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
+                </svg>
+                Stop
+            `;
+            console.log('▶️ Started sequencer playback');
+        }
+    }
+
+    highlightCurrentStep(step) {
+        // Highlight the current step column
+        const columns = document.querySelectorAll('.note-column');
+        columns.forEach((col, index) => {
+            if (index === step) {
+                col.style.background = 'rgba(139, 92, 246, 0.2)';
+            } else {
+                col.style.background = '';
+            }
+        });
     }
 
     exportPatternMidi() {
