@@ -709,7 +709,7 @@ class Mesmer {
 
         // Pad click handlers
         allPads.forEach(pad => {
-            pad.addEventListener('click', () => {
+            pad.addEventListener('click', async () => {
                 const padIndex = parseInt(pad.dataset.pad);
                 const padType = pad.dataset.type;
 
@@ -741,7 +741,7 @@ class Mesmer {
                     const assignment = this.mpcState.pads[padIndex];
                     if (assignment && assignment.pattern) {
                         console.log('🎹 Triggering pad:', padIndex, assignment);
-                        this.triggerPad(padIndex, assignment);
+                        await this.triggerPad(padIndex, assignment);
 
                         // Visual feedback
                         pad.classList.add('playing');
@@ -790,7 +790,15 @@ class Mesmer {
         console.log(`✓ Assigned ${type} pattern "${pattern}" to pad ${padIndex}`);
     }
 
-    triggerPad(padIndex, assignment) {
+    async triggerPad(padIndex, assignment) {
+        // Check if music is playing - if not, auto-start it
+        if (!this.isPlaying) {
+            console.log('⚠️ Music not playing - auto-starting...');
+            await this.togglePlay(); // Start playback
+            // Wait a moment for audio to initialize
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+
         if (assignment.type === 'drum') {
             // Switch drum pattern
             console.log('🥁 Switching to drum pattern:', assignment.pattern);
