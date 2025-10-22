@@ -868,6 +868,7 @@ class Mesmer {
         this.synthSeqState = {
             currentTrack: 'pad', // pad, lead, bass, arp
             patterns: {
+                // Each pattern: [{ step: 0, notes: [{ note: 'C3', duration: 1, velocity: 0.7 }] }]
                 pad: [],
                 lead: [],
                 bass: [],
@@ -876,11 +877,16 @@ class Mesmer {
             length: 16,
             scale: 'major',
             octave: 3,
+            rootNote: 'C', // Root note of the key
             velocity: 0.7,
             isDragging: false,
             dragOffset: { x: 0, y: 0 },
             isPlaying: false,
-            currentStep: 0
+            currentStep: 0,
+            // Note length dragging
+            isDraggingNote: false,
+            dragStartCell: null,
+            dragCurrentNote: null
         };
 
         // Scale definitions
@@ -902,6 +908,7 @@ class Mesmer {
                 panel.style.transform = 'translate(-50%, -50%)';
                 panel.style.zIndex = '9998';
                 this.bringPanelToFront(panel);
+                this.updateKeyDisplay();
                 this.renderPianoRoll();
                 console.log('🎹 Synth Sequencer shown');
             } else {
@@ -1003,6 +1010,7 @@ class Mesmer {
 
         document.getElementById('synthSeqScale').addEventListener('change', (e) => {
             this.synthSeqState.scale = e.target.value;
+            this.updateKeyDisplay();
             this.renderPianoRoll();
             console.log('🎼 Scale changed to', this.synthSeqState.scale);
         });
@@ -1070,8 +1078,22 @@ class Mesmer {
 
                 // Check if this note is active in the pattern
                 const stepPattern = pattern.find(p => p.step === step);
-                if (stepPattern && stepPattern.notes.includes(note)) {
-                    cell.classList.add('active');
+                if (stepPattern) {
+                    const noteData = stepPattern.notes.find(n => n.note === note);
+                    if (noteData) {
+                        cell.classList.add('active');
+                        // Show duration visually if > 1
+                        if (noteData.duration > 1) {
+                            cell.style.background = `linear-gradient(90deg,
+                                rgba(139, 92, 246, 0.9) 0%,
+                                rgba(139, 92, 246, 0.9) ${(noteData.duration / 4) * 100}%,
+                                rgba(139, 92, 246, 0.4) ${(noteData.duration / 4) * 100}%,
+                                rgba(139, 92, 246, 0.4) 100%)`;
+                        }
+                        // Store note data for dragging
+                        cell.dataset.duration = noteData.duration;
+                        cell.dataset.velocity = noteData.velocity;
+                    }
                 }
 
                 // Toggle note on click
@@ -1097,13 +1119,24 @@ class Mesmer {
 
         if (stepIndex === -1) {
             // Step doesn't exist, create it with this note
-            pattern.push({ step, notes: [note] });
+            pattern.push({
+                step,
+                notes: [{
+                    note: note,
+                    duration: 1,
+                    velocity: this.synthSeqState.velocity
+                }]
+            });
         } else {
-            // Step exists, toggle note
-            const noteIndex = pattern[stepIndex].notes.indexOf(note);
+            // Step exists, find note
+            const noteIndex = pattern[stepIndex].notes.findIndex(n => n.note === note);
             if (noteIndex === -1) {
                 // Add note (polyphonic)
-                pattern[stepIndex].notes.push(note);
+                pattern[stepIndex].notes.push({
+                    note: note,
+                    duration: 1,
+                    velocity: this.synthSeqState.velocity
+                });
             } else {
                 // Remove note
                 pattern[stepIndex].notes.splice(noteIndex, 1);
@@ -1140,8 +1173,12 @@ class Mesmer {
                 const stepNotes = [];
                 for (let i = 0; i < noteCount; i++) {
                     const randomNote = notes[Math.floor(Math.random() * notes.length)];
-                    if (!stepNotes.includes(randomNote)) {
-                        stepNotes.push(randomNote);
+                    if (!stepNotes.find(n => n.note === randomNote)) {
+                        stepNotes.push({
+                            note: randomNote,
+                            duration: Math.random() > 0.7 ? 2 : 1, // 30% chance of longer notes
+                            velocity: 0.5 + Math.random() * 0.5 // Random velocity 0.5-1.0
+                        });
                     }
                 }
                 pattern.push({ step, notes: stepNotes });
@@ -1167,7 +1204,8 @@ class Mesmer {
             pattern,
             length: this.synthSeqState.length,
             scale: this.synthSeqState.scale,
-            octave: this.synthSeqState.octave
+            octave: this.synthSeqState.octave,
+            rootNote: this.synthSeqState.rootNote
         };
 
         localStorage.setItem(`synthPattern_${track}_${name}`, JSON.stringify(saved));
@@ -1175,6 +1213,19 @@ class Mesmer {
 
         console.log('💾 Saved pattern:', name);
         alert(`✅ Pattern "${name}" saved!`);
+    }
+
+    updateKeyDisplay() {
+        const keyDisplay = document.getElementById('synthSeqKeyDisplay');
+        if (!keyDisplay) return;
+
+        const root = this.synthSeqState.rootNote;
+        const scale = this.synthSeqState.scale;
+
+        // Capitalize scale name
+        const scaleName = scale.charAt(0).toUpperCase() + scale.slice(1);
+
+        keyDisplay.innerHTML = `Key: <strong>${root} ${scaleName}</strong>`;
     }
 
     exportPatternMidi() {
