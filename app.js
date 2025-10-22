@@ -879,6 +879,7 @@ class Mesmer {
             octave: 3,
             rootNote: 'C', // Root note of the key
             velocity: 0.7,
+            engine: 'tonejs', // tonejs, wad, dirt
             isDragging: false,
             dragOffset: { x: 0, y: 0 },
             isPlaying: false,
@@ -1032,6 +1033,18 @@ class Mesmer {
         this.populatePatternPresets();
 
         // Settings
+        document.getElementById('synthSeqEngine').addEventListener('change', (e) => {
+            this.synthSeqState.engine = e.target.value;
+            console.log('🎛️ Sequencer engine changed to', this.synthSeqState.engine);
+            // Reset synths when engine changes
+            if (this.previewSynths) {
+                Object.values(this.previewSynths).forEach(synth => {
+                    if (synth && synth.dispose) synth.dispose();
+                });
+                this.previewSynths = null;
+            }
+        });
+
         document.getElementById('synthSeqLength').addEventListener('change', (e) => {
             this.synthSeqState.length = parseInt(e.target.value);
             this.renderPianoRoll();
@@ -1416,15 +1429,17 @@ class Mesmer {
 
     async toggleSequencerPlayback() {
         const playBtn = document.getElementById('synthSeqPlay');
-        const track = this.synthSeqState.currentTrack;
-        const pattern = this.synthSeqState.patterns[track];
 
         if (this.synthSeqState.isPlaying) {
             // Stop playback
-            if (this.sequencerPlayback) {
-                this.sequencerPlayback.stop();
-                this.sequencerPlayback.dispose();
-                this.sequencerPlayback = null;
+            if (this.sequencerPlaybacks) {
+                Object.values(this.sequencerPlaybacks).forEach(seq => {
+                    if (seq) {
+                        seq.stop();
+                        seq.dispose();
+                    }
+                });
+                this.sequencerPlaybacks = null;
             }
 
             if (typeof Tone !== 'undefined') {
@@ -1440,9 +1455,13 @@ class Mesmer {
             `;
             console.log('⏹️ Stopped sequencer playback');
         } else {
-            // Start playback
-            if (pattern.length === 0) {
-                alert('⚠️ Pattern is empty! Add some notes first or click Random.');
+            // Check if at least one track has notes
+            const hasNotes = ['pad', 'lead', 'bass', 'arp'].some(track =>
+                this.synthSeqState.patterns[track].length > 0
+            );
+
+            if (!hasNotes) {
+                alert('⚠️ All patterns are empty! Add some notes first or click Random.');
                 return;
             }
 
@@ -1452,44 +1471,98 @@ class Mesmer {
                 console.log('🎵 Started Tone.js context');
             }
 
-            // Create simple synth for playback
-            if (!this.previewSynth) {
-                this.previewSynth = new Tone.PolySynth(Tone.Synth, {
-                    oscillator: { type: 'triangle' },
-                    envelope: {
-                        attack: 0.05,
-                        decay: 0.2,
-                        sustain: 0.5,
-                        release: 0.8
-                    }
-                }).toDestination();
-            }
+            // Create synths for each track type if they don't exist
+            const engine = this.synthSeqState.engine;
 
-            // Create sequence
-            const steps = Array.from({ length: this.synthSeqState.length }, (_, i) => i);
-
-            this.sequencerPlayback = new Tone.Sequence((time, step) => {
-                // Find notes for this step
-                const stepData = pattern.find(p => p.step === step);
-
-                if (stepData && stepData.notes.length > 0) {
-                    stepData.notes.forEach(noteData => {
-                        const duration = `${noteData.duration * 0.25}n`; // Convert to Tone.js notation
-                        this.previewSynth.triggerAttackRelease(
-                            noteData.note,
-                            duration,
-                            time,
-                            noteData.velocity
-                        );
+            if (!this.previewSynths || this.previewEngine !== engine) {
+                // Dispose old synths if changing engine
+                if (this.previewSynths) {
+                    Object.values(this.previewSynths).forEach(synth => {
+                        if (synth && synth.dispose) synth.dispose();
                     });
                 }
 
-                // Visual feedback
-                this.synthSeqState.currentStep = step;
-                this.highlightCurrentStep(step);
-            }, steps, '16n');
+                if (engine === 'tonejs') {
+                    this.previewSynths = {
+                        pad: new Tone.PolySynth(Tone.Synth, {
+                            oscillator: { type: 'sine' },
+                            envelope: { attack: 0.8, decay: 0.2, sustain: 0.5, release: 1.5 },
+                            volume: -6
+                        }).toDestination(),
+                        lead: new Tone.PolySynth(Tone.Synth, {
+                            oscillator: { type: 'sawtooth' },
+                            envelope: { attack: 0.05, decay: 0.2, sustain: 0.4, release: 0.4 },
+                            volume: -8
+                        }).toDestination(),
+                        bass: new Tone.PolySynth(Tone.Synth, {
+                            oscillator: { type: 'triangle' },
+                            envelope: { attack: 0.02, decay: 0.3, sustain: 0.6, release: 0.5 },
+                            volume: -3
+                        }).toDestination(),
+                        arp: new Tone.PolySynth(Tone.Synth, {
+                            oscillator: { type: 'square' },
+                            envelope: { attack: 0.01, decay: 0.1, sustain: 0.2, release: 0.2 },
+                            volume: -10
+                        }).toDestination()
+                    };
+                    console.log('🎹 Created Tone.js preview synths');
+                } else if (engine === 'wad') {
+                    // WAD synths - use the already initialized WAD engine
+                    this.previewSynths = { pad: 'wad', lead: 'wad', bass: 'wad', arp: 'wad' };
+                    console.log('🎹 Using WAD synth engine');
+                } else if (engine === 'dirt') {
+                    // Dirt samples - use the already initialized Dirt engine
+                    this.previewSynths = { pad: 'dirt', lead: 'dirt', bass: 'dirt', arp: 'dirt' };
+                    console.log('🎹 Using Dirt sample engine');
+                }
 
-            this.sequencerPlayback.start(0);
+                this.previewEngine = engine;
+            }
+
+            // Create sequences for ALL tracks
+            const steps = Array.from({ length: this.synthSeqState.length }, (_, i) => i);
+            this.sequencerPlaybacks = {};
+
+            ['pad', 'lead', 'bass', 'arp'].forEach(track => {
+                const pattern = this.synthSeqState.patterns[track];
+
+                this.sequencerPlaybacks[track] = new Tone.Sequence((time, step) => {
+                    // Find notes for this step
+                    const stepData = pattern.find(p => p.step === step);
+
+                    if (stepData && stepData.notes.length > 0) {
+                        stepData.notes.forEach(noteData => {
+                            const duration = `${noteData.duration * 0.25}n`;
+                            const durationSeconds = noteData.duration * 0.25; // For WAD/Dirt
+
+                            // Play using selected engine
+                            if (engine === 'tonejs') {
+                                this.previewSynths[track].triggerAttackRelease(
+                                    noteData.note,
+                                    duration,
+                                    time,
+                                    noteData.velocity
+                                );
+                            } else if (engine === 'wad' && this.wadEngine) {
+                                // Use WAD engine
+                                this.wadEngine.play(track, noteData.note, durationSeconds, noteData.velocity);
+                            } else if (engine === 'dirt' && this.dirtEngine) {
+                                // Use Dirt samples
+                                this.dirtEngine.play(track, noteData.note, durationSeconds, noteData.velocity);
+                            }
+                        });
+                    }
+
+                    // Visual feedback (only from one track to avoid conflicts)
+                    if (track === this.synthSeqState.currentTrack) {
+                        this.synthSeqState.currentStep = step;
+                        this.highlightCurrentStep(step);
+                    }
+                }, steps, '16n');
+
+                this.sequencerPlaybacks[track].start(0);
+            });
+
             Tone.Transport.start();
 
             this.synthSeqState.isPlaying = true;
@@ -1499,7 +1572,7 @@ class Mesmer {
                 </svg>
                 Stop
             `;
-            console.log('▶️ Started sequencer playback');
+            console.log('▶️ Started ALL 4 tracks playback (Pad + Lead + Bass + Arp)');
         }
     }
 
