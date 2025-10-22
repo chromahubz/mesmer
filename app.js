@@ -1011,6 +1011,14 @@ class Mesmer {
             this.saveCurrentPattern();
         });
 
+        document.getElementById('synthSeqCopy').addEventListener('click', () => {
+            this.copyPattern();
+        });
+
+        document.getElementById('synthSeqPaste').addEventListener('click', () => {
+            this.pastePattern();
+        });
+
         // Load preset dropdown
         const presetLoadSelect = document.getElementById('synthSeqPresetLoad');
         presetLoadSelect.addEventListener('change', (e) => {
@@ -1412,6 +1420,58 @@ class Mesmer {
             console.log('🗑️ Deleted pattern:', saved.name);
             alert(`✅ Pattern "${saved.name}" deleted`);
         }
+    }
+
+    copyPattern() {
+        const track = this.synthSeqState.currentTrack;
+        const pattern = this.synthSeqState.patterns[track];
+
+        if (pattern.length === 0) {
+            alert('⚠️ Pattern is empty! Nothing to copy.');
+            return;
+        }
+
+        // Deep clone the pattern to clipboard
+        this.patternClipboard = {
+            track,
+            pattern: JSON.parse(JSON.stringify(pattern)),
+            length: this.synthSeqState.length,
+            scale: this.synthSeqState.scale,
+            octave: this.synthSeqState.octave
+        };
+
+        console.log('📋 Copied pattern from', track, '(' + pattern.length + ' steps)');
+        alert(`✅ Copied ${track} pattern to clipboard!`);
+    }
+
+    pastePattern() {
+        if (!this.patternClipboard) {
+            alert('⚠️ Clipboard is empty! Copy a pattern first.');
+            return;
+        }
+
+        const track = this.synthSeqState.currentTrack;
+
+        // Deep clone from clipboard
+        this.synthSeqState.patterns[track] = JSON.parse(JSON.stringify(this.patternClipboard.pattern));
+
+        // Optionally update settings
+        if (confirm('Apply copied pattern settings (length, scale, octave)?')) {
+            this.synthSeqState.length = this.patternClipboard.length;
+            this.synthSeqState.scale = this.patternClipboard.scale;
+            this.synthSeqState.octave = this.patternClipboard.octave;
+
+            document.getElementById('synthSeqLength').value = this.synthSeqState.length;
+            document.getElementById('synthSeqScale').value = this.synthSeqState.scale;
+            document.getElementById('synthSeqOctave').value = this.synthSeqState.octave;
+
+            this.updateKeyDisplay();
+        }
+
+        this.renderPianoRoll();
+
+        console.log('📋 Pasted pattern to', track);
+        alert(`✅ Pasted pattern from ${this.patternClipboard.track} to ${track}!`);
     }
 
     updateKeyDisplay() {
