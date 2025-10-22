@@ -534,6 +534,12 @@ class Mesmer {
 
         // MPC Pad Controller
         this.setupMPCPads();
+
+        // Synth Sequencer
+        this.setupSynthSequencer();
+
+        // Mode Toggle
+        this.setupModeToggle();
     }
 
     setupMPCPads() {
@@ -848,6 +854,391 @@ class Mesmer {
             .split(/[-_]/)
             .map(word => word.charAt(0).toUpperCase() + word.slice(1))
             .join(' ');
+    }
+
+    setupSynthSequencer() {
+        console.log('🎹 Setting up Synth Sequencer...');
+
+        const panel = document.getElementById('synthSequencer');
+        const toggleBtn = document.getElementById('synthSeqToggleBtn');
+        const closeBtn = document.getElementById('synthSeqCloseBtn');
+        const header = document.getElementById('synthSeqHeader');
+
+        // Synth sequencer state
+        this.synthSeqState = {
+            currentTrack: 'pad', // pad, lead, bass, arp
+            patterns: {
+                pad: [],
+                lead: [],
+                bass: [],
+                arp: []
+            },
+            length: 16,
+            scale: 'major',
+            octave: 3,
+            velocity: 0.7,
+            isDragging: false,
+            dragOffset: { x: 0, y: 0 },
+            isPlaying: false,
+            currentStep: 0
+        };
+
+        // Scale definitions
+        this.scales = {
+            chromatic: ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'],
+            major: ['C', 'D', 'E', 'F', 'G', 'A', 'B'],
+            minor: ['C', 'D', 'Eb', 'F', 'G', 'Ab', 'Bb'],
+            pentatonic: ['C', 'D', 'E', 'G', 'A'],
+            blues: ['C', 'Eb', 'F', 'Gb', 'G', 'Bb']
+        };
+
+        // Toggle panel visibility
+        toggleBtn.addEventListener('click', () => {
+            const isHidden = panel.style.display === 'none' || !panel.style.display;
+            if (isHidden) {
+                panel.style.display = 'block';
+                panel.style.left = '50%';
+                panel.style.top = '50%';
+                panel.style.transform = 'translate(-50%, -50%)';
+                panel.style.zIndex = '9998';
+                this.bringPanelToFront(panel);
+                this.renderPianoRoll();
+                console.log('🎹 Synth Sequencer shown');
+            } else {
+                panel.style.display = 'none';
+                console.log('🎹 Synth Sequencer hidden');
+            }
+        });
+
+        // Close button
+        closeBtn.addEventListener('click', () => {
+            panel.style.display = 'none';
+            console.log('🎹 Synth Sequencer closed');
+        });
+
+        // Bring to front when clicked
+        panel.addEventListener('mousedown', () => {
+            this.bringPanelToFront(panel);
+        });
+
+        // Make panel draggable
+        header.addEventListener('mousedown', (e) => {
+            if (e.target.closest('.synth-seq-close')) return;
+
+            // Convert transform to pixels if needed
+            if (panel.style.transform.includes('translate')) {
+                const rect = panel.getBoundingClientRect();
+                panel.style.left = `${rect.left}px`;
+                panel.style.top = `${rect.top}px`;
+                panel.style.transform = 'none';
+            }
+
+            this.synthSeqState.isDragging = true;
+            const rect = panel.getBoundingClientRect();
+            this.synthSeqState.dragOffset = {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top
+            };
+
+            e.preventDefault();
+            console.log('🖱️ Synth Sequencer drag started');
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!this.synthSeqState.isDragging) return;
+
+            requestAnimationFrame(() => {
+                const x = e.clientX - this.synthSeqState.dragOffset.x;
+                const y = e.clientY - this.synthSeqState.dragOffset.y;
+
+                const maxX = window.innerWidth - panel.offsetWidth;
+                const maxY = window.innerHeight - panel.offsetHeight;
+
+                panel.style.left = `${Math.max(0, Math.min(x, maxX))}px`;
+                panel.style.top = `${Math.max(0, Math.min(y, maxY))}px`;
+            });
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (this.synthSeqState.isDragging) {
+                this.synthSeqState.isDragging = false;
+                console.log('🖱️ Synth Sequencer drag ended');
+            }
+        });
+
+        // Track selector buttons
+        const trackBtns = document.querySelectorAll('.synth-track-btn');
+        trackBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                trackBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.synthSeqState.currentTrack = btn.dataset.track;
+                this.renderPianoRoll();
+                console.log('🎹 Switched to track:', this.synthSeqState.currentTrack);
+            });
+        });
+
+        // Control buttons
+        document.getElementById('synthSeqClear').addEventListener('click', () => {
+            this.synthSeqState.patterns[this.synthSeqState.currentTrack] = [];
+            this.renderPianoRoll();
+            console.log('🗑️ Cleared pattern for', this.synthSeqState.currentTrack);
+        });
+
+        document.getElementById('synthSeqRandomize').addEventListener('click', () => {
+            this.randomizePattern();
+            console.log('🎲 Randomized pattern for', this.synthSeqState.currentTrack);
+        });
+
+        document.getElementById('synthSeqSave').addEventListener('click', () => {
+            this.saveCurrentPattern();
+        });
+
+        // Settings
+        document.getElementById('synthSeqLength').addEventListener('change', (e) => {
+            this.synthSeqState.length = parseInt(e.target.value);
+            this.renderPianoRoll();
+            console.log('📏 Pattern length changed to', this.synthSeqState.length);
+        });
+
+        document.getElementById('synthSeqScale').addEventListener('change', (e) => {
+            this.synthSeqState.scale = e.target.value;
+            this.renderPianoRoll();
+            console.log('🎼 Scale changed to', this.synthSeqState.scale);
+        });
+
+        document.getElementById('synthSeqOctave').addEventListener('change', (e) => {
+            this.synthSeqState.octave = parseInt(e.target.value);
+            this.renderPianoRoll();
+            console.log('🎵 Octave changed to', this.synthSeqState.octave);
+        });
+
+        const velocitySlider = document.getElementById('synthSeqVelocity');
+        const velocityValue = document.getElementById('synthSeqVelocityValue');
+        velocitySlider.addEventListener('input', (e) => {
+            this.synthSeqState.velocity = parseInt(e.target.value) / 100;
+            velocityValue.textContent = `${e.target.value}%`;
+        });
+
+        // Export buttons
+        document.getElementById('synthSeqExportMidi').addEventListener('click', () => {
+            this.exportPatternMidi();
+        });
+
+        document.getElementById('synthSeqExportWav').addEventListener('click', () => {
+            this.exportPatternWav();
+        });
+
+        console.log('✅ Synth Sequencer initialized');
+    }
+
+    renderPianoRoll() {
+        const pianoKeys = document.getElementById('pianoKeys');
+        const pianoGrid = document.getElementById('pianoRollGrid');
+
+        // Get current scale notes
+        const scaleNotes = this.scales[this.synthSeqState.scale];
+        const octave = this.synthSeqState.octave;
+
+        // Build full note array (2 octaves)
+        const notes = [];
+        for (let o = octave + 1; o >= octave; o--) {
+            for (let i = scaleNotes.length - 1; i >= 0; i--) {
+                notes.push(`${scaleNotes[i]}${o}`);
+            }
+        }
+
+        // Render piano keys
+        pianoKeys.innerHTML = notes.map(note => {
+            const isSharp = note.includes('#') || note.includes('b');
+            return `<div class="piano-key ${isSharp ? 'sharp' : 'natural'}">${note}</div>`;
+        }).join('');
+
+        // Render grid
+        pianoGrid.innerHTML = '';
+        const pattern = this.synthSeqState.patterns[this.synthSeqState.currentTrack] || [];
+
+        for (let step = 0; step < this.synthSeqState.length; step++) {
+            const column = document.createElement('div');
+            column.className = 'note-column';
+
+            notes.forEach((note, noteIndex) => {
+                const cell = document.createElement('div');
+                cell.className = 'note-cell';
+                cell.dataset.step = step;
+                cell.dataset.note = note;
+
+                // Check if this note is active in the pattern
+                const stepPattern = pattern.find(p => p.step === step);
+                if (stepPattern && stepPattern.notes.includes(note)) {
+                    cell.classList.add('active');
+                }
+
+                // Toggle note on click
+                cell.addEventListener('click', () => {
+                    this.toggleNote(step, note);
+                });
+
+                column.appendChild(cell);
+            });
+
+            pianoGrid.appendChild(column);
+        }
+
+        console.log('🎹 Piano roll rendered:', notes.length, 'notes ×', this.synthSeqState.length, 'steps');
+    }
+
+    toggleNote(step, note) {
+        const track = this.synthSeqState.currentTrack;
+        let pattern = this.synthSeqState.patterns[track];
+
+        // Find step in pattern
+        let stepIndex = pattern.findIndex(p => p.step === step);
+
+        if (stepIndex === -1) {
+            // Step doesn't exist, create it with this note
+            pattern.push({ step, notes: [note] });
+        } else {
+            // Step exists, toggle note
+            const noteIndex = pattern[stepIndex].notes.indexOf(note);
+            if (noteIndex === -1) {
+                // Add note (polyphonic)
+                pattern[stepIndex].notes.push(note);
+            } else {
+                // Remove note
+                pattern[stepIndex].notes.splice(noteIndex, 1);
+                // Remove step if no notes left
+                if (pattern[stepIndex].notes.length === 0) {
+                    pattern.splice(stepIndex, 1);
+                }
+            }
+        }
+
+        // Update display
+        this.renderPianoRoll();
+        console.log('🎵 Toggled note', note, 'at step', step);
+    }
+
+    randomizePattern() {
+        const track = this.synthSeqState.currentTrack;
+        const scaleNotes = this.scales[this.synthSeqState.scale];
+        const octave = this.synthSeqState.octave;
+
+        // Build note array
+        const notes = [];
+        for (let o = octave + 1; o >= octave; o--) {
+            scaleNotes.forEach(note => {
+                notes.push(`${note}${o}`);
+            });
+        }
+
+        // Generate random pattern (30% chance per step, 1-3 notes)
+        const pattern = [];
+        for (let step = 0; step < this.synthSeqState.length; step++) {
+            if (Math.random() < 0.3) {
+                const noteCount = Math.floor(Math.random() * 3) + 1; // 1-3 notes
+                const stepNotes = [];
+                for (let i = 0; i < noteCount; i++) {
+                    const randomNote = notes[Math.floor(Math.random() * notes.length)];
+                    if (!stepNotes.includes(randomNote)) {
+                        stepNotes.push(randomNote);
+                    }
+                }
+                pattern.push({ step, notes: stepNotes });
+            }
+        }
+
+        this.synthSeqState.patterns[track] = pattern;
+        this.renderPianoRoll();
+    }
+
+    saveCurrentPattern() {
+        const track = this.synthSeqState.currentTrack;
+        const pattern = this.synthSeqState.patterns[track];
+
+        // Prompt for pattern name
+        const name = prompt(`Save ${track} pattern as:`, `Custom ${track.charAt(0).toUpperCase() + track.slice(1)}`);
+        if (!name) return;
+
+        // Save to localStorage
+        const saved = {
+            name,
+            track,
+            pattern,
+            length: this.synthSeqState.length,
+            scale: this.synthSeqState.scale,
+            octave: this.synthSeqState.octave
+        };
+
+        localStorage.setItem(`synthPattern_${track}_${name}`, JSON.stringify(saved));
+        document.getElementById('synthSeqPatternName').innerHTML = `Current Pattern: <strong>${name}</strong>`;
+
+        console.log('💾 Saved pattern:', name);
+        alert(`✅ Pattern "${name}" saved!`);
+    }
+
+    exportPatternMidi() {
+        console.log('🎵 MIDI export not yet implemented - requires midi-writer-js library');
+        alert('MIDI export coming soon! Will require midi-writer-js library.');
+    }
+
+    exportPatternWav() {
+        console.log('🎵 WAV export not yet implemented - requires offline rendering');
+        alert('WAV export coming soon! Will use Tone.Offline() rendering.');
+    }
+
+    setupModeToggle() {
+        console.log('🎛️ Setting up Mode Toggle...');
+
+        const generativeBtn = document.getElementById('generativeModeBtn');
+        const prodBtn = document.getElementById('prodModeBtn');
+
+        // Initialize music mode state
+        this.musicMode = 'generative'; // 'generative' or 'prod'
+
+        generativeBtn.addEventListener('click', () => {
+            if (this.musicMode === 'generative') return;
+
+            this.musicMode = 'generative';
+            generativeBtn.classList.add('active');
+            prodBtn.classList.remove('active');
+
+            console.log('🎹 Switched to GENERATIVE mode');
+
+            // Restart music with generative patterns if playing
+            if (this.isPlaying && this.musicEngine) {
+                this.musicEngine.switchToGenerativeMode();
+            }
+        });
+
+        prodBtn.addEventListener('click', () => {
+            if (this.musicMode === 'prod') return;
+
+            this.musicMode = 'prod';
+            prodBtn.classList.add('active');
+            generativeBtn.classList.remove('active');
+
+            console.log('🎹 Switched to PROD/DAW mode');
+
+            // Load custom patterns from sequencer if playing
+            if (this.isPlaying && this.musicEngine) {
+                this.loadSequencerPatternsToEngine();
+            }
+        });
+
+        console.log('✅ Mode Toggle initialized');
+    }
+
+    loadSequencerPatternsToEngine() {
+        // Load patterns from synth sequencer into music engine
+        const patterns = this.synthSeqState.patterns;
+
+        console.log('🎵 Loading custom patterns to engine:', patterns);
+
+        // Pass patterns to music engine
+        if (this.musicEngine) {
+            this.musicEngine.useCustomPatterns(patterns);
+        }
     }
 
     async togglePlay() {
@@ -1165,9 +1556,11 @@ class Mesmer {
         // Reset all panels to base z-index
         const drumSequencer = document.getElementById('drumSequencer');
         const mpcPanel = document.getElementById('mpcPanel');
+        const synthSequencer = document.getElementById('synthSequencer');
 
         if (drumSequencer) drumSequencer.style.zIndex = '9998';
         if (mpcPanel) mpcPanel.style.zIndex = '9998';
+        if (synthSequencer) synthSequencer.style.zIndex = '9998';
 
         // Bring clicked panel to front
         panel.style.zIndex = '99999';
