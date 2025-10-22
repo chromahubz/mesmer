@@ -287,6 +287,10 @@ class GenerativeMusic {
         // Master volume (kept for backwards compatibility)
         this.masterVolume = this.synthVolume;
 
+        // Volume multiplier for WAD and Dirt engines (0-1 range)
+        this.synthVolumeMultiplier = 0.5; // Default to 50%
+        this.drumVolumeMultiplier = 0.5; // Default to 50%
+
         console.log('Effects chain created with separate synth/drum volumes');
         console.log(`Reverb: ${reverbConfig.name}, Delay: ${delayConfig.name}`);
     }
@@ -545,17 +549,17 @@ class GenerativeMusic {
             const chord = this.generateChord(this.rootNote, 3);
 
             if (this.synthEngine === 'wad' && this.wadEngine) {
-                // Use WAD synth
+                // Use WAD synth with volume multiplier
                 chord.forEach((note, i) => {
                     setTimeout(() => {
-                        this.wadEngine.play('pad', note, 2, 0.3);
+                        this.wadEngine.play('pad', note, 2, 0.3 * this.synthVolumeMultiplier);
                     }, i * 50);
                 });
             } else if (this.synthEngine === 'dirt' && this.dirtEngine) {
-                // Use Dirt samples
+                // Use Dirt samples with volume multiplier
                 chord.forEach((note, i) => {
                     setTimeout(() => {
-                        this.dirtEngine.play('pad', note, 2, 0.3);
+                        this.dirtEngine.play('pad', note, 2, 0.3 * this.synthVolumeMultiplier);
                     }, i * 50);
                 });
             } else {
@@ -569,11 +573,11 @@ class GenerativeMusic {
             const bassNote = this.generateNote(2, 0);
 
             if (this.synthEngine === 'wad' && this.wadEngine) {
-                // Use WAD synth
-                this.wadEngine.play('bass', bassNote, 0.25, 0.6);
+                // Use WAD synth with volume multiplier
+                this.wadEngine.play('bass', bassNote, 0.25, 0.6 * this.synthVolumeMultiplier);
             } else if (this.synthEngine === 'dirt' && this.dirtEngine) {
-                // Use Dirt samples
-                this.dirtEngine.play('bass', bassNote, 0.25, 0.6);
+                // Use Dirt samples with volume multiplier
+                this.dirtEngine.play('bass', bassNote, 0.25, 0.6 * this.synthVolumeMultiplier);
             } else {
                 // Use Tone.js synth
                 this.instruments.bass.triggerAttackRelease(bassNote, '4n', time, 0.6);
@@ -587,11 +591,11 @@ class GenerativeMusic {
                 const duration = Math.random() > 0.5 ? 0.125 : 0.0625; // 8n or 16n in seconds
 
                 if (this.synthEngine === 'wad' && this.wadEngine) {
-                    // Use WAD synth
-                    this.wadEngine.play('lead', note, duration, 0.4);
+                    // Use WAD synth with volume multiplier
+                    this.wadEngine.play('lead', note, duration, 0.4 * this.synthVolumeMultiplier);
                 } else if (this.synthEngine === 'dirt' && this.dirtEngine) {
-                    // Use Dirt samples
-                    this.dirtEngine.play('lead', note, duration, 0.4);
+                    // Use Dirt samples with volume multiplier
+                    this.dirtEngine.play('lead', note, duration, 0.4 * this.synthVolumeMultiplier);
                 } else {
                     // Use Tone.js synth
                     const toneDuration = Math.random() > 0.5 ? '8n' : '16n';
@@ -606,11 +610,11 @@ class GenerativeMusic {
                 const arpNote = this.generateNote(3 + Math.floor(Math.random() * 2));
 
                 if (this.synthEngine === 'wad' && this.wadEngine) {
-                    // Use WAD synth
-                    this.wadEngine.play('arp', arpNote, 0.0625, 0.3);
+                    // Use WAD synth with volume multiplier
+                    this.wadEngine.play('arp', arpNote, 0.0625, 0.3 * this.synthVolumeMultiplier);
                 } else if (this.synthEngine === 'dirt' && this.dirtEngine) {
-                    // Use Dirt samples
-                    this.dirtEngine.play('arp', arpNote, 0.0625, 0.3);
+                    // Use Dirt samples with volume multiplier
+                    this.dirtEngine.play('arp', arpNote, 0.0625, 0.3 * this.synthVolumeMultiplier);
                 } else {
                     // Use Tone.js synth
                     this.instruments.arp.triggerAttackRelease(arpNote, '16n', time, 0.3);
@@ -725,27 +729,6 @@ class GenerativeMusic {
     }
 
     /**
-     * Change drum pattern
-     */
-    changeDrumPattern(patternName) {
-        if (!this.drumPatterns[patternName]) {
-            console.error(`Pattern "${patternName}" not found!`);
-            return;
-        }
-
-        this.currentPattern = patternName;
-        console.log(`🥁 Pattern changed to: ${this.drumPatterns[patternName].name}`);
-
-        // If drums are currently playing, restart with new pattern
-        if (this.isPlaying && this.drumsEnabled) {
-            this.stopDrums();
-            setTimeout(() => {
-                this.startDrums();
-            }, 10);
-        }
-    }
-
-    /**
      * Get available drum machines
      */
     getDrumMachines() {
@@ -791,7 +774,7 @@ class GenerativeMusic {
     }
 
     /**
-     * Change drum pattern (supports both built-in and MIDI patterns)
+     * Change drum pattern (supports both built-in and MIDI patterns) - LIVE SWITCHING
      */
     changeDrumPattern(patternKey) {
         if (patternKey.startsWith('midi:')) {
@@ -802,18 +785,20 @@ class GenerativeMusic {
             if (pattern) {
                 this.currentDrumPattern = patternKey;
                 this.currentMidiPattern = pattern;
-                console.log('Loaded MIDI pattern:', midiPatternName);
+                console.log(`🥁 Live-switched to MIDI pattern: ${midiPatternName}`);
             } else {
                 console.warn('MIDI pattern not found:', midiPatternName);
             }
         } else {
             // Use built-in pattern
             if (this.drumPatterns[patternKey]) {
+                this.currentPattern = patternKey; // Update currentPattern for built-in patterns
                 this.currentDrumPattern = patternKey;
                 this.currentMidiPattern = null;
-                console.log('Loaded built-in pattern:', patternKey);
+                console.log(`🥁 Live-switched to built-in pattern: ${this.drumPatterns[patternKey].name}`);
             }
         }
+        // No restart needed - pattern updates on next sequence iteration
     }
 
     /**
@@ -862,22 +847,30 @@ class GenerativeMusic {
      * Set master volume (now controls synth volume)
      */
     setVolume(value) {
+        // Update multiplier for WAD/Dirt engines (0-1 range)
+        this.synthVolumeMultiplier = value / 100;
+
         if (this.synthVolume) {
             // Convert 0-100 to dB (-60 to 0)
             const db = (value / 100) * 60 - 60;
             this.synthVolume.volume.rampTo(db, 0.5);
         }
+        console.log(`🔊 Synth volume: ${value}% (multiplier: ${this.synthVolumeMultiplier.toFixed(2)})`);
     }
 
     /**
      * Set drum master volume
      */
     setDrumMasterVolume(value) {
+        // Update multiplier for WAD/Dirt engines (0-1 range)
+        this.drumVolumeMultiplier = value / 100;
+
         if (this.drumVolume) {
             // Convert 0-100 to dB (-60 to 0)
             const db = (value / 100) * 60 - 60;
             this.drumVolume.volume.rampTo(db, 0.5);
         }
+        console.log(`🔊 Drum volume: ${value}% (multiplier: ${this.drumVolumeMultiplier.toFixed(2)})`);
     }
 
     /**
@@ -1175,16 +1168,21 @@ class GenerativeMusic {
      */
 
     /**
-     * Set synth engine (tonejs, wad, or dirt)
+     * Set synth engine (tonejs, wad, or dirt) - LIVE SWITCHING
      */
     setSynthEngine(engineType) {
+        const wasPlaying = this.isPlaying;
         this.synthEngine = engineType;
-        console.log('Switched to ' + engineType + ' synths');
+        console.log(`🎹 Live-switched to ${engineType} synths`);
 
-        // If music is playing, restart with new engine
-        if (this.isPlaying) {
+        // If music is playing, quickly restart with new engine for seamless transition
+        if (wasPlaying) {
             this.stop();
-            setTimeout(() => this.play(), 100);
+            // Immediate restart for minimal interruption
+            setTimeout(() => {
+                this.play();
+                console.log('✅ Synth engine switched seamlessly');
+            }, 10); // Reduced from 100ms to 10ms for faster transition
         }
     }
 
