@@ -277,6 +277,18 @@ class Mesmer {
             this.musicEngine.setKey(e.target.value);
         });
 
+        // Reverb type selector
+        const reverbTypeSelect = document.getElementById('reverbTypeSelect');
+        reverbTypeSelect.addEventListener('change', (e) => {
+            this.musicEngine.setReverbType(e.target.value);
+        });
+
+        // Delay type selector
+        const delayTypeSelect = document.getElementById('delayTypeSelect');
+        delayTypeSelect.addEventListener('change', (e) => {
+            this.musicEngine.setDelayType(e.target.value);
+        });
+
         // Drum machine toggle
         const drumsToggle = document.getElementById('drumsToggle');
         drumsToggle.addEventListener('change', (e) => {

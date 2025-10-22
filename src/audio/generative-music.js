@@ -239,17 +239,45 @@ class GenerativeMusic {
     }
 
     setupEffects() {
+        // Reverb presets
+        this.reverbPresets = {
+            hall: { decay: 4, wet: 0.3, preDelay: 0.01, name: 'Hall' },
+            room: { decay: 1.5, wet: 0.25, preDelay: 0.005, name: 'Room' },
+            plate: { decay: 2.5, wet: 0.35, preDelay: 0, name: 'Plate' },
+            spring: { decay: 1, wet: 0.4, preDelay: 0.01, name: 'Spring' },
+            chamber: { decay: 3, wet: 0.28, preDelay: 0.015, name: 'Chamber' },
+            cathedral: { decay: 8, wet: 0.4, preDelay: 0.02, name: 'Cathedral' },
+            none: { decay: 0.1, wet: 0, preDelay: 0, name: 'None' }
+        };
+        this.currentReverbType = 'hall';
+
+        // Delay presets
+        this.delayPresets = {
+            eighth: { delayTime: '8n', feedback: 0.3, wet: 0.2, name: '1/8 Note' },
+            quarter: { delayTime: '4n', feedback: 0.35, wet: 0.25, name: '1/4 Note' },
+            dotted: { delayTime: '8n.', feedback: 0.4, wet: 0.22, name: 'Dotted 1/8' },
+            slapback: { delayTime: '16n', feedback: 0.1, wet: 0.3, name: 'Slapback' },
+            pingpong: { delayTime: '8n', feedback: 0.4, wet: 0.25, name: 'Ping-Pong' },
+            tape: { delayTime: '4n', feedback: 0.5, wet: 0.3, name: 'Tape Echo' },
+            long: { delayTime: '2n', feedback: 0.6, wet: 0.2, name: 'Long Delay' },
+            none: { delayTime: '8n', feedback: 0, wet: 0, name: 'None' }
+        };
+        this.currentDelayType = 'eighth';
+
         // Master reverb
+        const reverbConfig = this.reverbPresets[this.currentReverbType];
         this.effects.reverb = new Tone.Reverb({
-            decay: 4,
-            wet: 0.3
+            decay: reverbConfig.decay,
+            wet: reverbConfig.wet,
+            preDelay: reverbConfig.preDelay
         }).toDestination();
 
         // Master delay
+        const delayConfig = this.delayPresets[this.currentDelayType];
         this.effects.delay = new Tone.FeedbackDelay({
-            delayTime: '8n',
-            feedback: 0.3,
-            wet: 0.2
+            delayTime: delayConfig.delayTime,
+            feedback: delayConfig.feedback,
+            wet: delayConfig.wet
         }).connect(this.effects.reverb);
 
         // Separate volume controls for synth and drums
@@ -260,6 +288,7 @@ class GenerativeMusic {
         this.masterVolume = this.synthVolume;
 
         console.log('Effects chain created with separate synth/drum volumes');
+        console.log(`Reverb: ${reverbConfig.name}, Delay: ${delayConfig.name}`);
     }
 
     setupInstruments() {
@@ -924,22 +953,122 @@ class GenerativeMusic {
                 this.currentScale = this.scales.minor;
                 this.rootNote = 'C3';
                 break;
-
             case 'techno':
                 this.currentScale = this.scales.phrygian;
                 this.rootNote = 'E3';
                 break;
-
+            case 'house':
+                this.currentScale = this.scales.major;
+                this.rootNote = 'G3';
+                break;
+            case 'trance':
+                this.currentScale = this.scales.minor;
+                this.rootNote = 'A3';
+                break;
+            case 'dnb':
+                this.currentScale = this.scales.minor;
+                this.rootNote = 'D3';
+                break;
+            case 'dubstep':
+                this.currentScale = this.scales.phrygian;
+                this.rootNote = 'F#2';
+                break;
             case 'jazz':
                 this.currentScale = this.scales.dorian;
                 this.rootNote = 'D3';
                 break;
-
+            case 'funk':
+                this.currentScale = this.scales.dorian;
+                this.rootNote = 'E3';
+                break;
+            case 'soul':
+                this.currentScale = this.scales.minor;
+                this.rootNote = 'C3';
+                break;
+            case 'hiphop':
+                this.currentScale = this.scales.minor;
+                this.rootNote = 'A2';
+                break;
+            case 'trap':
+                this.currentScale = this.scales.minor;
+                this.rootNote = 'F#2';
+                break;
+            case 'lofi':
+                this.currentScale = this.scales.pentatonic;
+                this.rootNote = 'F3';
+                break;
+            case 'chillwave':
+                this.currentScale = this.scales.major;
+                this.rootNote = 'D3';
+                break;
+            case 'vaporwave':
+                this.currentScale = this.scales.major;
+                this.rootNote = 'F3';
+                break;
+            case 'synthwave':
+                this.currentScale = this.scales.minor;
+                this.rootNote = 'E3';
+                break;
+            case 'industrial':
+                this.currentScale = this.scales.phrygian;
+                this.rootNote = 'C3';
+                break;
             case 'drone':
                 this.currentScale = this.scales.pentatonic;
                 this.rootNote = 'A2';
                 break;
-
+            case 'psychedelic':
+                this.currentScale = this.scales.minor;
+                this.rootNote = 'B2';
+                break;
+            case 'experimental':
+                this.currentScale = this.scales.phrygian;
+                this.rootNote = 'G#2';
+                break;
+            case 'minimal':
+                this.currentScale = this.scales.pentatonic;
+                this.rootNote = 'C3';
+                break;
+            case 'idm':
+                this.currentScale = this.scales.dorian;
+                this.rootNote = 'F#3';
+                break;
+            case 'breakbeat':
+                this.currentScale = this.scales.minor;
+                this.rootNote = 'E3';
+                break;
+            case 'jungle':
+                this.currentScale = this.scales.pentatonic;
+                this.rootNote = 'D3';
+                break;
+            case 'downtempo':
+                this.currentScale = this.scales.minor;
+                this.rootNote = 'G3';
+                break;
+            case 'chillout':
+                this.currentScale = this.scales.major;
+                this.rootNote = 'C3';
+                break;
+            case 'trip':
+                this.currentScale = this.scales.minor;
+                this.rootNote = 'E2';
+                break;
+            case 'garage':
+                this.currentScale = this.scales.minor;
+                this.rootNote = 'G3';
+                break;
+            case 'bassline':
+                this.currentScale = this.scales.minor;
+                this.rootNote = 'F2';
+                break;
+            case 'grime':
+                this.currentScale = this.scales.phrygian;
+                this.rootNote = 'E2';
+                break;
+            case 'footwork':
+                this.currentScale = this.scales.minor;
+                this.rootNote = 'C3';
+                break;
             default:
                 this.currentScale = this.scales.minor;
                 this.rootNote = 'C3';
@@ -957,10 +1086,36 @@ class GenerativeMusic {
      */
     getGenres() {
         return {
-            ambient: 'Ambient (slow, atmospheric)',
-            techno: 'Techno (fast, rhythmic)',
-            jazz: 'Jazz (complex, improvised)',
-            drone: 'Drone (minimal, meditative)'
+            ambient: 'Ambient',
+            techno: 'Techno',
+            house: 'House',
+            trance: 'Trance',
+            dnb: 'Drum & Bass',
+            dubstep: 'Dubstep',
+            jazz: 'Jazz',
+            funk: 'Funk',
+            soul: 'Soul',
+            hiphop: 'Hip-Hop',
+            trap: 'Trap',
+            lofi: 'Lo-Fi Hip-Hop',
+            chillwave: 'Chillwave',
+            vaporwave: 'Vaporwave',
+            synthwave: 'Synthwave',
+            industrial: 'Industrial',
+            drone: 'Drone',
+            psychedelic: 'Psychedelic',
+            experimental: 'Experimental',
+            minimal: 'Minimal',
+            idm: 'IDM',
+            breakbeat: 'Breakbeat',
+            jungle: 'Jungle',
+            downtempo: 'Downtempo',
+            chillout: 'Chillout',
+            triphop: 'Trip-Hop',
+            garage: 'UK Garage',
+            bassline: 'Bassline',
+            grime: 'Grime',
+            footwork: 'Footwork/Juke'
         };
     }
 
@@ -1090,5 +1245,65 @@ class GenerativeMusic {
      */
     getCurrentEngine() {
         return this.synthEngine;
+    }
+
+    /**
+     * Change reverb type
+     */
+    setReverbType(type) {
+        if (!this.reverbPresets[type]) {
+            console.warn('Unknown reverb type:', type);
+            return;
+        }
+
+        this.currentReverbType = type;
+        const config = this.reverbPresets[type];
+
+        // Update reverb parameters
+        this.effects.reverb.decay = config.decay;
+        this.effects.reverb.wet.value = config.wet;
+        this.effects.reverb.preDelay = config.preDelay;
+
+        console.log(`🎚️ Reverb changed to: ${config.name}`);
+    }
+
+    /**
+     * Change delay type
+     */
+    setDelayType(type) {
+        if (!this.delayPresets[type]) {
+            console.warn('Unknown delay type:', type);
+            return;
+        }
+
+        this.currentDelayType = type;
+        const config = this.delayPresets[type];
+
+        // Update delay parameters
+        this.effects.delay.delayTime.value = config.delayTime;
+        this.effects.delay.feedback.value = config.feedback;
+        this.effects.delay.wet.value = config.wet;
+
+        console.log(`🎚️ Delay changed to: ${config.name}`);
+    }
+
+    /**
+     * Get available reverb types
+     */
+    getReverbTypes() {
+        return Object.keys(this.reverbPresets).map(key => ({
+            value: key,
+            label: this.reverbPresets[key].name
+        }));
+    }
+
+    /**
+     * Get available delay types
+     */
+    getDelayTypes() {
+        return Object.keys(this.delayPresets).map(key => ({
+            value: key,
+            label: this.delayPresets[key].name
+        }));
     }
 }

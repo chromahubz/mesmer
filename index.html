@@ -260,10 +260,48 @@
                             Music Genre
                         </label>
                         <select id="genreSelect">
-                            <option value="ambient">Ambient</option>
-                            <option value="techno">Techno</option>
-                            <option value="jazz">Jazz</option>
-                            <option value="drone">Drone</option>
+                            <optgroup label="Electronic">
+                                <option value="ambient">Ambient</option>
+                                <option value="techno">Techno</option>
+                                <option value="house">House</option>
+                                <option value="trance">Trance</option>
+                                <option value="dnb">Drum & Bass</option>
+                                <option value="dubstep">Dubstep</option>
+                                <option value="industrial">Industrial</option>
+                                <option value="idm">IDM</option>
+                                <option value="breakbeat">Breakbeat</option>
+                                <option value="jungle">Jungle</option>
+                                <option value="garage">UK Garage</option>
+                                <option value="bassline">Bassline</option>
+                                <option value="grime">Grime</option>
+                                <option value="footwork">Footwork/Juke</option>
+                            </optgroup>
+                            <optgroup label="Retro/Wave">
+                                <option value="synthwave">Synthwave</option>
+                                <option value="vaporwave">Vaporwave</option>
+                                <option value="chillwave">Chillwave</option>
+                            </optgroup>
+                            <optgroup label="Hip-Hop & Urban">
+                                <option value="hiphop">Hip-Hop</option>
+                                <option value="trap">Trap</option>
+                                <option value="lofi">Lo-Fi Hip-Hop</option>
+                                <option value="triphop">Trip-Hop</option>
+                            </optgroup>
+                            <optgroup label="Jazz & Funk">
+                                <option value="jazz">Jazz</option>
+                                <option value="funk">Funk</option>
+                                <option value="soul">Soul</option>
+                            </optgroup>
+                            <optgroup label="Chill & Downtempo">
+                                <option value="chillout">Chillout</option>
+                                <option value="downtempo">Downtempo</option>
+                            </optgroup>
+                            <optgroup label="Experimental">
+                                <option value="drone">Drone</option>
+                                <option value="psychedelic">Psychedelic</option>
+                                <option value="experimental">Experimental</option>
+                                <option value="minimal">Minimal</option>
+                            </optgroup>
                         </select>
                     </div>
                     <div class="shader-selector">
@@ -1310,6 +1348,41 @@
                             <option value="A4">A4 (440Hz)</option>
                             <option value="A#4">A#4 / Bb4</option>
                             <option value="B4">B4</option>
+                        </select>
+                    </div>
+                    <div class="shader-selector">
+                        <label>
+                            <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 3v9.28c-.47-.17-.97-.28-1.5-.28C8.01 12 6 14.01 6 16.5S8.01 21 10.5 21c2.31 0 4.2-1.75 4.45-4H15V6h4V3h-7z"/>
+                            </svg>
+                            Reverb Type
+                        </label>
+                        <select id="reverbTypeSelect">
+                            <option value="hall" selected>Hall</option>
+                            <option value="room">Room</option>
+                            <option value="plate">Plate</option>
+                            <option value="spring">Spring</option>
+                            <option value="chamber">Chamber</option>
+                            <option value="cathedral">Cathedral</option>
+                            <option value="none">None</option>
+                        </select>
+                    </div>
+                    <div class="shader-selector">
+                        <label>
+                            <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M17.5 12c0 2.49-2.01 4.5-4.5 4.5s-4.5-2.01-4.5-4.5 2.01-4.5 4.5-4.5 4.5 2.01 4.5 4.5zm-1.5 0c0-1.66-1.34-3-3-3s-3 1.34-3 3 1.34 3 3 3 3-1.34 3-3zm-3-7C7.48 5 2 8 2 12s5.48 7 11 7 11-3 11-7-5.48-7-11-7z"/>
+                            </svg>
+                            Delay Type
+                        </label>
+                        <select id="delayTypeSelect">
+                            <option value="eighth" selected>1/8 Note</option>
+                            <option value="quarter">1/4 Note</option>
+                            <option value="dotted">Dotted 1/8</option>
+                            <option value="slapback">Slapback</option>
+                            <option value="pingpong">Ping-Pong</option>
+                            <option value="tape">Tape Echo</option>
+                            <option value="long">Long Delay</option>
+                            <option value="none">None</option>
                         </select>
                     </div>
                     <div class="toggle-group">
