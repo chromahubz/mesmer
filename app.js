@@ -648,24 +648,43 @@ class Mesmer {
         mpcHeader.addEventListener('mousedown', (e) => {
             if (e.target.closest('.mpc-close')) return; // Don't drag when clicking close button
 
+            // Convert from percentage/transform positioning to pixel positioning
+            if (mpcPanel.style.transform !== 'none') {
+                const rect = mpcPanel.getBoundingClientRect();
+                mpcPanel.style.left = `${rect.left}px`;
+                mpcPanel.style.top = `${rect.top}px`;
+                mpcPanel.style.transform = 'none';
+            }
+
             this.mpcState.isDragging = true;
+
+            // Now get offset AFTER transform is removed
             const rect = mpcPanel.getBoundingClientRect();
             this.mpcState.dragOffset = {
                 x: e.clientX - rect.left,
                 y: e.clientY - rect.top
             };
-            mpcPanel.style.transform = 'none';
+
+            // Prevent text selection during drag
+            e.preventDefault();
             console.log('🖱️ MPC Panel drag started');
         });
 
         document.addEventListener('mousemove', (e) => {
             if (!this.mpcState.isDragging) return;
 
-            const x = e.clientX - this.mpcState.dragOffset.x;
-            const y = e.clientY - this.mpcState.dragOffset.y;
+            // Use requestAnimationFrame for smooth dragging
+            requestAnimationFrame(() => {
+                const x = e.clientX - this.mpcState.dragOffset.x;
+                const y = e.clientY - this.mpcState.dragOffset.y;
 
-            mpcPanel.style.left = `${x}px`;
-            mpcPanel.style.top = `${y}px`;
+                // Clamp to viewport bounds
+                const maxX = window.innerWidth - mpcPanel.offsetWidth;
+                const maxY = window.innerHeight - mpcPanel.offsetHeight;
+
+                mpcPanel.style.left = `${Math.max(0, Math.min(x, maxX))}px`;
+                mpcPanel.style.top = `${Math.max(0, Math.min(y, maxY))}px`;
+            });
         });
 
         document.addEventListener('mouseup', () => {
