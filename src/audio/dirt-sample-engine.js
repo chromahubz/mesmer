@@ -59,14 +59,16 @@ class DirtSampleEngine {
 
     /**
      * Initialize Dirt Sample Engine
+     * @param {Tone.Volume} destination - Optional Tone.js node to connect to (for effects chain)
      */
-    async init() {
+    async init(destination = null) {
         if (typeof Tone === 'undefined') {
             console.error('❌ Tone.js not loaded!');
             return false;
         }
 
-        console.log('🎵 Initializing Dirt Sample Engine...');
+        this.destination = destination; // Store destination for effects routing
+        console.log('🎵 Initializing Dirt Sample Engine' + (destination ? ' with effects chain routing' : ''));
 
         // Load manifest
         try {
@@ -129,15 +131,25 @@ class DirtSampleEngine {
                 this.samplePlayers[synthType].dispose();
             }
 
-            this.samplePlayers[synthType] = new Tone.Players({
+            // Connect to effects chain if available, otherwise to destination
+            const players = new Tone.Players({
                 urls: urls,
                 onload: () => {
-                    console.log(`✅ Loaded ${bankName} (${maxSamples} samples)`);
+                    console.log(`✅ Loaded ${bankName} (${maxSamples} samples)` + (this.destination ? ' [routed through effects]' : ''));
                 },
                 onerror: (error) => {
                     console.error(`❌ Error loading ${bankName}:`, error);
                 }
-            }).toDestination();
+            });
+
+            // Connect to effects chain or directly to destination
+            if (this.destination) {
+                players.connect(this.destination);
+            } else {
+                players.toDestination();
+            }
+
+            this.samplePlayers[synthType] = players;
 
             this.currentBanks[synthType] = bankName;
             return true;

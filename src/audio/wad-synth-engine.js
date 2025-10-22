@@ -299,14 +299,17 @@ class WadSynthEngine {
 
     /**
      * Initialize WAD synth engine
+     * @param {Tone.Volume} destination - Optional Tone.js node to connect to (for effects chain)
      */
-    init() {
+    init(destination = null) {
         if (typeof Wad === 'undefined') {
             console.error('❌ WAD library not loaded!');
             return false;
         }
 
-        console.log('🎹 Initializing WAD Synth Engine...');
+        // Store destination for effects routing
+        this.destination = destination;
+        console.log('🎹 Initializing WAD Synth Engine' + (destination ? ' with effects chain routing' : '') + '...');
 
         // Create default synths
         this.createSynth('pad', this.presets.warmPad);
@@ -324,8 +327,15 @@ class WadSynthEngine {
      */
     createSynth(name, preset) {
         try {
-            this.synths[name] = new Wad(preset);
-            console.log(`✓ Created ${name} synth with preset`);
+            // Add destination to preset config if we have one
+            const config = { ...preset };
+            if (this.destination) {
+                // Connect to Tone.js node's Web Audio input
+                config.destination = this.destination.input;
+            }
+
+            this.synths[name] = new Wad(config);
+            console.log(`✓ Created ${name} synth with preset` + (this.destination ? ' [routed through effects]' : ''));
             return this.synths[name];
         } catch (error) {
             console.error(`❌ Error creating ${name} synth:`, error);

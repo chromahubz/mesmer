@@ -201,13 +201,13 @@ class GenerativeMusic {
         // Load default drum machine
         await this.loadDrumMachine(this.currentDrumMachine);
 
-        // Initialize WAD Synth Engine
+        // Initialize WAD Synth Engine with effects chain connection
         this.wadEngine = new WadSynthEngine();
-        this.wadEngine.init();
+        this.wadEngine.init(this.synthVolume); // Pass synth volume node for effects routing
 
-        // Initialize Dirt Sample Engine
+        // Initialize Dirt Sample Engine with effects chain connection
         this.dirtEngine = new DirtSampleEngine();
-        await this.dirtEngine.init();
+        await this.dirtEngine.init(this.synthVolume); // Pass synth volume node for effects routing
 
         this.synthEngine = 'tonejs'; // 'tonejs', 'wad', or 'dirt'
         this.useWadSynths = false; // Backward compatibility
@@ -636,7 +636,7 @@ class GenerativeMusic {
     }
 
     /**
-     * Start drum patterns
+     * Start drum patterns with LIVE PATTERN SWITCHING support
      */
     startDrums() {
         if (!this.drumSamples) {
@@ -644,51 +644,60 @@ class GenerativeMusic {
             return;
         }
 
-        // Get pattern - either MIDI or built-in
-        let pattern;
-        if (this.currentMidiPattern) {
-            pattern = this.currentMidiPattern;
-            console.log(`🥁 Starting MIDI drum pattern`);
-        } else {
-            pattern = this.drumPatterns[this.currentPattern];
-            console.log(`🥁 Starting drum pattern: ${pattern.name}`);
-        }
+        console.log(`🥁 Starting drum sequencer with live switching enabled`);
 
-        // Kick drum pattern
-        this.sequences.kick = new Tone.Sequence((time, step) => {
-            if (step === 1 && this.drumSamples.has('kick')) {
-                const player = this.drumSamples.player('kick');
-                player.volume.value = Tone.gainToDb(this.drumVolumes.kick * this.drumVolumes.master);
-                player.start(time);
-            }
-        }, pattern.kick, '16n').start(0);
+        // Create sequences with step index (0-15) instead of pattern data
+        // Pattern is looked up dynamically on each step
+        const steps = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
 
-        // Snare drum pattern
-        this.sequences.snare = new Tone.Sequence((time, step) => {
-            if (step === 1 && this.drumSamples.has('snare')) {
-                const player = this.drumSamples.player('snare');
-                player.volume.value = Tone.gainToDb(this.drumVolumes.snare * this.drumVolumes.master);
-                player.start(time);
+        // Kick drum pattern - dynamically checks current pattern
+        this.sequences.kick = new Tone.Sequence((time, stepIndex) => {
+            // Get current pattern dynamically
+            const currentPattern = this.currentMidiPattern || this.drumPatterns[this.currentPattern];
+            if (currentPattern && currentPattern.kick && currentPattern.kick[stepIndex] === 1) {
+                if (this.drumSamples.has('kick')) {
+                    const player = this.drumSamples.player('kick');
+                    player.volume.value = Tone.gainToDb(this.drumVolumes.kick * this.drumVolumes.master * this.drumVolumeMultiplier);
+                    player.start(time);
+                }
             }
-        }, pattern.snare, '16n').start(0);
+        }, steps, '16n').start(0);
 
-        // Hi-hat pattern
-        this.sequences.hihat = new Tone.Sequence((time, step) => {
-            if (step === 1 && this.drumSamples.has('hihat')) {
-                const player = this.drumSamples.player('hihat');
-                player.volume.value = Tone.gainToDb(this.drumVolumes.hihat * this.drumVolumes.master);
-                player.start(time);
+        // Snare drum pattern - dynamically checks current pattern
+        this.sequences.snare = new Tone.Sequence((time, stepIndex) => {
+            const currentPattern = this.currentMidiPattern || this.drumPatterns[this.currentPattern];
+            if (currentPattern && currentPattern.snare && currentPattern.snare[stepIndex] === 1) {
+                if (this.drumSamples.has('snare')) {
+                    const player = this.drumSamples.player('snare');
+                    player.volume.value = Tone.gainToDb(this.drumVolumes.snare * this.drumVolumes.master * this.drumVolumeMultiplier);
+                    player.start(time);
+                }
             }
-        }, pattern.hihat, '16n').start(0);
+        }, steps, '16n').start(0);
 
-        // Open hi-hat pattern
-        this.sequences.openhat = new Tone.Sequence((time, step) => {
-            if (step === 1 && this.drumSamples.has('openhat')) {
-                const player = this.drumSamples.player('openhat');
-                player.volume.value = Tone.gainToDb(this.drumVolumes.openhat * this.drumVolumes.master);
-                player.start(time);
+        // Hi-hat pattern - dynamically checks current pattern
+        this.sequences.hihat = new Tone.Sequence((time, stepIndex) => {
+            const currentPattern = this.currentMidiPattern || this.drumPatterns[this.currentPattern];
+            if (currentPattern && currentPattern.hihat && currentPattern.hihat[stepIndex] === 1) {
+                if (this.drumSamples.has('hihat')) {
+                    const player = this.drumSamples.player('hihat');
+                    player.volume.value = Tone.gainToDb(this.drumVolumes.hihat * this.drumVolumes.master * this.drumVolumeMultiplier);
+                    player.start(time);
+                }
             }
-        }, pattern.openhat, '16n').start(0);
+        }, steps, '16n').start(0);
+
+        // Open hi-hat pattern - dynamically checks current pattern
+        this.sequences.openhat = new Tone.Sequence((time, stepIndex) => {
+            const currentPattern = this.currentMidiPattern || this.drumPatterns[this.currentPattern];
+            if (currentPattern && currentPattern.openhat && currentPattern.openhat[stepIndex] === 1) {
+                if (this.drumSamples.has('openhat')) {
+                    const player = this.drumSamples.player('openhat');
+                    player.volume.value = Tone.gainToDb(this.drumVolumes.openhat * this.drumVolumes.master * this.drumVolumeMultiplier);
+                    player.start(time);
+                }
+            }
+        }, steps, '16n').start(0);
     }
 
     /**
@@ -1168,22 +1177,14 @@ class GenerativeMusic {
      */
 
     /**
-     * Set synth engine (tonejs, wad, or dirt) - LIVE SWITCHING
+     * Set synth engine (tonejs, wad, or dirt) - TRUE LIVE SWITCHING
      */
     setSynthEngine(engineType) {
-        const wasPlaying = this.isPlaying;
         this.synthEngine = engineType;
-        console.log(`🎹 Live-switched to ${engineType} synths`);
+        console.log(`🎹 Live-switched to ${engineType} synths (no restart needed)`);
 
-        // If music is playing, quickly restart with new engine for seamless transition
-        if (wasPlaying) {
-            this.stop();
-            // Immediate restart for minimal interruption
-            setTimeout(() => {
-                this.play();
-                console.log('✅ Synth engine switched seamlessly');
-            }, 10); // Reduced from 100ms to 10ms for faster transition
-        }
+        // No restart needed! Sequences check this.synthEngine dynamically in their callbacks
+        // The switch happens immediately on the next note
     }
 
     /**
