@@ -1038,3 +1038,238 @@ button {
     color: var(--accent-hover);
     margin-left: 10px;
 }
+
+/* ===========================
+   MPC Pad Controller
+   =========================== */
+
+.mpc-controller {
+    margin-top: 20px;
+}
+
+.mpc-controller h3 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 15px;
+    font-size: 16px;
+    color: var(--text-primary);
+}
+
+.mpc-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 12px;
+    border: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+.mpc-pad {
+    aspect-ratio: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    border: none;
+    border-radius: 8px;
+    background: linear-gradient(135deg, rgba(30, 30, 40, 0.8), rgba(20, 20, 30, 0.9));
+    cursor: pointer;
+    transition: all 0.15s ease;
+    position: relative;
+    overflow: hidden;
+    padding: 8px;
+    box-shadow:
+        inset 0 2px 4px rgba(255, 255, 255, 0.05),
+        0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Drum pads - Orange/Red gradient */
+.mpc-pad[data-type="drum"] {
+    background: linear-gradient(135deg,
+        rgba(234, 88, 12, 0.15),
+        rgba(220, 38, 38, 0.15));
+    border: 1px solid rgba(234, 88, 12, 0.3);
+}
+
+/* Synth pads - Blue/Purple gradient */
+.mpc-pad[data-type="synth"] {
+    background: linear-gradient(135deg,
+        rgba(99, 102, 241, 0.15),
+        rgba(139, 92, 246, 0.15));
+    border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+/* Assigned pads - brighter */
+.mpc-pad[data-pattern]:not([data-pattern=""]) {
+    box-shadow:
+        inset 0 0 20px rgba(255, 255, 255, 0.1),
+        0 0 15px currentColor,
+        0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.mpc-pad[data-type="drum"][data-pattern]:not([data-pattern=""]) {
+    background: linear-gradient(135deg,
+        rgba(234, 88, 12, 0.4),
+        rgba(220, 38, 38, 0.4));
+    border-color: rgba(234, 88, 12, 0.6);
+    color: #fb923c;
+}
+
+.mpc-pad[data-type="synth"][data-pattern]:not([data-pattern=""]) {
+    background: linear-gradient(135deg,
+        rgba(99, 102, 241, 0.4),
+        rgba(139, 92, 246, 0.4));
+    border-color: rgba(99, 102, 241, 0.6);
+    color: #818cf8;
+}
+
+/* Hover states */
+.mpc-pad:hover {
+    transform: translateY(-2px);
+    box-shadow:
+        inset 0 0 30px rgba(255, 255, 255, 0.15),
+        0 0 20px currentColor,
+        0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.mpc-pad[data-type="drum"]:hover {
+    border-color: rgba(234, 88, 12, 0.8);
+    background: linear-gradient(135deg,
+        rgba(234, 88, 12, 0.3),
+        rgba(220, 38, 38, 0.3));
+}
+
+.mpc-pad[data-type="synth"]:hover {
+    border-color: rgba(99, 102, 241, 0.8);
+    background: linear-gradient(135deg,
+        rgba(99, 102, 241, 0.3),
+        rgba(139, 92, 246, 0.3));
+}
+
+/* Active/Playing state */
+.mpc-pad.active {
+    transform: scale(0.95);
+    box-shadow:
+        inset 0 0 30px currentColor,
+        0 0 30px currentColor,
+        0 0 50px currentColor;
+}
+
+.mpc-pad[data-type="drum"].active {
+    background: linear-gradient(135deg,
+        rgba(234, 88, 12, 0.8),
+        rgba(220, 38, 38, 0.8));
+    color: #ffffff;
+}
+
+.mpc-pad[data-type="synth"].active {
+    background: linear-gradient(135deg,
+        rgba(99, 102, 241, 0.8),
+        rgba(139, 92, 246, 0.8));
+    color: #ffffff;
+}
+
+/* Pad text elements */
+.pad-number {
+    font-size: 10px;
+    font-weight: 700;
+    opacity: 0.5;
+    letter-spacing: 0.5px;
+}
+
+.pad-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-align: center;
+    line-height: 1.2;
+    opacity: 0.8;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mpc-pad[data-pattern]:not([data-pattern=""]) .pad-label {
+    opacity: 1;
+    font-weight: 700;
+}
+
+/* Pulse animation for active pads */
+@keyframes pad-pulse {
+    0%, 100% {
+        box-shadow:
+            inset 0 0 20px currentColor,
+            0 0 20px currentColor;
+    }
+    50% {
+        box-shadow:
+            inset 0 0 40px currentColor,
+            0 0 40px currentColor,
+            0 0 60px currentColor;
+    }
+}
+
+.mpc-pad.playing {
+    animation: pad-pulse 0.6s ease-in-out;
+}
+
+/* Assign mode controls */
+.mpc-assign-controls {
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.mpc-assign-hint {
+    padding: 8px 12px;
+    background: rgba(99, 102, 241, 0.1);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: 6px;
+    font-size: 12px;
+    color: var(--accent-hover);
+    text-align: center;
+}
+
+/* Assign mode active state */
+body.mpc-assign-mode .mpc-pad {
+    cursor: pointer;
+    animation: assign-pulse 2s ease-in-out infinite;
+}
+
+@keyframes assign-pulse {
+    0%, 100% {
+        opacity: 0.6;
+    }
+    50% {
+        opacity: 1;
+    }
+}
+
+body.mpc-assign-mode .mpc-pad.selected {
+    animation: none;
+    opacity: 1;
+    box-shadow:
+        inset 0 0 30px currentColor,
+        0 0 30px currentColor;
+    transform: scale(0.98);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .mpc-grid {
+        gap: 6px;
+        padding: 10px;
+    }
+
+    .pad-number {
+        font-size: 9px;
+    }
+
+    .pad-label {
+        font-size: 10px;
+    }
+}

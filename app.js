@@ -531,6 +531,163 @@ class Mesmer {
         document.addEventListener('mozfullscreenchange', handleFullscreenChange);
         document.addEventListener('MSFullscreenChange', handleFullscreenChange);
         console.log('✅ Fullscreen event listeners registered');
+
+        // MPC Pad Controller
+        this.setupMPCPads();
+    }
+
+    setupMPCPads() {
+        console.log('🎹 Setting up MPC Pad Controller...');
+
+        this.mpcState = {
+            assignMode: false,
+            selectedPad: null,
+            pads: {} // Store pad assignments: { padIndex: { type: 'drum'|'synth', pattern: 'patternName' } }
+        };
+
+        const assignModeBtn = document.getElementById('mpcAssignMode');
+        const assignHint = document.getElementById('mpcAssignHint');
+        const allPads = document.querySelectorAll('.mpc-pad');
+        const drumPatternSelect = document.getElementById('drumPatternSelect');
+        const genreSelect = document.getElementById('genreSelect');
+
+        // Assign Mode button
+        assignModeBtn.addEventListener('click', () => {
+            this.mpcState.assignMode = !this.mpcState.assignMode;
+
+            if (this.mpcState.assignMode) {
+                console.log('🎛️ MPC Assign Mode: ON');
+                document.body.classList.add('mpc-assign-mode');
+                assignModeBtn.classList.add('active');
+                assignModeBtn.innerHTML = `
+                    <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                    </svg>
+                    Exit Assign Mode
+                `;
+                assignHint.style.display = 'block';
+                this.mpcState.selectedPad = null;
+            } else {
+                console.log('🎛️ MPC Assign Mode: OFF');
+                document.body.classList.remove('mpc-assign-mode');
+                assignModeBtn.classList.remove('active');
+                assignModeBtn.innerHTML = `
+                    <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                    </svg>
+                    Assign Mode
+                `;
+                assignHint.style.display = 'none';
+                allPads.forEach(pad => pad.classList.remove('selected'));
+                this.mpcState.selectedPad = null;
+            }
+        });
+
+        // Pad click handlers
+        allPads.forEach(pad => {
+            pad.addEventListener('click', () => {
+                const padIndex = parseInt(pad.dataset.pad);
+                const padType = pad.dataset.type;
+
+                if (this.mpcState.assignMode) {
+                    // Assignment mode - select pad for assignment
+                    if (this.mpcState.selectedPad === padIndex) {
+                        // Deselect
+                        this.mpcState.selectedPad = null;
+                        pad.classList.remove('selected');
+                        console.log('🎹 Pad deselected:', padIndex);
+                    } else {
+                        // Select pad
+                        allPads.forEach(p => p.classList.remove('selected'));
+                        this.mpcState.selectedPad = padIndex;
+                        pad.classList.add('selected');
+                        console.log('🎹 Pad selected for assignment:', padIndex, padType);
+
+                        // Auto-assign current pattern
+                        if (padType === 'drum') {
+                            const currentPattern = drumPatternSelect.value;
+                            this.assignPadPattern(padIndex, 'drum', currentPattern);
+                        } else if (padType === 'synth') {
+                            const currentGenre = genreSelect.value;
+                            this.assignPadPattern(padIndex, 'synth', currentGenre);
+                        }
+                    }
+                } else {
+                    // Play mode - trigger assigned pattern
+                    const assignment = this.mpcState.pads[padIndex];
+                    if (assignment && assignment.pattern) {
+                        console.log('🎹 Triggering pad:', padIndex, assignment);
+                        this.triggerPad(padIndex, assignment);
+
+                        // Visual feedback
+                        pad.classList.add('playing');
+                        setTimeout(() => {
+                            pad.classList.remove('playing');
+                        }, 600);
+                    } else {
+                        console.log('⚠️ Pad not assigned:', padIndex);
+                    }
+                }
+            });
+        });
+
+        // Listen for pattern/genre changes to update selected pad assignment
+        drumPatternSelect.addEventListener('change', () => {
+            if (this.mpcState.assignMode && this.mpcState.selectedPad !== null) {
+                const pad = document.querySelector(`.mpc-pad[data-pad="${this.mpcState.selectedPad}"]`);
+                if (pad && pad.dataset.type === 'drum') {
+                    this.assignPadPattern(this.mpcState.selectedPad, 'drum', drumPatternSelect.value);
+                }
+            }
+        });
+
+        genreSelect.addEventListener('change', () => {
+            if (this.mpcState.assignMode && this.mpcState.selectedPad !== null) {
+                const pad = document.querySelector(`.mpc-pad[data-pad="${this.mpcState.selectedPad}"]`);
+                if (pad && pad.dataset.type === 'synth') {
+                    this.assignPadPattern(this.mpcState.selectedPad, 'synth', genreSelect.value);
+                }
+            }
+        });
+
+        console.log('✅ MPC Pad Controller initialized');
+    }
+
+    assignPadPattern(padIndex, type, pattern) {
+        this.mpcState.pads[padIndex] = { type, pattern };
+
+        const pad = document.querySelector(`.mpc-pad[data-pad="${padIndex}"]`);
+        if (pad) {
+            pad.dataset.pattern = pattern;
+            const label = pad.querySelector('.pad-label');
+            label.textContent = this.getPatternDisplayName(pattern);
+        }
+
+        console.log(`✓ Assigned ${type} pattern "${pattern}" to pad ${padIndex}`);
+    }
+
+    triggerPad(padIndex, assignment) {
+        if (assignment.type === 'drum') {
+            // Switch drum pattern
+            console.log('🥁 Switching to drum pattern:', assignment.pattern);
+            const drumPatternSelect = document.getElementById('drumPatternSelect');
+            drumPatternSelect.value = assignment.pattern;
+            this.musicEngine.setDrumPattern(assignment.pattern);
+        } else if (assignment.type === 'synth') {
+            // Switch genre (which changes synth patterns)
+            console.log('🎹 Switching to genre:', assignment.pattern);
+            const genreSelect = document.getElementById('genreSelect');
+            genreSelect.value = assignment.pattern;
+            this.musicEngine.setGenre(assignment.pattern);
+        }
+    }
+
+    getPatternDisplayName(pattern) {
+        // Convert pattern name to display-friendly format
+        return pattern
+            .split(/[-_]/)
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
     }
 
     async togglePlay() {
