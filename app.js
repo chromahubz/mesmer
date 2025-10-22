@@ -457,6 +457,22 @@ class Mesmer {
         // Fullscreen button
         const fullscreenBtn = document.getElementById('fullscreenBtn');
         fullscreenBtn.addEventListener('click', () => this.toggleFullscreen());
+
+        // Listen for fullscreen changes (including ESC key exit)
+        document.addEventListener('fullscreenchange', () => {
+            const controls = document.getElementById('controls');
+            const debugOverlay = document.getElementById('debugOverlay');
+
+            if (document.fullscreenElement) {
+                // Entering fullscreen - hide controls
+                controls.style.display = 'none';
+                if (debugOverlay) debugOverlay.style.display = 'none';
+            } else {
+                // Exiting fullscreen - show controls
+                controls.style.display = 'block';
+                if (debugOverlay) debugOverlay.style.display = 'block';
+            }
+        });
     }
 
     async togglePlay() {
@@ -519,20 +535,12 @@ class Mesmer {
     }
 
     toggleFullscreen() {
-        const controls = document.getElementById('controls');
-        const debugOverlay = document.getElementById('debugOverlay');
-
         if (!document.fullscreenElement) {
             document.documentElement.requestFullscreen();
-            // Hide controls and debug overlay in fullscreen
-            controls.style.display = 'none';
-            if (debugOverlay) debugOverlay.style.display = 'none';
         } else {
             document.exitFullscreen();
-            // Show controls and debug overlay when exiting fullscreen
-            controls.style.display = 'block';
-            if (debugOverlay) debugOverlay.style.display = 'block';
         }
+        // Note: fullscreenchange event listener handles showing/hiding controls
     }
 
     setupResize() {
