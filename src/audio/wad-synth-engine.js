@@ -327,15 +327,15 @@ class WadSynthEngine {
      */
     createSynth(name, preset) {
         try {
-            // Add destination to preset config if we have one
+            // Note: WAD uses native Web Audio API and has its own effects system
+            // We don't route it through Tone.js effects to avoid compatibility issues
             const config = { ...preset };
-            if (this.destination) {
-                // Connect to Tone.js node's Web Audio input
-                config.destination = this.destination.input;
-            }
+
+            // WAD will connect directly to audio output
+            // (Attempting to connect WAD to Tone.js nodes causes AudioNode connection errors)
 
             this.synths[name] = new Wad(config);
-            console.log(`✓ Created ${name} synth with preset` + (this.destination ? ' [routed through effects]' : ''));
+            console.log(`✓ Created ${name} synth with preset`);
             return this.synths[name];
         } catch (error) {
             console.error(`❌ Error creating ${name} synth:`, error);

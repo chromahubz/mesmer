@@ -1169,7 +1169,8 @@ class GenerativeMusic {
      * Get current pattern data
      */
     getCurrentPattern() {
-        return this.drumPatterns[this.currentPattern];
+        // Return MIDI pattern if active, otherwise return built-in pattern
+        return this.currentMidiPattern || this.drumPatterns[this.currentPattern];
     }
 
     /**
