@@ -462,26 +462,34 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 }`
     },
 
-    // Synthwave sunset with Mt. Fuji
+    // Synthwave sunset with Mt. Fuji (ENHANCED AUDIO REACTIVE VERSION)
     synthwave_sunset: {
         name: '🌅 Synthwave Sunset',
-        description: 'Retro synthwave sunset with mountains',
+        description: 'Retro synthwave sunset with mountains - Fully audio reactive',
         format: 'shadertoy',
-        code: `float sun(vec2 uv, float battery) {
-    float val = smoothstep(0.3, 0.29, length(uv));
+        code: `float sun(vec2 uv, float battery, float audioPulse) {
+    // Audio-reactive sun size
+    float sunSize = 0.3 + audioPulse * 0.1;
+    float val = smoothstep(sunSize, sunSize - 0.01, length(uv));
     float bloom = smoothstep(0.7, 0.0, length(uv));
+
+    // Audio-reactive scan lines
     float cut = 3.0 * sin((uv.y + iTime * 0.2 * (battery + 0.02)) * 100.0)
                 + clamp(uv.y * 14.0 + 1.0, -6.0, 6.0);
     cut = clamp(cut, 0.0, 1.0);
-    return clamp(val * cut, 0.0, 1.0) + bloom * 0.6;
+
+    // Enhanced bloom with audio
+    return clamp(val * cut, 0.0, 1.0) + bloom * (0.6 + audioPulse * 0.4);
 }
 
-float grid(vec2 uv, float battery) {
+float grid(vec2 uv, float battery, float bassKick) {
     vec2 size = vec2(uv.y, uv.y * uv.y * 0.2) * 0.01;
-    uv += vec2(0.0, iTime * 4.0 * (battery + 0.05));
+    // Bass-driven grid speed
+    uv += vec2(0.0, iTime * (4.0 + bassKick * 8.0) * (battery + 0.05));
     uv = abs(fract(uv) - 0.5);
     vec2 lines = smoothstep(size, vec2(0.0), uv);
-    lines += smoothstep(size * 5.0, vec2(0.0), uv) * 0.4 * battery;
+    // Audio-reactive grid brightness
+    lines += smoothstep(size * 5.0, vec2(0.0), uv) * (0.4 + bassKick * 0.6) * battery;
     return clamp(lines.x + lines.y, 0.0, 3.0);
 }
 
@@ -499,47 +507,68 @@ float sdTrapezoid(in vec2 p, in float r1, float r2, float he) {
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = (2.0 * fragCoord.xy - iResolution.xy)/iResolution.y;
-    float battery = 0.7 + iAudioMid * 0.3;
+
+    // Enhanced audio reactivity
+    float bassKick = iAudioLow * 1.5;
+    float midPulse = iAudioMid * 1.2;
+    float highShimmer = iAudioHigh * 1.0;
+    float battery = 0.7 + midPulse * 0.3;
 
     // Grid
     float fog = smoothstep(0.1, -0.02, abs(uv.y + 0.2));
-    vec3 col = vec3(0.0, 0.1, 0.2);
+    // Audio-reactive background color
+    vec3 col = vec3(0.0, 0.1 + bassKick * 0.1, 0.2 + bassKick * 0.1);
 
     if (uv.y < -0.2) {
         uv.y = 3.0 / (abs(uv.y + 0.2) + 0.05);
         uv.x *= uv.y * 1.0;
-        float gridVal = grid(uv, battery);
-        col = mix(col, vec3(1.0, 0.5, 1.0), gridVal);
+        float gridVal = grid(uv, battery, bassKick);
+        // Pulsing grid colors with audio
+        vec3 gridColor = vec3(
+            1.0,
+            0.5 + midPulse * 0.3,
+            1.0 - highShimmer * 0.2
+        );
+        col = mix(col, gridColor, gridVal);
     } else {
         float fujiD = min(uv.y * 4.5 - 0.5, 1.0);
         uv.y -= battery * 1.1 - 0.51;
 
         vec2 sunUV = uv;
 
-        // Sun
-        sunUV += vec2(0.75, 0.2);
-        col = vec3(1.0, 0.2, 1.0);
-        float sunVal = sun(sunUV, battery);
+        // Sun with audio pulsing
+        sunUV += vec2(0.75, 0.2 + sin(iTime * 2.0) * midPulse * 0.05);
+        col = vec3(1.0, 0.2 + midPulse * 0.3, 1.0);
+        float sunVal = sun(sunUV, battery, midPulse);
 
-        col = mix(col, vec3(1.0, 0.4, 0.1), sunUV.y * 2.0 + 0.2);
+        // Audio-reactive sun colors
+        col = mix(col, vec3(1.0, 0.4 + highShimmer * 0.3, 0.1), sunUV.y * 2.0 + 0.2);
         col = mix(vec3(0.0), col, sunVal);
 
-        // Mountain
+        // Mountain with audio-reactive glow
         float fujiVal = sdTrapezoid(uv + vec2(-0.75+sunUV.y * 0.0, 0.5),
                                     1.75 + pow(uv.y * uv.y, 2.1), 0.2, 0.5);
 
-        col = mix(col, mix(vec3(0.0, 0.0, 0.25), vec3(1.0, 0.0, 0.5), fujiD),
-                  step(fujiVal, 0.0));
-        col = mix(col, vec3(1.0, 0.5, 1.0),
-                  1.0-smoothstep(0.0,0.01,abs(fujiVal)));
+        vec3 mountainDark = vec3(0.0, 0.0, 0.25 + bassKick * 0.1);
+        vec3 mountainBright = vec3(1.0, 0.0 + midPulse * 0.2, 0.5 + highShimmer * 0.3);
+        col = mix(col, mix(mountainDark, mountainBright, fujiD), step(fujiVal, 0.0));
 
-        col += mix(col, mix(vec3(1.0, 0.12, 0.8), vec3(0.0, 0.0, 0.2),
-                   clamp(uv.y * 3.5 + 3.0, 0.0, 1.0)), step(0.0, fujiVal));
+        // Glowing mountain edges with audio
+        vec3 edgeGlow = vec3(1.0, 0.5 + midPulse * 0.5, 1.0);
+        col = mix(col, edgeGlow, (1.0-smoothstep(0.0,0.01,abs(fujiVal))) * (1.0 + highShimmer));
+
+        vec3 skyTop = vec3(1.0, 0.12 + bassKick * 0.2, 0.8 + midPulse * 0.2);
+        vec3 skyBottom = vec3(0.0, 0.0, 0.2 + bassKick * 0.15);
+        col += mix(col, mix(skyTop, skyBottom, clamp(uv.y * 3.5 + 3.0, 0.0, 1.0)),
+                   step(0.0, fujiVal));
     }
 
-    col += fog * fog * fog;
+    // Enhanced fog with audio pulse
+    col += (fog * fog * fog) * (1.0 + midPulse * 0.3);
     col = mix(vec3(col.r) * 0.5, col, battery * 0.7);
-    col *= (1.0 + iAudioHigh * 0.2);
+
+    // Strong overall audio reactivity boost
+    col *= (1.0 + highShimmer * 0.4 + bassKick * 0.2);
 
     fragColor = vec4(col, 0.9);
 }`
@@ -875,7 +904,7 @@ void pR(inout vec2 p, float a) {
 
 float fractal(vec3 p)
 {
-    const int iterations = 20;
+    const int iterations = 12; // Reduced from 20 for better performance
 
     float d = iTime*5. - p.z;
        p=p.yxz;
@@ -915,11 +944,11 @@ vec3 vmarch(Ray ray, float dist)
     vec2 r = vec2(0.);
     vec3 sum = vec3(0);
     vec3 c = hue(vec3(0.,0.,1.),5.5 + iAudioMid * 2.0);
-    for( int i=0; i<20; i++ )
+    for( int i=0; i<12; i++ ) // Reduced from 20 for better performance
     {
         r = map(p);
         if (r.x > .01) break;
-        p += ray.rd*.015;
+        p += ray.rd*.02; // Increased step size for faster traversal
         vec3 col = c;
         col.rgb *= smoothstep(.0,0.15,-r.x);
         sum += abs(col)*.5;
@@ -929,8 +958,8 @@ vec3 vmarch(Ray ray, float dist)
 
 vec2 march(Ray ray)
 {
-    const int steps = 50;
-    const float prec = 0.001;
+    const int steps = 35; // Reduced from 50 for better performance
+    const float prec = 0.002; // Slightly increased tolerance
     vec2 res = vec2(0.);
 
     for (int i = 0; i < steps; i++)
@@ -942,7 +971,7 @@ vec2 march(Ray ray)
             break;
         }
 
-        res.x += s.x;
+        res.x += s.x * 1.2; // Slightly larger steps
         res.y = s.y;
 
     }
@@ -1172,18 +1201,18 @@ vec3 f(vec3 p){
 float softshadow(vec3 ro, vec3 rd, float k ){
     float akuma=1.0,h=0.0;
     float t = 0.01;
-    for(int i=0; i < 50; ++i){
+    for(int i=0; i < 30; ++i){ // Reduced from 50 for better performance
         h=f(ro+rd*t).x;
         if(h<0.001)return 0.02;
         akuma=min(akuma, k*h/t);
-        t+=clamp(h,0.01,2.0);
+        t+=clamp(h,0.02,2.5); // Slightly larger step sizes
     }
     return akuma;
 }
 
 vec3 nor( in vec3 pos )
 {
-    vec3 eps = vec3(0.001,0.0,0.0);
+    vec3 eps = vec3(0.002,0.0,0.0); // Slightly larger epsilon for faster calculation
     return normalize( vec3(
            f(pos+eps.xyy).x - f(pos-eps.xyy).x,
            f(pos+eps.yxy).x - f(pos-eps.yxy).x,
@@ -1203,9 +1232,9 @@ vec3 intersect( in vec3 ro, in vec3 rd )
     float step = 0.0;
     float error = 1000.0;
 
-    for( int i=0; i<48; i++ )
+    for( int i=0; i<32; i++ ) // Reduced from 48 for better performance
     {
-        if( error < pixel_size*0.5 || t > 20.0 )
+        if( error < pixel_size*0.7 || t > 20.0 ) // Slightly relaxed error tolerance
         {
         }
         else{
@@ -1214,7 +1243,7 @@ vec3 intersect( in vec3 ro, in vec3 rd )
 
             if(d > os)
             {
-                os = 0.4 * d*d/pd;
+                os = 0.45 * d*d/pd; // Slightly larger overstep
                 step = d + os;
                 pd = d;
             }
