@@ -201,7 +201,41 @@ class GenerativeMusic {
         // Load default drum machine
         await this.loadDrumMachine(this.currentDrumMachine);
 
+        // Initialize WAD Synth Engine
+        this.wadEngine = new WadSynthEngine();
+        this.wadEngine.init();
+
+        // Initialize Dirt Sample Engine
+        this.dirtEngine = new DirtSampleEngine();
+        await this.dirtEngine.init();
+
+        this.synthEngine = 'tonejs'; // 'tonejs', 'wad', or 'dirt'
+        this.useWadSynths = false; // Backward compatibility
+
+        // Load MIDI drum patterns
+        await this.loadMidiPatterns();
+
         console.log('Generative music engine initialized');
+    }
+
+    /**
+     * Load MIDI drum patterns from JSON
+     */
+    async loadMidiPatterns() {
+        try {
+            const response = await fetch('samples/midi-drum-patterns.json');
+            const data = await response.json();
+
+            this.midiPatterns = data.patterns;
+            this.midiCategories = data.categories;
+
+            console.log('✅ Loaded', Object.keys(this.midiPatterns).length, 'MIDI patterns');
+            console.log('📁 Categories:', Object.keys(this.midiCategories).length);
+        } catch (error) {
+            console.error('❌ Failed to load MIDI patterns:', error);
+            this.midiPatterns = {};
+            this.midiCategories = {};
+        }
     }
 
     setupEffects() {
@@ -480,21 +514,60 @@ class GenerativeMusic {
         // Pad sequence (slow atmospheric chords)
         this.sequences.pad = new Tone.Sequence((time, index) => {
             const chord = this.generateChord(this.rootNote, 3);
-            this.instruments.pad.triggerAttackRelease(chord, '2n', time, 0.3);
+
+            if (this.synthEngine === 'wad' && this.wadEngine) {
+                // Use WAD synth
+                chord.forEach((note, i) => {
+                    setTimeout(() => {
+                        this.wadEngine.play('pad', note, 2, 0.3);
+                    }, i * 50);
+                });
+            } else if (this.synthEngine === 'dirt' && this.dirtEngine) {
+                // Use Dirt samples
+                chord.forEach((note, i) => {
+                    setTimeout(() => {
+                        this.dirtEngine.play('pad', note, 2, 0.3);
+                    }, i * 50);
+                });
+            } else {
+                // Use Tone.js synth
+                this.instruments.pad.triggerAttackRelease(chord, '2n', time, 0.3);
+            }
         }, [0, 1, 2, 3], '2m').start(0);
 
         // Bass sequence (root notes)
         this.sequences.bass = new Tone.Sequence((time, note) => {
             const bassNote = this.generateNote(2, 0);
-            this.instruments.bass.triggerAttackRelease(bassNote, '4n', time, 0.6);
+
+            if (this.synthEngine === 'wad' && this.wadEngine) {
+                // Use WAD synth
+                this.wadEngine.play('bass', bassNote, 0.25, 0.6);
+            } else if (this.synthEngine === 'dirt' && this.dirtEngine) {
+                // Use Dirt samples
+                this.dirtEngine.play('bass', bassNote, 0.25, 0.6);
+            } else {
+                // Use Tone.js synth
+                this.instruments.bass.triggerAttackRelease(bassNote, '4n', time, 0.6);
+            }
         }, [0, null, 1, null], '2n').start(0);
 
         // Lead melody (random melodic patterns)
         this.sequences.lead = new Tone.Loop((time) => {
             if (Math.random() > 0.3) {
                 const note = this.generateNote(4 + Math.floor(Math.random() * 2));
-                const duration = Math.random() > 0.5 ? '8n' : '16n';
-                this.instruments.lead.triggerAttackRelease(note, duration, time, 0.4);
+                const duration = Math.random() > 0.5 ? 0.125 : 0.0625; // 8n or 16n in seconds
+
+                if (this.synthEngine === 'wad' && this.wadEngine) {
+                    // Use WAD synth
+                    this.wadEngine.play('lead', note, duration, 0.4);
+                } else if (this.synthEngine === 'dirt' && this.dirtEngine) {
+                    // Use Dirt samples
+                    this.dirtEngine.play('lead', note, duration, 0.4);
+                } else {
+                    // Use Tone.js synth
+                    const toneDuration = Math.random() > 0.5 ? '8n' : '16n';
+                    this.instruments.lead.triggerAttackRelease(note, toneDuration, time, 0.4);
+                }
             }
         }, '8n').start(0);
 
@@ -502,7 +575,17 @@ class GenerativeMusic {
         this.sequences.arp = new Tone.Pattern((time, note) => {
             if (Math.random() > 0.4) {
                 const arpNote = this.generateNote(3 + Math.floor(Math.random() * 2));
-                this.instruments.arp.triggerAttackRelease(arpNote, '16n', time, 0.3);
+
+                if (this.synthEngine === 'wad' && this.wadEngine) {
+                    // Use WAD synth
+                    this.wadEngine.play('arp', arpNote, 0.0625, 0.3);
+                } else if (this.synthEngine === 'dirt' && this.dirtEngine) {
+                    // Use Dirt samples
+                    this.dirtEngine.play('arp', arpNote, 0.0625, 0.3);
+                } else {
+                    // Use Tone.js synth
+                    this.instruments.arp.triggerAttackRelease(arpNote, '16n', time, 0.3);
+                }
             }
         }, [0, 1, 2, 3, 4, 5, 6], 'upDown').start(0);
         this.sequences.arp.interval = '16n';
@@ -528,9 +611,15 @@ class GenerativeMusic {
             return;
         }
 
-        console.log(`🥁 Starting drum pattern: ${this.drumPatterns[this.currentPattern].name}`);
-
-        const pattern = this.drumPatterns[this.currentPattern];
+        // Get pattern - either MIDI or built-in
+        let pattern;
+        if (this.currentMidiPattern) {
+            pattern = this.currentMidiPattern;
+            console.log(`🥁 Starting MIDI drum pattern`);
+        } else {
+            pattern = this.drumPatterns[this.currentPattern];
+            console.log(`🥁 Starting drum pattern: ${pattern.name}`);
+        }
 
         // Kick drum pattern
         this.sequences.kick = new Tone.Sequence((time, step) => {
@@ -641,10 +730,61 @@ class GenerativeMusic {
      * Get available drum patterns
      */
     getDrumPatterns() {
-        return Object.keys(this.drumPatterns).map(key => ({
+        const builtInPatterns = Object.keys(this.drumPatterns).map(key => ({
             value: key,
-            label: this.drumPatterns[key].name
+            label: this.drumPatterns[key].name,
+            category: 'Built-in',
+            type: 'builtin'
         }));
+
+        const midiPatterns = [];
+        if (this.midiPatterns && this.midiCategories) {
+            for (const [category, patternNames] of Object.entries(this.midiCategories)) {
+                for (const patternName of patternNames) {
+                    midiPatterns.push({
+                        value: 'midi:' + patternName,
+                        label: patternName.replace(/([A-Z])/g, ' $1').trim(),
+                        category: category,
+                        type: 'midi'
+                    });
+                }
+            }
+        }
+
+        return [...builtInPatterns, ...midiPatterns];
+    }
+
+    /**
+     * Get MIDI pattern categories
+     */
+    getMidiCategories() {
+        return this.midiCategories || {};
+    }
+
+    /**
+     * Change drum pattern (supports both built-in and MIDI patterns)
+     */
+    changeDrumPattern(patternKey) {
+        if (patternKey.startsWith('midi:')) {
+            // Load MIDI pattern
+            const midiPatternName = patternKey.replace('midi:', '');
+            const pattern = this.midiPatterns[midiPatternName];
+
+            if (pattern) {
+                this.currentDrumPattern = patternKey;
+                this.currentMidiPattern = pattern;
+                console.log('Loaded MIDI pattern:', midiPatternName);
+            } else {
+                console.warn('MIDI pattern not found:', midiPatternName);
+            }
+        } else {
+            // Use built-in pattern
+            if (this.drumPatterns[patternKey]) {
+                this.currentDrumPattern = patternKey;
+                this.currentMidiPattern = null;
+                console.log('Loaded built-in pattern:', patternKey);
+            }
+        }
     }
 
     /**
@@ -750,6 +890,14 @@ class GenerativeMusic {
     }
 
     /**
+     * Set root note/key
+     */
+    setKey(key) {
+        this.rootNote = key;
+        console.log('Key (root note) changed to:', key);
+    }
+
+    /**
      * Get available scales
      */
     getScales() {
@@ -770,36 +918,31 @@ class GenerativeMusic {
         this.currentGenre = genre;
         console.log('Genre changed to:', genre);
 
-        // Update musical parameters based on genre
+        // Update musical parameters based on genre (BPM stays at user-selected value)
         switch(genre) {
             case 'ambient':
                 this.currentScale = this.scales.minor;
                 this.rootNote = 'C3';
-                Tone.Transport.bpm.value = 60;
                 break;
 
             case 'techno':
                 this.currentScale = this.scales.phrygian;
                 this.rootNote = 'E3';
-                Tone.Transport.bpm.value = 128;
                 break;
 
             case 'jazz':
                 this.currentScale = this.scales.dorian;
                 this.rootNote = 'D3';
-                Tone.Transport.bpm.value = 120;
                 break;
 
             case 'drone':
                 this.currentScale = this.scales.pentatonic;
                 this.rootNote = 'A2';
-                Tone.Transport.bpm.value = 40;
                 break;
 
             default:
                 this.currentScale = this.scales.minor;
                 this.rootNote = 'C3';
-                Tone.Transport.bpm.value = 80;
         }
 
         // If music is playing, restart with new settings
@@ -870,5 +1013,82 @@ class GenerativeMusic {
      */
     getCurrentPattern() {
         return this.drumPatterns[this.currentPattern];
+    }
+
+    /**
+     * WAD Synth Methods
+     */
+
+    /**
+     * Set synth engine (tonejs, wad, or dirt)
+     */
+    setSynthEngine(engineType) {
+        this.synthEngine = engineType;
+        console.log('Switched to ' + engineType + ' synths');
+
+        // If music is playing, restart with new engine
+        if (this.isPlaying) {
+            this.stop();
+            setTimeout(() => this.play(), 100);
+        }
+    }
+
+    /**
+     * Toggle between Tone.js and WAD synths (backward compatibility)
+     */
+    toggleSynthEngine(useWad = true) {
+        this.setSynthEngine(useWad ? 'wad' : 'tonejs');
+    }
+
+    /**
+     * Change WAD synth preset
+     */
+    changeWadPreset(synthType, presetName) {
+        if (!this.wadEngine) {
+            console.warn('WAD engine not initialized');
+            return;
+        }
+
+        if (!this.wadEngine.presets[presetName]) {
+            console.warn('Preset ' + presetName + ' not found');
+            return;
+        }
+
+        console.log('Changing ' + synthType + ' to ' + presetName);
+        this.wadEngine.changePreset(synthType, presetName);
+    }
+
+    /**
+     * Change Dirt sample bank
+     */
+    changeDirtBank(synthType, bankName) {
+        if (!this.dirtEngine) {
+            console.warn('Dirt engine not initialized');
+            return;
+        }
+
+        console.log('Changing ' + synthType + ' to ' + bankName + ' bank');
+        this.dirtEngine.changeBank(synthType, bankName);
+    }
+
+    /**
+     * Get all WAD presets
+     */
+    getWadPresets() {
+        return this.wadEngine ? this.wadEngine.getAllPresets() : [];
+    }
+
+    /**
+     * Get WAD presets by category
+     */
+    getWadPresetsByCategory(category) {
+        return this.wadEngine ? this.wadEngine.getPresetsByCategory(category) : [];
+    }
+
+    /**
+     * Get current synth engine
+     */
+    getCurrentEngine() {
+        return this.synthEngine;
     }
 }

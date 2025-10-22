@@ -269,6 +269,991 @@
                     <div class="shader-selector">
                         <label>
                             <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
+                            </svg>
+                            Synth Engine
+                        </label>
+                        <select id="synthEngineSelect">
+                            <option value="tonejs" selected>Tone.js (Classic)</option>
+                            <option value="wad">WAD (Sound Banks)</option>
+                            <option value="dirt">Dirt (Samples)</option>
+                        </select>
+                    </div>
+                    <div class="shader-selector wad-controls" style="display: none;">
+                        <label>
+                            <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/>
+                            </svg>
+                            Pad Sound
+                        </label>
+                        <select id="wadPadPreset">
+                            <option value="warmPad" selected>Warm Pad</option>
+                            <option value="spacePad">Space Pad</option>
+                            <option value="dreamPad">Dream Pad</option>
+                            <option value="atmosphericPad">Atmospheric</option>
+                            <option value="drone">Drone</option>
+                        </select>
+                    </div>
+                    <div class="shader-selector wad-controls" style="display: none;">
+                        <label>
+                            <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/>
+                            </svg>
+                            Lead Sound
+                        </label>
+                        <select id="wadLeadPreset">
+                            <option value="brightLead" selected>Bright Lead</option>
+                            <option value="analogLead">Analog Lead</option>
+                        </select>
+                    </div>
+                    <div class="shader-selector wad-controls" style="display: none;">
+                        <label>
+                            <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/>
+                            </svg>
+                            Bass Sound
+                        </label>
+                        <select id="wadBassPreset">
+                            <option value="deepBass" selected>Deep Bass</option>
+                            <option value="subBass">Sub Bass</option>
+                            <option value="acidBass">Acid Bass</option>
+                        </select>
+                    </div>
+                    <div class="shader-selector dirt-controls" style="display: none;">
+                        <label>
+                            <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/>
+                            </svg>
+                            Pad Samples
+                        </label>
+                        <select id="dirtPadBank">
+                            <optgroup label="Pads & Ambient">
+                                <option value="breath">Breath</option>
+                                <option value="cosmicg">Cosmicg</option>
+                                <option value="feel">Feel</option>
+                                <option value="feelfx">Feelfx</option>
+                                <option value="moog">Moog</option>
+                                <option value="newnotes">Newnotes</option>
+                                <option value="notes">Notes</option>
+                                <option value="outdoor">Outdoor</option>
+                                <option value="pad" selected>Pad</option>
+                                <option value="padlong">Padlong</option>
+                                <option value="psr">PSR</option>
+                                <option value="seawolf">Seawolf</option>
+                                <option value="space">Space</option>
+                                <option value="sugar">Sugar</option>
+                                <option value="wind">Wind</option>
+                            </optgroup>
+                            <optgroup label="Bass">
+                                <option value="bass">Bass</option>
+                                <option value="bass0">Bass 0</option>
+                                <option value="bass1">Bass 1</option>
+                                <option value="bass2">Bass 2</option>
+                                <option value="bass3">Bass 3</option>
+                                <option value="bassfoo">Bassfoo</option>
+                                <option value="db">Double Bass</option>
+                                <option value="dorkbot">Dorkbot</option>
+                                <option value="jungbass">Jungle Bass</option>
+                                <option value="jvbass">JV Bass</option>
+                                <option value="subroc3d">Subroc3D</option>
+                                <option value="wobble">Wobble</option>
+                            </optgroup>
+                            <optgroup label="Leads & Melodic">
+                                <option value="arpy">Arpy</option>
+                                <option value="bleep">Bleep</option>
+                                <option value="gtr">Guitar</option>
+                                <option value="hoover">Hoover</option>
+                                <option value="monsterb">Monsterb</option>
+                                <option value="oc">OC</option>
+                                <option value="popkick">Popkick</option>
+                                <option value="sax">Sax</option>
+                                <option value="simplesine">Simple Sine</option>
+                                <option value="trump">Trumpet</option>
+                                <option value="ul">UL</option>
+                            </optgroup>
+                            <optgroup label="Plucks & Keys">
+                                <option value="arp">Arp</option>
+                                <option value="blip">Blip</option>
+                                <option value="bottle">Bottle</option>
+                                <option value="casio">Casio</option>
+                                <option value="click">Click</option>
+                                <option value="jazz">Jazz</option>
+                                <option value="juno">Juno</option>
+                                <option value="peri">Peri</option>
+                                <option value="pluck">Pluck</option>
+                                <option value="print">Print</option>
+                                <option value="sitar">Sitar</option>
+                                <option value="stab">Stab</option>
+                            </optgroup>
+                            <optgroup label="Percussion">
+                                <option value="can">Can</option>
+                                <option value="glasstap">Glasstap</option>
+                                <option value="hand">Hand</option>
+                                <option value="lighter">Lighter</option>
+                                <option value="metal">Metal</option>
+                                <option value="perc">Perc</option>
+                                <option value="stomp">Stomp</option>
+                                <option value="tabla">Tabla</option>
+                                <option value="tabla2">Tabla 2</option>
+                                <option value="tablex">Tablex</option>
+                                <option value="tink">Tink</option>
+                                <option value="tok">Tok</option>
+                            </optgroup>
+                            <optgroup label="Drums & Breaks">
+                                <option value="amencutup">Amen Cutup</option>
+                                <option value="bd">Bass Drum</option>
+                                <option value="breaks125">Breaks 125</option>
+                                <option value="clubkick">Club Kick</option>
+                                <option value="cp">Clap</option>
+                                <option value="dr55">DR-55</option>
+                                <option value="drum">Drum</option>
+                                <option value="drumtraks">Drumtraks</option>
+                                <option value="gretsch">Gretsch</option>
+                                <option value="hardkick">Hard Kick</option>
+                                <option value="hh">Hi-hat</option>
+                                <option value="hh27">Hi-hat 27</option>
+                                <option value="jungle">Jungle</option>
+                                <option value="kicklinn">Kick Linn</option>
+                                <option value="linnhats">Linn Hats</option>
+                                <option value="reverbkick">Reverb Kick</option>
+                                <option value="sd">Snare Drum</option>
+                                <option value="sn">Snare</option>
+                            </optgroup>
+                            <optgroup label="Electronic & Synth">
+                                <option value="auto">Auto</option>
+                                <option value="electro1">Electro 1</option>
+                                <option value="em2">EM2</option>
+                                <option value="fm">FM</option>
+                                <option value="future">Future</option>
+                                <option value="gabba">Gabba</option>
+                                <option value="gabbaloud">Gabba Loud</option>
+                                <option value="gabbalouder">Gabba Louder</option>
+                                <option value="hardcore">Hardcore</option>
+                                <option value="house">House</option>
+                                <option value="rave">Rave</option>
+                                <option value="rave2">Rave 2</option>
+                                <option value="ravemono">Rave Mono</option>
+                                <option value="sequential">Sequential</option>
+                                <option value="sid">SID</option>
+                                <option value="tech">Tech</option>
+                                <option value="techno">Techno</option>
+                            </optgroup>
+                            <optgroup label="Vocals & Speech">
+                                <option value="alphabet">Alphabet</option>
+                                <option value="diphone">Diphone</option>
+                                <option value="diphone2">Diphone 2</option>
+                                <option value="haw">Haw</option>
+                                <option value="hmm">Hmm</option>
+                                <option value="ho">Ho</option>
+                                <option value="miniyeah">Mini Yeah</option>
+                                <option value="mouth">Mouth</option>
+                                <option value="num">Num</option>
+                                <option value="numbers">Numbers</option>
+                                <option value="speakspell">Speak & Spell</option>
+                                <option value="speech">Speech</option>
+                                <option value="speechless">Speechless</option>
+                                <option value="yeah">Yeah</option>
+                            </optgroup>
+                            <optgroup label="FX & Glitch">
+                                <option value="bend">Bend</option>
+                                <option value="control">Control</option>
+                                <option value="dist">Distortion</option>
+                                <option value="flick">Flick</option>
+                                <option value="foo">Foo</option>
+                                <option value="gab">Gab</option>
+                                <option value="glitch">Glitch</option>
+                                <option value="glitch2">Glitch 2</option>
+                                <option value="if">If</option>
+                                <option value="ifdrums">If Drums</option>
+                                <option value="industrial">Industrial</option>
+                                <option value="mute">Mute</option>
+                                <option value="noise">Noise</option>
+                                <option value="noise2">Noise 2</option>
+                                <option value="off">Off</option>
+                                <option value="proc">Proc</option>
+                                <option value="procshort">Proc Short</option>
+                                <option value="short">Short</option>
+                            </optgroup>
+                            <optgroup label="Nature & Organic">
+                                <option value="birds">Birds</option>
+                                <option value="birds3">Birds 3</option>
+                                <option value="bubble">Bubble</option>
+                                <option value="crow">Crow</option>
+                                <option value="fire">Fire</option>
+                                <option value="insect">Insect</option>
+                                <option value="pebbles">Pebbles</option>
+                            </optgroup>
+                            <optgroup label="World & Ethnic">
+                                <option value="east">East</option>
+                                <option value="latibro">Latibro</option>
+                                <option value="sundance">Sundance</option>
+                                <option value="world">World</option>
+                            </optgroup>
+                            <optgroup label="Weird & Experimental">
+                                <option value="ab">AB</option>
+                                <option value="ade">Ade</option>
+                                <option value="ades2">Ades 2</option>
+                                <option value="ades3">Ades 3</option>
+                                <option value="ades4">Ades 4</option>
+                                <option value="alex">Alex</option>
+                                <option value="armora">Armora</option>
+                                <option value="baa">Baa</option>
+                                <option value="baa2">Baa 2</option>
+                                <option value="battles">Battles</option>
+                                <option value="bev">Bev</option>
+                                <option value="bin">Bin</option>
+                                <option value="blue">Blue</option>
+                                <option value="cb">CB</option>
+                                <option value="cc">CC</option>
+                                <option value="chin">Chin</option>
+                                <option value="circus">Circus</option>
+                                <option value="clak">Clak</option>
+                                <option value="co">CO</option>
+                                <option value="coins">Coins</option>
+                                <option value="cr">CR</option>
+                                <option value="d">D</option>
+                                <option value="dork2">Dork 2</option>
+                                <option value="e">E</option>
+                                <option value="erk">Erk</option>
+                                <option value="f">F</option>
+                                <option value="fest">Fest</option>
+                                <option value="h">H</option>
+                                <option value="hc">HC</option>
+                                <option value="hit">Hit</option>
+                                <option value="ht">HT</option>
+                                <option value="incoming">Incoming</option>
+                                <option value="invaders">Invaders</option>
+                                <option value="koy">Koy</option>
+                                <option value="kurt">Kurt</option>
+                                <option value="led">LED</option>
+                                <option value="less">Less</option>
+                                <option value="lt">LT</option>
+                                <option value="made">Made</option>
+                                <option value="made2">Made 2</option>
+                                <option value="mash">Mash</option>
+                                <option value="mash2">Mash 2</option>
+                                <option value="mp3">MP3</option>
+                                <option value="msg">MSG</option>
+                                <option value="mt">MT</option>
+                                <option value="odx">ODX</option>
+                                <option value="realclaps">Real Claps</option>
+                                <option value="rm">RM</option>
+                                <option value="rs">RS</option>
+                                <option value="sf">SF</option>
+                                <option value="sheffield">Sheffield</option>
+                                <option value="speedupdown">Speed Up/Down</option>
+                                <option value="tacscan">Tacscan</option>
+                                <option value="toys">Toys</option>
+                                <option value="ulgab">Ulgab</option>
+                                <option value="uxay">Uxay</option>
+                                <option value="v">V</option>
+                                <option value="voodoo">Voodoo</option>
+                                <option value="xmas">Xmas</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                    <div class="shader-selector dirt-controls" style="display: none;">
+                        <label>
+                            <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/>
+                            </svg>
+                            Lead Samples
+                        </label>
+                        <select id="dirtLeadBank">
+                            <optgroup label="Pads & Ambient">
+                                <option value="breath">Breath</option>
+                                <option value="cosmicg">Cosmicg</option>
+                                <option value="feel">Feel</option>
+                                <option value="feelfx">Feelfx</option>
+                                <option value="moog">Moog</option>
+                                <option value="newnotes">Newnotes</option>
+                                <option value="notes">Notes</option>
+                                <option value="outdoor">Outdoor</option>
+                                <option value="pad">Pad</option>
+                                <option value="padlong">Padlong</option>
+                                <option value="psr">PSR</option>
+                                <option value="seawolf">Seawolf</option>
+                                <option value="space">Space</option>
+                                <option value="sugar">Sugar</option>
+                                <option value="wind">Wind</option>
+                            </optgroup>
+                            <optgroup label="Bass">
+                                <option value="bass">Bass</option>
+                                <option value="bass0">Bass 0</option>
+                                <option value="bass1">Bass 1</option>
+                                <option value="bass2">Bass 2</option>
+                                <option value="bass3">Bass 3</option>
+                                <option value="bassfoo">Bassfoo</option>
+                                <option value="db">Double Bass</option>
+                                <option value="dorkbot">Dorkbot</option>
+                                <option value="jungbass">Jungle Bass</option>
+                                <option value="jvbass">JV Bass</option>
+                                <option value="subroc3d">Subroc3D</option>
+                                <option value="wobble">Wobble</option>
+                            </optgroup>
+                            <optgroup label="Leads & Melodic">
+                                <option value="arpy" selected>Arpy</option>
+                                <option value="bleep">Bleep</option>
+                                <option value="gtr">Guitar</option>
+                                <option value="hoover">Hoover</option>
+                                <option value="monsterb">Monsterb</option>
+                                <option value="oc">OC</option>
+                                <option value="popkick">Popkick</option>
+                                <option value="sax">Sax</option>
+                                <option value="simplesine">Simple Sine</option>
+                                <option value="trump">Trumpet</option>
+                                <option value="ul">UL</option>
+                            </optgroup>
+                            <optgroup label="Plucks & Keys">
+                                <option value="arp">Arp</option>
+                                <option value="blip">Blip</option>
+                                <option value="bottle">Bottle</option>
+                                <option value="casio">Casio</option>
+                                <option value="click">Click</option>
+                                <option value="jazz">Jazz</option>
+                                <option value="juno">Juno</option>
+                                <option value="peri">Peri</option>
+                                <option value="pluck">Pluck</option>
+                                <option value="print">Print</option>
+                                <option value="sitar">Sitar</option>
+                                <option value="stab">Stab</option>
+                            </optgroup>
+                            <optgroup label="Percussion">
+                                <option value="can">Can</option>
+                                <option value="glasstap">Glasstap</option>
+                                <option value="hand">Hand</option>
+                                <option value="lighter">Lighter</option>
+                                <option value="metal">Metal</option>
+                                <option value="perc">Perc</option>
+                                <option value="stomp">Stomp</option>
+                                <option value="tabla">Tabla</option>
+                                <option value="tabla2">Tabla 2</option>
+                                <option value="tablex">Tablex</option>
+                                <option value="tink">Tink</option>
+                                <option value="tok">Tok</option>
+                            </optgroup>
+                            <optgroup label="Drums & Breaks">
+                                <option value="amencutup">Amen Cutup</option>
+                                <option value="bd">Bass Drum</option>
+                                <option value="breaks125">Breaks 125</option>
+                                <option value="clubkick">Club Kick</option>
+                                <option value="cp">Clap</option>
+                                <option value="dr55">DR-55</option>
+                                <option value="drum">Drum</option>
+                                <option value="drumtraks">Drumtraks</option>
+                                <option value="gretsch">Gretsch</option>
+                                <option value="hardkick">Hard Kick</option>
+                                <option value="hh">Hi-hat</option>
+                                <option value="hh27">Hi-hat 27</option>
+                                <option value="jungle">Jungle</option>
+                                <option value="kicklinn">Kick Linn</option>
+                                <option value="linnhats">Linn Hats</option>
+                                <option value="reverbkick">Reverb Kick</option>
+                                <option value="sd">Snare Drum</option>
+                                <option value="sn">Snare</option>
+                            </optgroup>
+                            <optgroup label="Electronic & Synth">
+                                <option value="auto">Auto</option>
+                                <option value="electro1">Electro 1</option>
+                                <option value="em2">EM2</option>
+                                <option value="fm">FM</option>
+                                <option value="future">Future</option>
+                                <option value="gabba">Gabba</option>
+                                <option value="gabbaloud">Gabba Loud</option>
+                                <option value="gabbalouder">Gabba Louder</option>
+                                <option value="hardcore">Hardcore</option>
+                                <option value="house">House</option>
+                                <option value="rave">Rave</option>
+                                <option value="rave2">Rave 2</option>
+                                <option value="ravemono">Rave Mono</option>
+                                <option value="sequential">Sequential</option>
+                                <option value="sid">SID</option>
+                                <option value="tech">Tech</option>
+                                <option value="techno">Techno</option>
+                            </optgroup>
+                            <optgroup label="Vocals & Speech">
+                                <option value="alphabet">Alphabet</option>
+                                <option value="diphone">Diphone</option>
+                                <option value="diphone2">Diphone 2</option>
+                                <option value="haw">Haw</option>
+                                <option value="hmm">Hmm</option>
+                                <option value="ho">Ho</option>
+                                <option value="miniyeah">Mini Yeah</option>
+                                <option value="mouth">Mouth</option>
+                                <option value="num">Num</option>
+                                <option value="numbers">Numbers</option>
+                                <option value="speakspell">Speak & Spell</option>
+                                <option value="speech">Speech</option>
+                                <option value="speechless">Speechless</option>
+                                <option value="yeah">Yeah</option>
+                            </optgroup>
+                            <optgroup label="FX & Glitch">
+                                <option value="bend">Bend</option>
+                                <option value="control">Control</option>
+                                <option value="dist">Distortion</option>
+                                <option value="flick">Flick</option>
+                                <option value="foo">Foo</option>
+                                <option value="gab">Gab</option>
+                                <option value="glitch">Glitch</option>
+                                <option value="glitch2">Glitch 2</option>
+                                <option value="if">If</option>
+                                <option value="ifdrums">If Drums</option>
+                                <option value="industrial">Industrial</option>
+                                <option value="mute">Mute</option>
+                                <option value="noise">Noise</option>
+                                <option value="noise2">Noise 2</option>
+                                <option value="off">Off</option>
+                                <option value="proc">Proc</option>
+                                <option value="procshort">Proc Short</option>
+                                <option value="short">Short</option>
+                            </optgroup>
+                            <optgroup label="Nature & Organic">
+                                <option value="birds">Birds</option>
+                                <option value="birds3">Birds 3</option>
+                                <option value="bubble">Bubble</option>
+                                <option value="crow">Crow</option>
+                                <option value="fire">Fire</option>
+                                <option value="insect">Insect</option>
+                                <option value="pebbles">Pebbles</option>
+                            </optgroup>
+                            <optgroup label="World & Ethnic">
+                                <option value="east">East</option>
+                                <option value="latibro">Latibro</option>
+                                <option value="sundance">Sundance</option>
+                                <option value="world">World</option>
+                            </optgroup>
+                            <optgroup label="Weird & Experimental">
+                                <option value="ab">AB</option>
+                                <option value="ade">Ade</option>
+                                <option value="ades2">Ades 2</option>
+                                <option value="ades3">Ades 3</option>
+                                <option value="ades4">Ades 4</option>
+                                <option value="alex">Alex</option>
+                                <option value="armora">Armora</option>
+                                <option value="baa">Baa</option>
+                                <option value="baa2">Baa 2</option>
+                                <option value="battles">Battles</option>
+                                <option value="bev">Bev</option>
+                                <option value="bin">Bin</option>
+                                <option value="blue">Blue</option>
+                                <option value="cb">CB</option>
+                                <option value="cc">CC</option>
+                                <option value="chin">Chin</option>
+                                <option value="circus">Circus</option>
+                                <option value="clak">Clak</option>
+                                <option value="co">CO</option>
+                                <option value="coins">Coins</option>
+                                <option value="cr">CR</option>
+                                <option value="d">D</option>
+                                <option value="dork2">Dork 2</option>
+                                <option value="e">E</option>
+                                <option value="erk">Erk</option>
+                                <option value="f">F</option>
+                                <option value="fest">Fest</option>
+                                <option value="h">H</option>
+                                <option value="hc">HC</option>
+                                <option value="hit">Hit</option>
+                                <option value="ht">HT</option>
+                                <option value="incoming">Incoming</option>
+                                <option value="invaders">Invaders</option>
+                                <option value="koy">Koy</option>
+                                <option value="kurt">Kurt</option>
+                                <option value="led">LED</option>
+                                <option value="less">Less</option>
+                                <option value="lt">LT</option>
+                                <option value="made">Made</option>
+                                <option value="made2">Made 2</option>
+                                <option value="mash">Mash</option>
+                                <option value="mash2">Mash 2</option>
+                                <option value="mp3">MP3</option>
+                                <option value="msg">MSG</option>
+                                <option value="mt">MT</option>
+                                <option value="odx">ODX</option>
+                                <option value="realclaps">Real Claps</option>
+                                <option value="rm">RM</option>
+                                <option value="rs">RS</option>
+                                <option value="sf">SF</option>
+                                <option value="sheffield">Sheffield</option>
+                                <option value="speedupdown">Speed Up/Down</option>
+                                <option value="tacscan">Tacscan</option>
+                                <option value="toys">Toys</option>
+                                <option value="ulgab">Ulgab</option>
+                                <option value="uxay">Uxay</option>
+                                <option value="v">V</option>
+                                <option value="voodoo">Voodoo</option>
+                                <option value="xmas">Xmas</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                    <div class="shader-selector dirt-controls" style="display: none;">
+                        <label>
+                            <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/>
+                            </svg>
+                            Bass Samples
+                        </label>
+                        <select id="dirtBassBank">
+                            <optgroup label="Pads & Ambient">
+                                <option value="breath">Breath</option>
+                                <option value="cosmicg">Cosmicg</option>
+                                <option value="feel">Feel</option>
+                                <option value="feelfx">Feelfx</option>
+                                <option value="moog">Moog</option>
+                                <option value="newnotes">Newnotes</option>
+                                <option value="notes">Notes</option>
+                                <option value="outdoor">Outdoor</option>
+                                <option value="pad">Pad</option>
+                                <option value="padlong">Padlong</option>
+                                <option value="psr">PSR</option>
+                                <option value="seawolf">Seawolf</option>
+                                <option value="space">Space</option>
+                                <option value="sugar">Sugar</option>
+                                <option value="wind">Wind</option>
+                            </optgroup>
+                            <optgroup label="Bass">
+                                <option value="bass" selected>Bass</option>
+                                <option value="bass0">Bass 0</option>
+                                <option value="bass1">Bass 1</option>
+                                <option value="bass2">Bass 2</option>
+                                <option value="bass3">Bass 3</option>
+                                <option value="bassfoo">Bassfoo</option>
+                                <option value="db">Double Bass</option>
+                                <option value="dorkbot">Dorkbot</option>
+                                <option value="jungbass">Jungle Bass</option>
+                                <option value="jvbass">JV Bass</option>
+                                <option value="subroc3d">Subroc3D</option>
+                                <option value="wobble">Wobble</option>
+                            </optgroup>
+                            <optgroup label="Leads & Melodic">
+                                <option value="arpy">Arpy</option>
+                                <option value="bleep">Bleep</option>
+                                <option value="gtr">Guitar</option>
+                                <option value="hoover">Hoover</option>
+                                <option value="monsterb">Monsterb</option>
+                                <option value="oc">OC</option>
+                                <option value="popkick">Popkick</option>
+                                <option value="sax">Sax</option>
+                                <option value="simplesine">Simple Sine</option>
+                                <option value="trump">Trumpet</option>
+                                <option value="ul">UL</option>
+                            </optgroup>
+                            <optgroup label="Plucks & Keys">
+                                <option value="arp">Arp</option>
+                                <option value="blip">Blip</option>
+                                <option value="bottle">Bottle</option>
+                                <option value="casio">Casio</option>
+                                <option value="click">Click</option>
+                                <option value="jazz">Jazz</option>
+                                <option value="juno">Juno</option>
+                                <option value="peri">Peri</option>
+                                <option value="pluck">Pluck</option>
+                                <option value="print">Print</option>
+                                <option value="sitar">Sitar</option>
+                                <option value="stab">Stab</option>
+                            </optgroup>
+                            <optgroup label="Percussion">
+                                <option value="can">Can</option>
+                                <option value="glasstap">Glasstap</option>
+                                <option value="hand">Hand</option>
+                                <option value="lighter">Lighter</option>
+                                <option value="metal">Metal</option>
+                                <option value="perc">Perc</option>
+                                <option value="stomp">Stomp</option>
+                                <option value="tabla">Tabla</option>
+                                <option value="tabla2">Tabla 2</option>
+                                <option value="tablex">Tablex</option>
+                                <option value="tink">Tink</option>
+                                <option value="tok">Tok</option>
+                            </optgroup>
+                            <optgroup label="Drums & Breaks">
+                                <option value="amencutup">Amen Cutup</option>
+                                <option value="bd">Bass Drum</option>
+                                <option value="breaks125">Breaks 125</option>
+                                <option value="clubkick">Club Kick</option>
+                                <option value="cp">Clap</option>
+                                <option value="dr55">DR-55</option>
+                                <option value="drum">Drum</option>
+                                <option value="drumtraks">Drumtraks</option>
+                                <option value="gretsch">Gretsch</option>
+                                <option value="hardkick">Hard Kick</option>
+                                <option value="hh">Hi-hat</option>
+                                <option value="hh27">Hi-hat 27</option>
+                                <option value="jungle">Jungle</option>
+                                <option value="kicklinn">Kick Linn</option>
+                                <option value="linnhats">Linn Hats</option>
+                                <option value="reverbkick">Reverb Kick</option>
+                                <option value="sd">Snare Drum</option>
+                                <option value="sn">Snare</option>
+                            </optgroup>
+                            <optgroup label="Electronic & Synth">
+                                <option value="auto">Auto</option>
+                                <option value="electro1">Electro 1</option>
+                                <option value="em2">EM2</option>
+                                <option value="fm">FM</option>
+                                <option value="future">Future</option>
+                                <option value="gabba">Gabba</option>
+                                <option value="gabbaloud">Gabba Loud</option>
+                                <option value="gabbalouder">Gabba Louder</option>
+                                <option value="hardcore">Hardcore</option>
+                                <option value="house">House</option>
+                                <option value="rave">Rave</option>
+                                <option value="rave2">Rave 2</option>
+                                <option value="ravemono">Rave Mono</option>
+                                <option value="sequential">Sequential</option>
+                                <option value="sid">SID</option>
+                                <option value="tech">Tech</option>
+                                <option value="techno">Techno</option>
+                            </optgroup>
+                            <optgroup label="Vocals & Speech">
+                                <option value="alphabet">Alphabet</option>
+                                <option value="diphone">Diphone</option>
+                                <option value="diphone2">Diphone 2</option>
+                                <option value="haw">Haw</option>
+                                <option value="hmm">Hmm</option>
+                                <option value="ho">Ho</option>
+                                <option value="miniyeah">Mini Yeah</option>
+                                <option value="mouth">Mouth</option>
+                                <option value="num">Num</option>
+                                <option value="numbers">Numbers</option>
+                                <option value="speakspell">Speak & Spell</option>
+                                <option value="speech">Speech</option>
+                                <option value="speechless">Speechless</option>
+                                <option value="yeah">Yeah</option>
+                            </optgroup>
+                            <optgroup label="FX & Glitch">
+                                <option value="bend">Bend</option>
+                                <option value="control">Control</option>
+                                <option value="dist">Distortion</option>
+                                <option value="flick">Flick</option>
+                                <option value="foo">Foo</option>
+                                <option value="gab">Gab</option>
+                                <option value="glitch">Glitch</option>
+                                <option value="glitch2">Glitch 2</option>
+                                <option value="if">If</option>
+                                <option value="ifdrums">If Drums</option>
+                                <option value="industrial">Industrial</option>
+                                <option value="mute">Mute</option>
+                                <option value="noise">Noise</option>
+                                <option value="noise2">Noise 2</option>
+                                <option value="off">Off</option>
+                                <option value="proc">Proc</option>
+                                <option value="procshort">Proc Short</option>
+                                <option value="short">Short</option>
+                            </optgroup>
+                            <optgroup label="Nature & Organic">
+                                <option value="birds">Birds</option>
+                                <option value="birds3">Birds 3</option>
+                                <option value="bubble">Bubble</option>
+                                <option value="crow">Crow</option>
+                                <option value="fire">Fire</option>
+                                <option value="insect">Insect</option>
+                                <option value="pebbles">Pebbles</option>
+                            </optgroup>
+                            <optgroup label="World & Ethnic">
+                                <option value="east">East</option>
+                                <option value="latibro">Latibro</option>
+                                <option value="sundance">Sundance</option>
+                                <option value="world">World</option>
+                            </optgroup>
+                            <optgroup label="Weird & Experimental">
+                                <option value="ab">AB</option>
+                                <option value="ade">Ade</option>
+                                <option value="ades2">Ades 2</option>
+                                <option value="ades3">Ades 3</option>
+                                <option value="ades4">Ades 4</option>
+                                <option value="alex">Alex</option>
+                                <option value="armora">Armora</option>
+                                <option value="baa">Baa</option>
+                                <option value="baa2">Baa 2</option>
+                                <option value="battles">Battles</option>
+                                <option value="bev">Bev</option>
+                                <option value="bin">Bin</option>
+                                <option value="blue">Blue</option>
+                                <option value="cb">CB</option>
+                                <option value="cc">CC</option>
+                                <option value="chin">Chin</option>
+                                <option value="circus">Circus</option>
+                                <option value="clak">Clak</option>
+                                <option value="co">CO</option>
+                                <option value="coins">Coins</option>
+                                <option value="cr">CR</option>
+                                <option value="d">D</option>
+                                <option value="dork2">Dork 2</option>
+                                <option value="e">E</option>
+                                <option value="erk">Erk</option>
+                                <option value="f">F</option>
+                                <option value="fest">Fest</option>
+                                <option value="h">H</option>
+                                <option value="hc">HC</option>
+                                <option value="hit">Hit</option>
+                                <option value="ht">HT</option>
+                                <option value="incoming">Incoming</option>
+                                <option value="invaders">Invaders</option>
+                                <option value="koy">Koy</option>
+                                <option value="kurt">Kurt</option>
+                                <option value="led">LED</option>
+                                <option value="less">Less</option>
+                                <option value="lt">LT</option>
+                                <option value="made">Made</option>
+                                <option value="made2">Made 2</option>
+                                <option value="mash">Mash</option>
+                                <option value="mash2">Mash 2</option>
+                                <option value="mp3">MP3</option>
+                                <option value="msg">MSG</option>
+                                <option value="mt">MT</option>
+                                <option value="odx">ODX</option>
+                                <option value="realclaps">Real Claps</option>
+                                <option value="rm">RM</option>
+                                <option value="rs">RS</option>
+                                <option value="sf">SF</option>
+                                <option value="sheffield">Sheffield</option>
+                                <option value="speedupdown">Speed Up/Down</option>
+                                <option value="tacscan">Tacscan</option>
+                                <option value="toys">Toys</option>
+                                <option value="ulgab">Ulgab</option>
+                                <option value="uxay">Uxay</option>
+                                <option value="v">V</option>
+                                <option value="voodoo">Voodoo</option>
+                                <option value="xmas">Xmas</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                    <div class="shader-selector dirt-controls" style="display: none;">
+                        <label>
+                            <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/>
+                            </svg>
+                            Arp Samples
+                        </label>
+                        <select id="dirtArpBank">
+                            <optgroup label="Pads & Ambient">
+                                <option value="breath">Breath</option>
+                                <option value="cosmicg">Cosmicg</option>
+                                <option value="feel">Feel</option>
+                                <option value="feelfx">Feelfx</option>
+                                <option value="moog">Moog</option>
+                                <option value="newnotes">Newnotes</option>
+                                <option value="notes">Notes</option>
+                                <option value="outdoor">Outdoor</option>
+                                <option value="pad">Pad</option>
+                                <option value="padlong">Padlong</option>
+                                <option value="psr">PSR</option>
+                                <option value="seawolf">Seawolf</option>
+                                <option value="space">Space</option>
+                                <option value="sugar">Sugar</option>
+                                <option value="wind">Wind</option>
+                            </optgroup>
+                            <optgroup label="Bass">
+                                <option value="bass">Bass</option>
+                                <option value="bass0">Bass 0</option>
+                                <option value="bass1">Bass 1</option>
+                                <option value="bass2">Bass 2</option>
+                                <option value="bass3">Bass 3</option>
+                                <option value="bassfoo">Bassfoo</option>
+                                <option value="db">Double Bass</option>
+                                <option value="dorkbot">Dorkbot</option>
+                                <option value="jungbass">Jungle Bass</option>
+                                <option value="jvbass">JV Bass</option>
+                                <option value="subroc3d">Subroc3D</option>
+                                <option value="wobble">Wobble</option>
+                            </optgroup>
+                            <optgroup label="Leads & Melodic">
+                                <option value="arpy">Arpy</option>
+                                <option value="bleep">Bleep</option>
+                                <option value="gtr">Guitar</option>
+                                <option value="hoover">Hoover</option>
+                                <option value="monsterb">Monsterb</option>
+                                <option value="oc">OC</option>
+                                <option value="popkick">Popkick</option>
+                                <option value="sax">Sax</option>
+                                <option value="simplesine">Simple Sine</option>
+                                <option value="trump">Trumpet</option>
+                                <option value="ul">UL</option>
+                            </optgroup>
+                            <optgroup label="Plucks & Keys">
+                                <option value="arp">Arp</option>
+                                <option value="blip">Blip</option>
+                                <option value="bottle">Bottle</option>
+                                <option value="casio">Casio</option>
+                                <option value="click">Click</option>
+                                <option value="jazz">Jazz</option>
+                                <option value="juno">Juno</option>
+                                <option value="peri">Peri</option>
+                                <option value="pluck" selected>Pluck</option>
+                                <option value="print">Print</option>
+                                <option value="sitar">Sitar</option>
+                                <option value="stab">Stab</option>
+                            </optgroup>
+                            <optgroup label="Percussion">
+                                <option value="can">Can</option>
+                                <option value="glasstap">Glasstap</option>
+                                <option value="hand">Hand</option>
+                                <option value="lighter">Lighter</option>
+                                <option value="metal">Metal</option>
+                                <option value="perc">Perc</option>
+                                <option value="stomp">Stomp</option>
+                                <option value="tabla">Tabla</option>
+                                <option value="tabla2">Tabla 2</option>
+                                <option value="tablex">Tablex</option>
+                                <option value="tink">Tink</option>
+                                <option value="tok">Tok</option>
+                            </optgroup>
+                            <optgroup label="Drums & Breaks">
+                                <option value="amencutup">Amen Cutup</option>
+                                <option value="bd">Bass Drum</option>
+                                <option value="breaks125">Breaks 125</option>
+                                <option value="clubkick">Club Kick</option>
+                                <option value="cp">Clap</option>
+                                <option value="dr55">DR-55</option>
+                                <option value="drum">Drum</option>
+                                <option value="drumtraks">Drumtraks</option>
+                                <option value="gretsch">Gretsch</option>
+                                <option value="hardkick">Hard Kick</option>
+                                <option value="hh">Hi-hat</option>
+                                <option value="hh27">Hi-hat 27</option>
+                                <option value="jungle">Jungle</option>
+                                <option value="kicklinn">Kick Linn</option>
+                                <option value="linnhats">Linn Hats</option>
+                                <option value="reverbkick">Reverb Kick</option>
+                                <option value="sd">Snare Drum</option>
+                                <option value="sn">Snare</option>
+                            </optgroup>
+                            <optgroup label="Electronic & Synth">
+                                <option value="auto">Auto</option>
+                                <option value="electro1">Electro 1</option>
+                                <option value="em2">EM2</option>
+                                <option value="fm">FM</option>
+                                <option value="future">Future</option>
+                                <option value="gabba">Gabba</option>
+                                <option value="gabbaloud">Gabba Loud</option>
+                                <option value="gabbalouder">Gabba Louder</option>
+                                <option value="hardcore">Hardcore</option>
+                                <option value="house">House</option>
+                                <option value="rave">Rave</option>
+                                <option value="rave2">Rave 2</option>
+                                <option value="ravemono">Rave Mono</option>
+                                <option value="sequential">Sequential</option>
+                                <option value="sid">SID</option>
+                                <option value="tech">Tech</option>
+                                <option value="techno">Techno</option>
+                            </optgroup>
+                            <optgroup label="Vocals & Speech">
+                                <option value="alphabet">Alphabet</option>
+                                <option value="diphone">Diphone</option>
+                                <option value="diphone2">Diphone 2</option>
+                                <option value="haw">Haw</option>
+                                <option value="hmm">Hmm</option>
+                                <option value="ho">Ho</option>
+                                <option value="miniyeah">Mini Yeah</option>
+                                <option value="mouth">Mouth</option>
+                                <option value="num">Num</option>
+                                <option value="numbers">Numbers</option>
+                                <option value="speakspell">Speak & Spell</option>
+                                <option value="speech">Speech</option>
+                                <option value="speechless">Speechless</option>
+                                <option value="yeah">Yeah</option>
+                            </optgroup>
+                            <optgroup label="FX & Glitch">
+                                <option value="bend">Bend</option>
+                                <option value="control">Control</option>
+                                <option value="dist">Distortion</option>
+                                <option value="flick">Flick</option>
+                                <option value="foo">Foo</option>
+                                <option value="gab">Gab</option>
+                                <option value="glitch">Glitch</option>
+                                <option value="glitch2">Glitch 2</option>
+                                <option value="if">If</option>
+                                <option value="ifdrums">If Drums</option>
+                                <option value="industrial">Industrial</option>
+                                <option value="mute">Mute</option>
+                                <option value="noise">Noise</option>
+                                <option value="noise2">Noise 2</option>
+                                <option value="off">Off</option>
+                                <option value="proc">Proc</option>
+                                <option value="procshort">Proc Short</option>
+                                <option value="short">Short</option>
+                            </optgroup>
+                            <optgroup label="Nature & Organic">
+                                <option value="birds">Birds</option>
+                                <option value="birds3">Birds 3</option>
+                                <option value="bubble">Bubble</option>
+                                <option value="crow">Crow</option>
+                                <option value="fire">Fire</option>
+                                <option value="insect">Insect</option>
+                                <option value="pebbles">Pebbles</option>
+                            </optgroup>
+                            <optgroup label="World & Ethnic">
+                                <option value="east">East</option>
+                                <option value="latibro">Latibro</option>
+                                <option value="sundance">Sundance</option>
+                                <option value="world">World</option>
+                            </optgroup>
+                            <optgroup label="Weird & Experimental">
+                                <option value="ab">AB</option>
+                                <option value="ade">Ade</option>
+                                <option value="ades2">Ades 2</option>
+                                <option value="ades3">Ades 3</option>
+                                <option value="ades4">Ades 4</option>
+                                <option value="alex">Alex</option>
+                                <option value="armora">Armora</option>
+                                <option value="baa">Baa</option>
+                                <option value="baa2">Baa 2</option>
+                                <option value="battles">Battles</option>
+                                <option value="bev">Bev</option>
+                                <option value="bin">Bin</option>
+                                <option value="blue">Blue</option>
+                                <option value="cb">CB</option>
+                                <option value="cc">CC</option>
+                                <option value="chin">Chin</option>
+                                <option value="circus">Circus</option>
+                                <option value="clak">Clak</option>
+                                <option value="co">CO</option>
+                                <option value="coins">Coins</option>
+                                <option value="cr">CR</option>
+                                <option value="d">D</option>
+                                <option value="dork2">Dork 2</option>
+                                <option value="e">E</option>
+                                <option value="erk">Erk</option>
+                                <option value="f">F</option>
+                                <option value="fest">Fest</option>
+                                <option value="h">H</option>
+                                <option value="hc">HC</option>
+                                <option value="hit">Hit</option>
+                                <option value="ht">HT</option>
+                                <option value="incoming">Incoming</option>
+                                <option value="invaders">Invaders</option>
+                                <option value="koy">Koy</option>
+                                <option value="kurt">Kurt</option>
+                                <option value="led">LED</option>
+                                <option value="less">Less</option>
+                                <option value="lt">LT</option>
+                                <option value="made">Made</option>
+                                <option value="made2">Made 2</option>
+                                <option value="mash">Mash</option>
+                                <option value="mash2">Mash 2</option>
+                                <option value="mp3">MP3</option>
+                                <option value="msg">MSG</option>
+                                <option value="mt">MT</option>
+                                <option value="odx">ODX</option>
+                                <option value="realclaps">Real Claps</option>
+                                <option value="rm">RM</option>
+                                <option value="rs">RS</option>
+                                <option value="sf">SF</option>
+                                <option value="sheffield">Sheffield</option>
+                                <option value="speedupdown">Speed Up/Down</option>
+                                <option value="tacscan">Tacscan</option>
+                                <option value="toys">Toys</option>
+                                <option value="ulgab">Ulgab</option>
+                                <option value="uxay">Uxay</option>
+                                <option value="v">V</option>
+                                <option value="voodoo">Voodoo</option>
+                                <option value="xmas">Xmas</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                    <div class="shader-selector">
+                        <label>
+                            <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
                                 <path d="M12 2l-5.5 9h11L12 2zm0 3.84L13.93 9h-3.87L12 5.84zM17.5 13c-2.49 0-4.5 2.01-4.5 4.5s2.01 4.5 4.5 4.5 4.5-2.01 4.5-4.5-2.01-4.5-4.5-4.5zm0 7c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5zM3 21.5h8v-8H3v8zm2-6h4v4H5v-4z"/>
                             </svg>
                             Musical Scale
@@ -279,6 +1264,52 @@
                             <option value="pentatonic">Pentatonic</option>
                             <option value="dorian">Dorian</option>
                             <option value="phrygian">Phrygian</option>
+                        </select>
+                    </div>
+                    <div class="shader-selector">
+                        <label>
+                            <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+                            </svg>
+                            Song Key (Root Note)
+                        </label>
+                        <select id="keySelect">
+                            <option value="C2">C2 (Low)</option>
+                            <option value="C#2">C#2 / Db2</option>
+                            <option value="D2">D2</option>
+                            <option value="D#2">D#2 / Eb2</option>
+                            <option value="E2">E2</option>
+                            <option value="F2">F2</option>
+                            <option value="F#2">F#2 / Gb2</option>
+                            <option value="G2">G2</option>
+                            <option value="G#2">G#2 / Ab2</option>
+                            <option value="A2">A2</option>
+                            <option value="A#2">A#2 / Bb2</option>
+                            <option value="B2">B2</option>
+                            <option value="C3" selected>C3 (Default)</option>
+                            <option value="C#3">C#3 / Db3</option>
+                            <option value="D3">D3</option>
+                            <option value="D#3">D#3 / Eb3</option>
+                            <option value="E3">E3</option>
+                            <option value="F3">F3</option>
+                            <option value="F#3">F#3 / Gb3</option>
+                            <option value="G3">G3</option>
+                            <option value="G#3">G#3 / Ab3</option>
+                            <option value="A3">A3</option>
+                            <option value="A#3">A#3 / Bb3</option>
+                            <option value="B3">B3</option>
+                            <option value="C4">C4 (Middle C)</option>
+                            <option value="C#4">C#4 / Db4</option>
+                            <option value="D4">D4</option>
+                            <option value="D#4">D#4 / Eb4</option>
+                            <option value="E4">E4</option>
+                            <option value="F4">F4</option>
+                            <option value="F#4">F#4 / Gb4</option>
+                            <option value="G4">G4</option>
+                            <option value="G#4">G#4 / Ab4</option>
+                            <option value="A4">A4 (440Hz)</option>
+                            <option value="A#4">A#4 / Bb4</option>
+                            <option value="B4">B4</option>
                         </select>
                     </div>
                     <div class="toggle-group">
@@ -439,6 +1470,7 @@
     </script>
 
     <!-- Custom Modules -->
+    <script src="lib/wad.min.js"></script>
     <script src="lib/shadertoy-lite.js"></script>
     <script src="src/visuals/osmos-shaders.js"></script>
     <script src="src/visuals/tron-shaders.js"></script>
@@ -447,6 +1479,8 @@
     <script src="src/visuals/main-shader.js"></script>
     <script src="src/visuals/toy-renderer.js"></script>
     <script src="src/audio/audio-engine.js"></script>
+    <script src="src/audio/wad-synth-engine.js"></script>
+    <script src="src/audio/dirt-sample-engine.js"></script>
     <script src="src/audio/generative-music.js"></script>
     <script src="src/visuals/shader-editor.js"></script>
     <script src="app.js"></script>

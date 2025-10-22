@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Drum Machine Test</title>
+</head>
+<body>
+    <h1>Testing Drum Machines</h1>
+    <div id="output"></div>
+
+    <script src="lib/tone.js"></script>
+    <script src="src/audio/generative-music.js"></script>
+    <script>
+        const output = document.getElementById('output');
+
+        function log(msg) {
+            output.innerHTML += msg + '<br>';
+            console.log(msg);
+        }
+
+        // Test creating the music engine
+        log('Creating GenerativeMusic instance...');
+        const music = new GenerativeMusic();
+
+        log('Available drum machines: ' + music.drumMachinesAvailable.length);
+        log('First few: ' + music.drumMachinesAvailable.slice(0, 5).join(', '));
+
+        // Test getDrumMachines
+        const machines = music.getDrumMachines();
+        log('getDrumMachines() returned: ' + machines.length + ' machines');
+        log('First machine: ' + JSON.stringify(machines[0]));
+
+        // Try to init
+        music.init().then(() => {
+            log('✅ Music engine initialized!');
+            log('Current drum machine: ' + music.currentDrumMachine);
+        }).catch(err => {
+            log('❌ Error initializing: ' + err.message);
+        });
+    </script>
+</body>
+</html>

@@ -190,10 +190,91 @@ class Mesmer {
             this.musicEngine.setGenre(e.target.value);
         });
 
+        // Synth engine selector
+        const synthEngineSelect = document.getElementById('synthEngineSelect');
+        synthEngineSelect.addEventListener('change', (e) => {
+            const engineType = e.target.value;
+            this.musicEngine.setSynthEngine(engineType);
+
+            // Show/hide WAD controls
+            const wadControls = document.querySelectorAll('.wad-controls');
+            wadControls.forEach(control => {
+                control.style.display = engineType === 'wad' ? 'block' : 'none';
+            });
+
+            // Show/hide Dirt controls
+            const dirtControls = document.querySelectorAll('.dirt-controls');
+            dirtControls.forEach(control => {
+                control.style.display = engineType === 'dirt' ? 'block' : 'none';
+            });
+        });
+
+        // WAD Pad preset selector
+        const wadPadPreset = document.getElementById('wadPadPreset');
+        if (wadPadPreset) {
+            wadPadPreset.addEventListener('change', (e) => {
+                this.musicEngine.changeWadPreset('pad', e.target.value);
+            });
+        }
+
+        // WAD Lead preset selector
+        const wadLeadPreset = document.getElementById('wadLeadPreset');
+        if (wadLeadPreset) {
+            wadLeadPreset.addEventListener('change', (e) => {
+                this.musicEngine.changeWadPreset('lead', e.target.value);
+            });
+        }
+
+        // WAD Bass preset selector
+        const wadBassPreset = document.getElementById('wadBassPreset');
+        if (wadBassPreset) {
+            wadBassPreset.addEventListener('change', (e) => {
+                this.musicEngine.changeWadPreset('bass', e.target.value);
+            });
+        }
+
+        // Dirt Pad bank selector
+        const dirtPadBank = document.getElementById('dirtPadBank');
+        if (dirtPadBank) {
+            dirtPadBank.addEventListener('change', (e) => {
+                this.musicEngine.changeDirtBank('pad', e.target.value);
+            });
+        }
+
+        // Dirt Lead bank selector
+        const dirtLeadBank = document.getElementById('dirtLeadBank');
+        if (dirtLeadBank) {
+            dirtLeadBank.addEventListener('change', (e) => {
+                this.musicEngine.changeDirtBank('lead', e.target.value);
+            });
+        }
+
+        // Dirt Bass bank selector
+        const dirtBassBank = document.getElementById('dirtBassBank');
+        if (dirtBassBank) {
+            dirtBassBank.addEventListener('change', (e) => {
+                this.musicEngine.changeDirtBank('bass', e.target.value);
+            });
+        }
+
+        // Dirt Arp bank selector
+        const dirtArpBank = document.getElementById('dirtArpBank');
+        if (dirtArpBank) {
+            dirtArpBank.addEventListener('change', (e) => {
+                this.musicEngine.changeDirtBank('arp', e.target.value);
+            });
+        }
+
         // Scale selector
         const scaleSelect = document.getElementById('scaleSelect');
         scaleSelect.addEventListener('change', (e) => {
             this.musicEngine.setScale(e.target.value);
+        });
+
+        // Key selector (root note)
+        const keySelect = document.getElementById('keySelect');
+        keySelect.addEventListener('change', (e) => {
+            this.musicEngine.setKey(e.target.value);
         });
 
         // Drum machine toggle
@@ -220,17 +301,35 @@ class Mesmer {
             this.musicEngine.changeDrumMachine(e.target.value);
         });
 
-        // Populate drum pattern dropdown
+        // Populate drum pattern dropdown with categories
         const drumPatternSelect = document.getElementById('drumPatternSelect');
         const drumPatterns = this.musicEngine.getDrumPatterns();
+
+        // Group patterns by category
+        const patternsByCategory = {};
         drumPatterns.forEach(pattern => {
-            const option = document.createElement('option');
-            option.value = pattern.value;
-            option.textContent = pattern.label;
-            if (pattern.value === this.musicEngine.currentPattern) {
-                option.selected = true;
+            if (!patternsByCategory[pattern.category]) {
+                patternsByCategory[pattern.category] = [];
             }
-            drumPatternSelect.appendChild(option);
+            patternsByCategory[pattern.category].push(pattern);
+        });
+
+        // Add patterns organized by category
+        Object.entries(patternsByCategory).forEach(([category, patterns]) => {
+            const optgroup = document.createElement('optgroup');
+            optgroup.label = category;
+
+            patterns.forEach(pattern => {
+                const option = document.createElement('option');
+                option.value = pattern.value;
+                option.textContent = pattern.label;
+                if (pattern.value === this.musicEngine.currentPattern) {
+                    option.selected = true;
+                }
+                optgroup.appendChild(option);
+            });
+
+            drumPatternSelect.appendChild(optgroup);
         });
 
         // Drum pattern selector
