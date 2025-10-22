@@ -825,15 +825,18 @@ button {
     bottom: 20px;
     right: 20px;
     width: 900px;
-    max-height: 500px;
+    max-height: 80vh;
+    min-height: 400px;
+    height: auto;
     background: linear-gradient(135deg, rgba(15, 15, 25, 0.98), rgba(25, 25, 40, 0.98));
     border: 2px solid var(--accent);
     border-radius: 12px;
     box-shadow: 0 10px 40px rgba(99, 102, 241, 0.3), 0 0 20px rgba(99, 102, 241, 0.1);
-    z-index: 1000;
+    z-index: 9998;
     overflow: hidden;
     backdrop-filter: blur(10px);
     transition: height 0.3s ease;
+    resize: vertical;
 }
 
 .drum-sequencer.collapsed .sequencer-controls {
@@ -870,7 +873,37 @@ button {
 .sequencer-controls {
     padding: 20px;
     overflow-y: auto;
-    max-height: 400px;
+    max-height: calc(80vh - 100px);
+    min-height: 300px;
+}
+
+/* Custom Scrollbar for Drum Sequencer */
+.sequencer-controls::-webkit-scrollbar {
+    width: 12px;
+}
+
+.sequencer-controls::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 6px;
+    margin: 4px;
+}
+
+.sequencer-controls::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+    border-radius: 6px;
+    border: 2px solid rgba(0, 0, 0, 0.3);
+    box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+}
+
+.sequencer-controls::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, var(--accent-hover), var(--accent));
+    box-shadow: 0 0 15px rgba(99, 102, 241, 0.8);
+}
+
+/* Firefox scrollbar */
+.sequencer-controls {
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent) rgba(0, 0, 0, 0.3);
 }
 
 /* Drum Channel */

@@ -644,6 +644,11 @@ class Mesmer {
             `;
         });
 
+        // Bring MPC panel to front when clicked
+        mpcPanel.addEventListener('mousedown', () => {
+            this.bringPanelToFront(mpcPanel);
+        });
+
         // Make panel draggable by header
         mpcHeader.addEventListener('mousedown', (e) => {
             if (e.target.closest('.mpc-close')) return; // Don't drag when clicking close button
@@ -824,6 +829,10 @@ class Mesmer {
             const drumPatternSelect = document.getElementById('drumPatternSelect');
             drumPatternSelect.value = assignment.pattern;
             this.musicEngine.changeDrumPattern(assignment.pattern);
+            // Update drum sequencer if it's open
+            if (this.updateSequencerDisplay) {
+                this.updateSequencerDisplay();
+            }
         } else if (assignment.type === 'synth') {
             // Switch genre (which changes synth patterns)
             console.log('🎹 Switching to genre:', assignment.pattern);
@@ -1152,6 +1161,18 @@ class Mesmer {
         });
     }
 
+    bringPanelToFront(panel) {
+        // Reset all panels to base z-index
+        const drumSequencer = document.getElementById('drumSequencer');
+        const mpcPanel = document.getElementById('mpcPanel');
+
+        if (drumSequencer) drumSequencer.style.zIndex = '9998';
+        if (mpcPanel) mpcPanel.style.zIndex = '9998';
+
+        // Bring clicked panel to front
+        panel.style.zIndex = '99999';
+    }
+
     setupDraggable() {
         const sequencer = document.getElementById('drumSequencer');
         const header = document.getElementById('sequencerHeader');
@@ -1161,6 +1182,11 @@ class Mesmer {
         let startY;
         let startLeft;
         let startTop;
+
+        // Bring to front when clicked anywhere on sequencer
+        sequencer.addEventListener('mousedown', () => {
+            this.bringPanelToFront(sequencer);
+        });
 
         header.addEventListener('mousedown', (e) => {
             // Don't start drag if clicking on buttons
@@ -1180,6 +1206,9 @@ class Mesmer {
             sequencer.style.right = 'auto';
             sequencer.style.left = `${startLeft}px`;
             sequencer.style.top = `${startTop}px`;
+
+            // Prevent text selection
+            e.preventDefault();
         });
 
         document.addEventListener('mousemove', (e) => {
