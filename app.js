@@ -550,10 +550,37 @@ class Mesmer {
     }
 
     toggleFullscreen() {
-        if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen();
+        // Check if we're currently in fullscreen (cross-browser)
+        const isFullscreen = !!(document.fullscreenElement ||
+                                document.webkitFullscreenElement ||
+                                document.mozFullScreenElement ||
+                                document.msFullscreenElement);
+
+        if (!isFullscreen) {
+            // Enter fullscreen (try all browser prefixes)
+            const elem = document.documentElement;
+            if (elem.requestFullscreen) {
+                elem.requestFullscreen();
+            } else if (elem.webkitRequestFullscreen) {
+                elem.webkitRequestFullscreen();
+            } else if (elem.mozRequestFullScreen) {
+                elem.mozRequestFullScreen();
+            } else if (elem.msRequestFullscreen) {
+                elem.msRequestFullscreen();
+            }
+            console.log('🖥️ Requesting fullscreen...');
         } else {
-            document.exitFullscreen();
+            // Exit fullscreen (try all browser prefixes)
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            } else if (document.mozCancelFullScreen) {
+                document.mozCancelFullScreen();
+            } else if (document.msExitFullscreen) {
+                document.msExitFullscreen();
+            }
+            console.log('🖥️ Exiting fullscreen...');
         }
         // Note: fullscreenchange event listener handles showing/hiding controls
     }
