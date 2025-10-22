@@ -557,17 +557,70 @@ class Mesmer {
         const drumPatternSelect = document.getElementById('drumPatternSelect');
         const genreSelect = document.getElementById('genreSelect');
 
+        console.log('🔍 MPC Panel elements found:', {
+            mpcPanel: !!mpcPanel,
+            mpcToggleBtn: !!mpcToggleBtn,
+            mpcCloseBtn: !!mpcCloseBtn,
+            mpcHeader: !!mpcHeader,
+            allPads: allPads.length
+        });
+
+        if (!mpcPanel) {
+            console.error('❌ MPC Panel not found in DOM!');
+            return;
+        }
+
+        // Ensure panel starts hidden with correct initial styles
+        mpcPanel.style.display = 'none';
+        mpcPanel.style.position = 'fixed';
+        mpcPanel.style.zIndex = '9999';
+        console.log('✓ MPC Panel initialized in hidden state');
+
         // Toggle panel visibility
         mpcToggleBtn.addEventListener('click', () => {
-            if (mpcPanel.style.display === 'none') {
+            const isHidden = mpcPanel.style.display === 'none' || !mpcPanel.style.display;
+
+            console.log('🔍 Current panel state:', {
+                display: mpcPanel.style.display,
+                isHidden: isHidden,
+                boundingRect: mpcPanel.getBoundingClientRect(),
+                computedStyle: {
+                    display: window.getComputedStyle(mpcPanel).display,
+                    visibility: window.getComputedStyle(mpcPanel).visibility,
+                    opacity: window.getComputedStyle(mpcPanel).opacity,
+                    zIndex: window.getComputedStyle(mpcPanel).zIndex
+                }
+            });
+
+            if (isHidden) {
+                // Show panel - reset to center position with all properties
                 mpcPanel.style.display = 'block';
+                mpcPanel.style.position = 'fixed';
+                mpcPanel.style.left = '50%';
+                mpcPanel.style.top = '50%';
+                mpcPanel.style.transform = 'translate(-50%, -50%)';
+                mpcPanel.style.zIndex = '99999';
+                mpcPanel.style.opacity = '1';
+                mpcPanel.style.visibility = 'visible';
+                mpcPanel.style.pointerEvents = 'auto';
+
                 mpcToggleBtn.innerHTML = `
                     <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M4 6h4v4H4V6zm0 8h4v4H4v-4zm6-8h4v4h-4V6zm0 8h4v4h-4v-4zm6-8h4v4h-4V6zm0 8h4v4h-4v-4z"/>
                     </svg>
                     Hide MPC Pads
                 `;
-                console.log('🎹 MPC Panel shown');
+
+                setTimeout(() => {
+                    console.log('🎹 ✅ MPC Panel SHOWN - Position:', {
+                        display: mpcPanel.style.display,
+                        left: mpcPanel.style.left,
+                        top: mpcPanel.style.top,
+                        transform: mpcPanel.style.transform,
+                        zIndex: mpcPanel.style.zIndex,
+                        boundingRect: mpcPanel.getBoundingClientRect()
+                    });
+                }, 100);
             } else {
                 mpcPanel.style.display = 'none';
                 mpcToggleBtn.innerHTML = `
@@ -576,7 +629,7 @@ class Mesmer {
                     </svg>
                     Show MPC Pads
                 `;
-                console.log('🎹 MPC Panel hidden');
+                console.log('🎹 ❌ MPC Panel HIDDEN');
             }
         });
 
