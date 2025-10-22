@@ -796,7 +796,7 @@ class Mesmer {
             console.log('🥁 Switching to drum pattern:', assignment.pattern);
             const drumPatternSelect = document.getElementById('drumPatternSelect');
             drumPatternSelect.value = assignment.pattern;
-            this.musicEngine.setDrumPattern(assignment.pattern);
+            this.musicEngine.changeDrumPattern(assignment.pattern);
         } else if (assignment.type === 'synth') {
             // Switch genre (which changes synth patterns)
             console.log('🎹 Switching to genre:', assignment.pattern);
