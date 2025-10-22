@@ -542,14 +542,85 @@ class Mesmer {
         this.mpcState = {
             assignMode: false,
             selectedPad: null,
-            pads: {} // Store pad assignments: { padIndex: { type: 'drum'|'synth', pattern: 'patternName' } }
+            pads: {}, // Store pad assignments: { padIndex: { type: 'drum'|'synth', pattern: 'patternName' } }
+            isDragging: false,
+            dragOffset: { x: 0, y: 0 }
         };
 
+        const mpcPanel = document.getElementById('mpcPanel');
+        const mpcToggleBtn = document.getElementById('mpcToggleBtn');
+        const mpcCloseBtn = document.getElementById('mpcCloseBtn');
+        const mpcHeader = document.getElementById('mpcHeader');
         const assignModeBtn = document.getElementById('mpcAssignMode');
         const assignHint = document.getElementById('mpcAssignHint');
         const allPads = document.querySelectorAll('.mpc-pad');
         const drumPatternSelect = document.getElementById('drumPatternSelect');
         const genreSelect = document.getElementById('genreSelect');
+
+        // Toggle panel visibility
+        mpcToggleBtn.addEventListener('click', () => {
+            if (mpcPanel.style.display === 'none') {
+                mpcPanel.style.display = 'block';
+                mpcToggleBtn.innerHTML = `
+                    <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M4 6h4v4H4V6zm0 8h4v4H4v-4zm6-8h4v4h-4V6zm0 8h4v4h-4v-4zm6-8h4v4h-4V6zm0 8h4v4h-4v-4z"/>
+                    </svg>
+                    Hide MPC Pads
+                `;
+                console.log('🎹 MPC Panel shown');
+            } else {
+                mpcPanel.style.display = 'none';
+                mpcToggleBtn.innerHTML = `
+                    <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M4 6h4v4H4V6zm0 8h4v4H4v-4zm6-8h4v4h-4V6zm0 8h4v4h-4v-4zm6-8h4v4h-4V6zm0 8h4v4h-4v-4z"/>
+                    </svg>
+                    Show MPC Pads
+                `;
+                console.log('🎹 MPC Panel hidden');
+            }
+        });
+
+        // Close button
+        mpcCloseBtn.addEventListener('click', () => {
+            mpcPanel.style.display = 'none';
+            mpcToggleBtn.innerHTML = `
+                <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M4 6h4v4H4V6zm0 8h4v4H4v-4zm6-8h4v4h-4V6zm0 8h4v4h-4v-4zm6-8h4v4h-4V6zm0 8h4v4h-4v-4z"/>
+                </svg>
+                Show MPC Pads
+            `;
+        });
+
+        // Make panel draggable by header
+        mpcHeader.addEventListener('mousedown', (e) => {
+            if (e.target.closest('.mpc-close')) return; // Don't drag when clicking close button
+
+            this.mpcState.isDragging = true;
+            const rect = mpcPanel.getBoundingClientRect();
+            this.mpcState.dragOffset = {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top
+            };
+            mpcPanel.style.transform = 'none';
+            console.log('🖱️ MPC Panel drag started');
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!this.mpcState.isDragging) return;
+
+            const x = e.clientX - this.mpcState.dragOffset.x;
+            const y = e.clientY - this.mpcState.dragOffset.y;
+
+            mpcPanel.style.left = `${x}px`;
+            mpcPanel.style.top = `${y}px`;
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (this.mpcState.isDragging) {
+                this.mpcState.isDragging = false;
+                console.log('🖱️ MPC Panel drag ended');
+            }
+        });
 
         // Assign Mode button
         assignModeBtn.addEventListener('click', () => {
