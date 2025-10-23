@@ -471,6 +471,34 @@ class Mesmer {
             this.toyCanvas.style.opacity = this.toyOpacity;
         });
 
+        // Color control sliders
+        const colorHueSlider = document.getElementById('colorHue');
+        const colorHueValue = document.getElementById('colorHueValue');
+        colorHueSlider.addEventListener('input', (e) => {
+            const hue = e.target.value / 360; // Convert 0-360 to 0.0-1.0
+            colorHueValue.textContent = e.target.value;
+            this.mainShader.setColorHue(hue);
+            this.toyRenderer.setColorHue(hue);
+        });
+
+        const colorSaturationSlider = document.getElementById('colorSaturation');
+        const colorSaturationValue = document.getElementById('colorSaturationValue');
+        colorSaturationSlider.addEventListener('input', (e) => {
+            const saturation = e.target.value / 100; // Convert 0-100 to 0.0-1.0
+            colorSaturationValue.textContent = e.target.value;
+            this.mainShader.setColorSaturation(saturation);
+            this.toyRenderer.setColorSaturation(saturation);
+        });
+
+        const colorBrightnessSlider = document.getElementById('colorBrightness');
+        const colorBrightnessValue = document.getElementById('colorBrightnessValue');
+        colorBrightnessSlider.addEventListener('input', (e) => {
+            const brightness = e.target.value / 100; // Convert 0-200 to 0.0-2.0
+            colorBrightnessValue.textContent = e.target.value;
+            this.mainShader.setColorBrightness(brightness);
+            this.toyRenderer.setColorBrightness(brightness);
+        });
+
         // Layer toggles removed - now controlled only by opacity sliders
         // Layers are always enabled, use opacity sliders to control visibility
         this.mainLayerEnabled = true;

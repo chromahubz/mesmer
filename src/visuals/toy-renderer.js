@@ -10,6 +10,11 @@ class ToyRenderer {
         this.shaders = [];
         this.currentShaderIndex = 0;
 
+        // Color controls
+        this.colorHue = 0.0;
+        this.colorSaturation = 1.0;
+        this.colorBrightness = 1.0;
+
         this.initShaders();
         this.loadShader(0);
     }
@@ -210,10 +215,25 @@ class ToyRenderer {
         this.toyEngine.setUniforms({
             audioLow: audioData.low || 0.0,
             audioMid: audioData.mid || 0.0,
-            audioHigh: audioData.high || 0.0
+            audioHigh: audioData.high || 0.0,
+            colorHue: this.colorHue,
+            colorSaturation: this.colorSaturation,
+            colorBrightness: this.colorBrightness
         });
 
         this.toyEngine.render();
+    }
+
+    setColorHue(value) {
+        this.colorHue = value;
+    }
+
+    setColorSaturation(value) {
+        this.colorSaturation = value;
+    }
+
+    setColorBrightness(value) {
+        this.colorBrightness = value;
     }
 
     resize(width, height) {

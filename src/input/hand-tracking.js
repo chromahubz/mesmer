@@ -42,17 +42,28 @@ class HandTracking {
         try {
             console.log('📦 Loading MediaPipe Hands model...');
 
-            // Check if MediaPipe is available
-            if (typeof window.vision === 'undefined') {
-                throw new Error('MediaPipe vision library not loaded');
+            // Wait for MediaPipe library to load
+            let attempts = 0;
+            while (typeof window.mpVision === 'undefined' && attempts < 50) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                attempts++;
             }
 
-            const { HandLandmarker, FilesetResolver } = window.vision;
+            // Check if MediaPipe is available
+            if (typeof window.mpVision === 'undefined') {
+                throw new Error('MediaPipe vision library not loaded. Please refresh the page.');
+            }
+
+            const { HandLandmarker, FilesetResolver } = window.mpVision;
+
+            console.log('📦 Loading vision tasks WASM...');
 
             // Load the MediaPipe vision module
             const vision = await FilesetResolver.forVisionTasks(
                 "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm"
             );
+
+            console.log('📦 Creating hand landmarker...');
 
             // Create hand landmarker
             this.handLandmarker = await HandLandmarker.createFromOptions(vision, {

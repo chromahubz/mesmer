@@ -256,12 +256,6 @@
                     <h3>Audio</h3>
                     <!-- Music Mode Toggle (Generative vs Prod) -->
                     <div class="shader-selector">
-                        <label>
-                            <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                            </svg>
-                            Music Mode
-                        </label>
                         <div class="mode-toggle">
                             <button id="generativeModeBtn" class="mode-btn active">
                                 <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
@@ -1584,6 +1578,29 @@
                             ShaderToy Layer: <span id="toyOpacityValue">80</span>%
                             <input type="range" id="toyOpacity" min="0" max="100" value="80" step="1">
                         </label>
+                    </div>
+                    <div class="slider-group">
+                        <label>
+                            <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+                            </svg>
+                            Color Hue: <span id="colorHueValue">0</span>°
+                        </label>
+                        <input type="range" id="colorHue" min="0" max="360" value="0" step="1">
+                        <label>
+                            <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M20 8.69V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12 20 8.69zm-2 5.79V18h-3.52L12 20.48 9.52 18H6v-3.52L3.52 12 6 9.52V6h3.52L12 3.52 14.48 6H18v3.52L20.48 12 18 14.48z"/>
+                            </svg>
+                            Color Saturation: <span id="colorSaturationValue">100</span>%
+                        </label>
+                        <input type="range" id="colorSaturation" min="0" max="100" value="100" step="1">
+                        <label>
+                            <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M9 2c-1.05 0-2.05.16-3 .46 4.06 1.27 7 5.06 7 9.54 0 4.48-2.94 8.27-7 9.54.95.3 1.95.46 3 .46 5.52 0 10-4.48 10-10S14.52 2 9 2z"/>
+                            </svg>
+                            Color Brightness: <span id="colorBrightnessValue">100</span>%
+                        </label>
+                        <input type="range" id="colorBrightness" min="0" max="200" value="100" step="1">
                     </div>
                     <div class="shader-selector">
                         <label>Main Shader</label>

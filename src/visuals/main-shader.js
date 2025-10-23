@@ -16,6 +16,11 @@ class MainShader {
         this.currentShaderIndex = 0;
         this.startTime = Date.now();
 
+        // Color controls
+        this.colorHue = 0.0;        // 0.0 to 1.0 (hue shift)
+        this.colorSaturation = 1.0; // 0.0 to 1.0
+        this.colorBrightness = 1.0; // 0.0 to 2.0
+
         this.initShaders();
         this.setupQuad();
     }
@@ -385,7 +390,24 @@ class MainShader {
         gl.uniform1f(gl.getUniformLocation(program, 'u_audioMid'), audioData.mid || 0.0);
         gl.uniform1f(gl.getUniformLocation(program, 'u_audioHigh'), audioData.high || 0.0);
 
+        // Color controls
+        gl.uniform1f(gl.getUniformLocation(program, 'u_colorHue'), this.colorHue);
+        gl.uniform1f(gl.getUniformLocation(program, 'u_colorSaturation'), this.colorSaturation);
+        gl.uniform1f(gl.getUniformLocation(program, 'u_colorBrightness'), this.colorBrightness);
+
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    }
+
+    setColorHue(value) {
+        this.colorHue = value;
+    }
+
+    setColorSaturation(value) {
+        this.colorSaturation = value;
+    }
+
+    setColorBrightness(value) {
+        this.colorBrightness = value;
     }
 
     resize(width, height) {
