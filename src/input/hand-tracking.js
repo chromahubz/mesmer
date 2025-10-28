@@ -27,12 +27,131 @@ class HandTracking {
         this.drawLandmarks = true;
         this.showVideo = true;
 
+        // Hand audio settings
+        this.handVolume = 0.7; // 70% default
+        this.currentPreset = 'sine'; // Current sound preset
+        this.playbackMode = 'note'; // note, legato, arpeggio, chord
+        this.handInteractionMode = 'layer'; // layer (additional) or control (generative)
+
         // Performance
         this.frameCount = 0;
         this.fps = 0;
         this.lastFpsUpdate = Date.now();
 
+        // Setup UI controls
+        this.setupHandAudioControls();
+
         console.log('👋 Hand Tracking initialized');
+    }
+
+    /**
+     * Setup hand audio control UI elements
+     */
+    setupHandAudioControls() {
+        // Hand Volume Slider
+        const handVolumeSlider = document.getElementById('handVolumeSlider');
+        const handVolumeValue = document.getElementById('handVolumeValue');
+
+        if (handVolumeSlider && handVolumeValue) {
+            handVolumeSlider.addEventListener('input', (e) => {
+                this.handVolume = parseInt(e.target.value) / 100;
+                handVolumeValue.textContent = `${e.target.value}%`;
+                console.log('🎚️ Hand volume:', this.handVolume);
+            });
+        }
+
+        // Sound Preset Selector
+        const handPresetSelect = document.getElementById('handPresetSelect');
+        const activePreset = document.getElementById('activePreset');
+
+        if (handPresetSelect && activePreset) {
+            handPresetSelect.addEventListener('change', (e) => {
+                this.currentPreset = e.target.value;
+
+                // Update visual indicator
+                const selectedOption = handPresetSelect.options[handPresetSelect.selectedIndex];
+                const presetName = selectedOption.text;
+                activePreset.querySelector('div:last-child').textContent = presetName;
+
+                // Update icon and color based on category
+                const groupLabel = selectedOption.parentElement.label;
+                let icon, color;
+                if (groupLabel.includes('Pad')) {
+                    icon = '🎹'; color = '#8b5cf6';
+                } else if (groupLabel.includes('Lead')) {
+                    icon = '⚡'; color = '#3b82f6';
+                } else if (groupLabel.includes('Bass')) {
+                    icon = '🔊'; color = '#ef4444';
+                } else {
+                    icon = '✨'; color = '#10b981';
+                }
+                activePreset.querySelector('span').textContent = icon;
+                activePreset.style.borderLeftColor = color;
+
+                console.log('🎹 Changed preset to:', presetName, '(' + this.currentPreset + ')');
+            });
+        }
+
+        // Playback Mode Selector
+        const handModeSelect = document.getElementById('handModeSelect');
+
+        if (handModeSelect) {
+            handModeSelect.addEventListener('change', (e) => {
+                this.playbackMode = e.target.value;
+                console.log('🎵 Changed playback mode to:', this.playbackMode);
+            });
+        }
+
+        // Hand Mode Toggle Buttons
+        const handModeLayer = document.getElementById('handModeLayer');
+        const handModeControl = document.getElementById('handModeControl');
+
+        console.log('🔍 DEBUG: handModeLayer found?', !!handModeLayer);
+        console.log('🔍 DEBUG: handModeControl found?', !!handModeControl);
+
+        if (handModeLayer && handModeControl) {
+            console.log('✅ Hand mode toggle buttons found, adding event listeners');
+
+            // Layer Mode Handler
+            const activateLayerMode = (e) => {
+                console.log('🔵 Layer button clicked!', e);
+                e.preventDefault();
+                e.stopPropagation();
+                this.handInteractionMode = 'layer';
+                handModeLayer.classList.add('active');
+                handModeControl.classList.remove('active');
+                console.log('🎵 Hand Mode: Additional Layer (plays alongside generative music)');
+
+                // Resume generative music if it was paused
+                if (this.musicMapper && this.musicMapper.musicEngine) {
+                    this.musicMapper.musicEngine.resume();
+                }
+            };
+
+            // Control Mode Handler
+            const activateControlMode = (e) => {
+                console.log('🔵 Control button clicked!', e);
+                e.preventDefault();
+                e.stopPropagation();
+                this.handInteractionMode = 'control';
+                handModeControl.classList.add('active');
+                handModeLayer.classList.remove('active');
+                console.log('🎛️ Hand Mode: Control Generative (controls/pauses generative music)');
+            };
+
+            // Add multiple event types for better compatibility
+            handModeLayer.addEventListener('click', activateLayerMode, true);
+            handModeLayer.addEventListener('mousedown', activateLayerMode, true);
+            handModeLayer.addEventListener('touchstart', activateLayerMode, true);
+
+            handModeControl.addEventListener('click', activateControlMode, true);
+            handModeControl.addEventListener('mousedown', activateControlMode, true);
+            handModeControl.addEventListener('touchstart', activateControlMode, true);
+
+            console.log('✅ Event listeners attached with capture phase');
+        } else {
+            console.error('❌ Hand mode toggle buttons not found in DOM!');
+        }
     }
 
     /**
@@ -246,8 +365,13 @@ class HandTracking {
             right: this.gestureRecognizer.getVelocity('right')
         };
 
-        // Send to music mapper
-        this.musicMapper.processGestures(leftGesture, rightGesture, velocities);
+        // Send to music mapper with volume, preset, playback mode, and interaction mode settings
+        this.musicMapper.processGestures(leftGesture, rightGesture, velocities, {
+            volume: this.handVolume,
+            preset: this.currentPreset,
+            mode: this.playbackMode,
+            interactionMode: this.handInteractionMode
+        });
     }
 
     /**
@@ -373,9 +497,31 @@ class HandTracking {
 
         // Music state
         this.ctx.fillStyle = '#ffff00';
-        const stateText = `${state.scale.toUpperCase()} | ${state.playbackMode.toUpperCase()} | OCT: ${state.octave}`;
+        const stateText = `${state.scale.toUpperCase()} | ${state.playbackMode.toUpperCase()}`;
         this.ctx.strokeText(stateText, 10, this.canvas.height - 20);
         this.ctx.fillText(stateText, 10, this.canvas.height - 20);
+
+        // Octave display (large, prominent)
+        this.ctx.fillStyle = '#00ffff';
+        this.ctx.font = 'bold 32px monospace';
+        const octaveText = `OCT ${state.octave}`;
+        const octaveWidth = this.ctx.measureText(octaveText).width;
+        this.ctx.strokeStyle = '#000000';
+        this.ctx.lineWidth = 4;
+        this.ctx.strokeText(octaveText, this.canvas.width - octaveWidth - 15, this.canvas.height - 15);
+        this.ctx.fillText(octaveText, this.canvas.width - octaveWidth - 15, this.canvas.height - 15);
+
+        // Hand interaction mode (top right)
+        const modeIcon = this.handInteractionMode === 'layer' ? '🎵' : '🎛️';
+        const modeText = this.handInteractionMode === 'layer' ? 'LAYER' : 'CONTROL';
+        const modeColor = this.handInteractionMode === 'layer' ? '#00ff00' : '#ff8800';
+
+        this.ctx.fillStyle = modeColor;
+        this.ctx.font = 'bold 14px monospace';
+        const modeString = `${modeIcon} ${modeText}`;
+        const modeWidth = this.ctx.measureText(modeString).width;
+        this.ctx.strokeText(modeString, this.canvas.width - modeWidth - 10, 30);
+        this.ctx.fillText(modeString, this.canvas.width - modeWidth - 10, 30);
     }
 
     /**

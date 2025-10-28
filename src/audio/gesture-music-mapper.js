@@ -23,6 +23,9 @@ class GestureMusicMapper {
         this.currentSynthVoice = 0;
         this.autoFilterEnabled = false;
         this.currentDrumPattern = 0;
+        this.generativePaused = false; // Track if generative music is paused by hand control
+        this.legatoActive = false; // Track if notes are being held in legato mode
+        this.arpeggioLoop = null; // Track active arpeggio loop
 
         // Available scales to cycle through
         this.scales = ['phrygian', 'dorian', 'lydian', 'mixolydian', 'major', 'minor'];
@@ -54,9 +57,42 @@ class GestureMusicMapper {
      * @param {Object} leftGesture - Gesture from left hand
      * @param {Object} rightGesture - Gesture from right hand
      * @param {Object} velocities - Hand velocities
+     * @param {Object} audioSettings - Audio settings (volume, preset, mode)
      */
-    processGestures(leftGesture, rightGesture, velocities) {
+    processGestures(leftGesture, rightGesture, velocities, audioSettings = {}) {
         const now = Date.now();
+
+        // Store audio settings
+        this.audioSettings = {
+            volume: audioSettings.volume || 0.7,
+            preset: audioSettings.preset || 'sine',
+            mode: audioSettings.mode || 'note',
+            interactionMode: audioSettings.interactionMode || 'layer'
+        };
+
+        // Handle generative music control based on interaction mode
+        if (this.audioSettings.interactionMode === 'control') {
+            // Control mode: Pause generative music when hands are detected
+            if ((leftGesture || rightGesture) && this.musicEngine) {
+                if (!this.generativePaused) {
+                    this.musicEngine.pause();
+                    this.generativePaused = true;
+                    console.log('⏸️ Generative music paused (hand control mode)');
+                }
+            } else if (!leftGesture && !rightGesture && this.generativePaused) {
+                // Resume when no hands detected
+                this.musicEngine.resume();
+                this.generativePaused = false;
+                console.log('▶️ Generative music resumed (no hands detected)');
+            }
+        } else {
+            // Layer mode: Always keep generative music playing
+            if (this.generativePaused) {
+                this.musicEngine.resume();
+                this.generativePaused = false;
+                console.log('▶️ Generative music resumed (layer mode)');
+            }
+        }
 
         // Update current gestures
         this.currentGestures.left = leftGesture;
@@ -184,14 +220,28 @@ class GestureMusicMapper {
      * Handle two-hand combinations
      */
     handleTwoHandGesture(leftGesture, rightGesture) {
-        // Octave change: Open Palm (left) + Index (right)
-        if (leftGesture.type === 'OPEN_PALM' && rightGesture.type === 'INDEX') {
+        // Octave up: Open Palm (left) + Thumbs Up (right)
+        if (leftGesture.type === 'OPEN_PALM' && rightGesture.type === 'THUMBS_UP') {
             this.chordEngine.changeOctave(1);
-            console.log('🎵 Octave up!');
+            const currentOctave = this.chordEngine.getCurrentOctave();
+            console.log(`🎵 Octave UP → ${currentOctave}`);
         }
 
-        // Triangle: Both hands open (cycle drum patterns)
-        if (leftGesture.type === 'OPEN_PALM' && rightGesture.type === 'OPEN_PALM') {
+        // Octave down: Open Palm (left) + Peace (right)
+        if (leftGesture.type === 'OPEN_PALM' && rightGesture.type === 'PEACE') {
+            this.chordEngine.changeOctave(-1);
+            const currentOctave = this.chordEngine.getCurrentOctave();
+            console.log(`🎵 Octave DOWN → ${currentOctave}`);
+        }
+
+        // Reset to middle octave: Open Palm (left) + OK Sign (right)
+        if (leftGesture.type === 'OPEN_PALM' && rightGesture.type === 'OK_SIGN') {
+            this.chordEngine.setOctave(4); // Middle octave
+            console.log('🎵 Octave RESET → 4');
+        }
+
+        // Cycle drum patterns: Both hands Shaka
+        if (leftGesture.type === 'SHAKA' && rightGesture.type === 'SHAKA') {
             this.cycleDrumPattern();
             console.log('🥁 Drum pattern cycled');
         }
@@ -204,25 +254,76 @@ class GestureMusicMapper {
         if (!romanNumeral || !this.musicEngine) return;
 
         const chordData = this.chordEngine.getChordForPlayback(romanNumeral);
-        console.log(`  🎹 Playing ${romanNumeral} chord (${chordData.mode}):`,
+        const settings = this.audioSettings || { mode: 'chord' };
+
+        console.log(`  🎹 Playing ${romanNumeral} chord (${chordData.mode}) - Mode: ${settings.mode}:`,
                     chordData.notes.map(n => n.name).join(', '));
 
         // Use Tone.js to play the notes
         if (window.Tone && this.musicEngine.instruments) {
             const synth = this.getCurrentSynth();
+            const frequencies = chordData.notes.map(n => n.frequency);
 
-            if (chordData.arpeggio) {
-                // Play as arpeggio
-                chordData.notes.forEach((note, i) => {
-                    const time = Tone.now() + i * 0.1;
-                    synth.triggerAttackRelease(note.frequency, '8n', time);
-                });
-            } else {
-                // Play as chord
-                const frequencies = chordData.notes.map(n => n.frequency);
-                if (synth.triggerAttackRelease) {
-                    synth.triggerAttackRelease(frequencies, '2n');
-                }
+            switch(settings.mode) {
+                case 'note':
+                    // Play short staccato note (root only, very short)
+                    if (synth.triggerAttackRelease) {
+                        synth.triggerAttackRelease(frequencies[0], '16n'); // Very short staccato
+                    }
+                    break;
+
+                case 'legato':
+                    // Pure sustain like the original default
+                    // Release old notes if any
+                    if (this.legatoActive && synth.triggerRelease) {
+                        synth.triggerRelease(Tone.now());
+                    }
+
+                    // Immediately trigger new chord with infinite sustain
+                    if (synth.triggerAttack) {
+                        synth.triggerAttack(frequencies, Tone.now());
+                        this.legatoActive = true;
+                        console.log('  🎶 Legato chord sustained (pure sustain)');
+                    }
+                    break;
+
+                case 'arpeggio':
+                    // Stop any existing arpeggio
+                    if (this.arpeggioLoop) {
+                        this.arpeggioLoop.stop();
+                        this.arpeggioLoop.dispose();
+                        this.arpeggioLoop = null;
+                    }
+
+                    // Start Transport if not running
+                    if (Tone.Transport.state !== 'started') {
+                        Tone.Transport.bpm.value = 120;
+                        Tone.Transport.start();
+                    }
+
+                    // Create continuous arpeggio loop
+                    let noteIndex = 0;
+                    this.arpeggioLoop = new Tone.Loop((time) => {
+                        // Play current note
+                        synth.triggerAttackRelease(frequencies[noteIndex], '8n', time);
+
+                        // Move to next note (cycle through)
+                        noteIndex = (noteIndex + 1) % frequencies.length;
+                    }, '8n'); // Play every 8th note
+
+                    // Start the loop immediately
+                    this.arpeggioLoop.start(0);
+
+                    console.log('  🎹 Arpeggio LOOPING continuously', frequencies.length, 'notes');
+                    break;
+
+                case 'chord':
+                default:
+                    // Play full chord with normal duration
+                    if (synth.triggerAttackRelease) {
+                        synth.triggerAttackRelease(frequencies, '4n'); // Quarter note duration
+                    }
+                    break;
             }
 
             this.activeNotes = chordData.notes;
@@ -235,9 +336,25 @@ class GestureMusicMapper {
     stopAllNotes() {
         if (this.activeNotes.length > 0 && window.Tone) {
             const synth = this.getCurrentSynth();
-            if (synth.triggerRelease) {
-                synth.triggerRelease();
+
+            // Stop arpeggio loop if active
+            if (this.arpeggioLoop) {
+                this.arpeggioLoop.stop();
+                this.arpeggioLoop.dispose();
+                this.arpeggioLoop = null;
+                console.log('  🎹 Arpeggio stopped');
             }
+
+            // For legato mode, we need to manually release the notes
+            if (this.legatoActive && synth.triggerRelease) {
+                // Release all currently playing notes
+                synth.triggerRelease(Tone.now());
+                this.legatoActive = false;
+                console.log('  🎵 Legato notes released');
+            } else if (synth.releaseAll) {
+                synth.releaseAll();
+            }
+
             this.activeNotes = [];
         }
     }
@@ -246,18 +363,75 @@ class GestureMusicMapper {
      * Get current synth instrument
      */
     getCurrentSynth() {
-        // Try to get from music engine
-        if (this.musicEngine.instruments?.pad) {
-            return this.musicEngine.instruments.pad;
+        const settings = this.audioSettings || { preset: 'sine', volume: 0.7, mode: 'note' };
+
+        // Check if we need to recreate the synth due to preset change
+        if (!this.handSynth || this.lastPreset !== settings.preset) {
+            if (this.handSynth && window.Tone) {
+                this.handSynth.dispose();
+            }
+
+            // Create synth based on preset
+            if (window.Tone) {
+                const oscillatorType = this.getOscillatorType(settings.preset);
+
+                // AGGRESSIVE envelope for ZERO decay, pure sustain
+                const envelope = {
+                    attack: 0.001,    // Instant attack
+                    decay: 0.001,     // Minimal decay
+                    sustain: 1.0,     // FULL sustain
+                    release: 0.3      // Quick release
+                };
+
+                this.handSynth = new Tone.PolySynth(Tone.Synth, {
+                    oscillator: {
+                        type: oscillatorType
+                    },
+                    envelope: envelope
+                }).toDestination();
+
+                this.lastPreset = settings.preset;
+                console.log(`🎹 Created hand synth with preset: ${settings.preset} (${oscillatorType}) - PURE SUSTAIN`);
+            }
         }
 
-        // Fallback: create a simple synth
-        if (!this.fallbackSynth && window.Tone) {
-            this.fallbackSynth = new Tone.PolySynth(Tone.Synth).toDestination();
-            this.fallbackSynth.volume.value = -10;
+        // Update volume
+        if (this.handSynth && window.Tone) {
+            const volumeDb = Tone.gainToDb(settings.volume);
+            this.handSynth.volume.value = volumeDb;
         }
 
-        return this.fallbackSynth;
+        return this.handSynth;
+    }
+
+    /**
+     * Map preset name to Tone.js oscillator type
+     */
+    getOscillatorType(preset) {
+        const presetMap = {
+            // Pad sounds
+            'sine': 'sine',
+            'triangle': 'triangle',
+            'fatsine': 'fatsine',
+            'fattriangle': 'fattriangle',
+            // Lead sounds
+            'sawtooth': 'sawtooth',
+            'square': 'square',
+            'fatsawtooth': 'fatsawtooth',
+            'fatsquare': 'fatsquare',
+            // Bass sounds
+            'deepsine': 'sine',
+            'subsine': 'sine',
+            'fatbass': 'fatsawtooth',
+            'pulse': 'pulse',
+            // Pluck/Arp sounds
+            'pluck': 'sawtooth',
+            'bell': 'triangle',
+            'marimba': 'square',
+            'metallic': 'fmsquare'
+        };
+
+        return presetMap[preset] || 'sine';
     }
 
     /**

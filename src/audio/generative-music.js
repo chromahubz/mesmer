@@ -921,6 +921,37 @@ class GenerativeMusic {
     }
 
     /**
+     * Pause music (for hand control mode)
+     */
+    pause() {
+        if (!this.isPlaying) return;
+
+        // Store previous volume for resume
+        if (this.masterVolume) {
+            this.pausedVolume = this.masterVolume.volume.value;
+            // Fade out to silence
+            this.masterVolume.volume.rampTo(-Infinity, 0.1);
+        }
+
+        console.log('🔇 Music paused (hand control active)');
+    }
+
+    /**
+     * Resume music (from pause)
+     */
+    resume() {
+        if (!this.isPlaying) return;
+
+        // Restore previous volume
+        if (this.masterVolume && this.pausedVolume !== undefined) {
+            // Fade in from silence
+            this.masterVolume.volume.rampTo(this.pausedVolume, 0.1);
+        }
+
+        console.log('🔊 Music resumed');
+    }
+
+    /**
      * Evolve musical parameters over time
      */
     startEvolution() {
