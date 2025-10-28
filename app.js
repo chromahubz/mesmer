@@ -640,6 +640,12 @@ class Mesmer {
         });
         console.log(`  ✓ Added ${this.toyRenderer.shaders.length} toy shaders to dropdown`);
 
+        // Set dropdown values to current shader indices
+        mainShaderSelect.value = this.mainShader.currentShaderIndex;
+        toyShaderSelect.value = this.toyRenderer.currentShaderIndex;
+        console.log(`  ✓ Set main shader dropdown to: ${this.mainShader.shaders[this.mainShader.currentShaderIndex].name} (index ${this.mainShader.currentShaderIndex})`);
+        console.log(`  ✓ Set toy shader dropdown to: ${this.toyRenderer.shaders[this.toyRenderer.currentShaderIndex].name} (index ${this.toyRenderer.currentShaderIndex})`);
+
         // Shader selector event listeners
         mainShaderSelect.addEventListener('change', (e) => {
             this.mainShader.setShader(parseInt(e.target.value));
