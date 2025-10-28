@@ -1157,6 +1157,7 @@ class GenerativeMusic {
             const actions = [
                 () => this.randomizeDrumPattern(),
                 () => this.randomizeSynthPreset(),
+                () => this.randomizeSynthEngine(),
                 () => this.randomizeBPM(),
                 () => this.randomizeScale(),
                 () => this.randomizeEffects()
@@ -1195,17 +1196,26 @@ class GenerativeMusic {
     }
 
     /**
-     * Randomize synth preset (WAD engine)
+     * Randomize synth presets for all instruments (WAD engine)
      */
     randomizeSynthPreset() {
         if (!this.wadEngine) return;
 
-        const presets = this.wadEngine.getAllPresets();
-        const randomPreset = presets[Math.floor(Math.random() * presets.length)];
+        const synthTypes = ['pad', 'lead', 'bass', 'arp'];
+        const categories = this.wadEngine.categories;
 
-        // Change pad synth preset
-        this.wadEngine.changePreset('pad', randomPreset);
-        console.log('🎲 Chaos: Changed synth to:', randomPreset);
+        // Randomize each instrument with appropriate presets
+        const padPreset = categories.pads[Math.floor(Math.random() * categories.pads.length)];
+        const leadPreset = categories.leads[Math.floor(Math.random() * categories.leads.length)];
+        const bassPreset = categories.bass[Math.floor(Math.random() * categories.bass.length)];
+        const arpPreset = categories.arps[Math.floor(Math.random() * categories.arps.length)];
+
+        this.wadEngine.changePreset('pad', padPreset);
+        this.wadEngine.changePreset('lead', leadPreset);
+        this.wadEngine.changePreset('bass', bassPreset);
+        this.wadEngine.changePreset('arp', arpPreset);
+
+        console.log('🎲 Chaos: Changed instruments → Pad:', padPreset, 'Lead:', leadPreset, 'Bass:', bassPreset, 'Arp:', arpPreset);
     }
 
     /**
@@ -1249,6 +1259,17 @@ class GenerativeMusic {
         }
 
         console.log('🎲 Chaos: FX updated - Reverb:', Math.round(reverbWet * 100) + '%', 'Delay:', Math.round(delayWet * 100) + '%');
+    }
+
+    /**
+     * Randomize synth engine (Tone.js vs WAD)
+     */
+    randomizeSynthEngine() {
+        const engines = ['tonejs', 'wad'];
+        const randomEngine = engines[Math.floor(Math.random() * engines.length)];
+
+        this.changeSynthEngine(randomEngine);
+        console.log('🎲 Chaos: Synth engine changed to:', randomEngine.toUpperCase());
     }
 
     /**
