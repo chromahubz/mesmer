@@ -41,20 +41,40 @@ class HandTracking {
     async init() {
         try {
             console.log('📦 Loading MediaPipe Hands model...');
+            console.log('🔍 DEBUG: window.mpVision initially:', typeof window.mpVision);
+            console.log('🔍 DEBUG: Checking all window properties...');
+
+            // Check what's available in window
+            const visionKeys = Object.keys(window).filter(k =>
+                k.toLowerCase().includes('vision') ||
+                k.toLowerCase().includes('mediapipe') ||
+                k.toLowerCase().includes('hand')
+            );
+            console.log('🔍 DEBUG: Window keys related to vision/mediapipe/hand:', visionKeys);
 
             // Wait for MediaPipe library to load
             let attempts = 0;
             while (typeof window.mpVision === 'undefined' && attempts < 50) {
+                if (attempts % 10 === 0) {
+                    console.log(`🔍 DEBUG: Waiting for MediaPipe... attempt ${attempts}/50`);
+                }
                 await new Promise(resolve => setTimeout(resolve, 100));
                 attempts++;
             }
 
+            console.log(`🔍 DEBUG: After waiting ${attempts} attempts, window.mpVision is:`, typeof window.mpVision);
+
             // Check if MediaPipe is available
             if (typeof window.mpVision === 'undefined') {
+                console.error('❌ MediaPipe not found after waiting');
+                console.log('🔍 DEBUG: Final check - all window keys:', Object.keys(window).filter(k => !k.startsWith('webkit')).slice(0, 100));
                 throw new Error('MediaPipe vision library not loaded. Please refresh the page.');
             }
 
+            console.log('✅ window.mpVision found:', window.mpVision);
             const { HandLandmarker, FilesetResolver } = window.mpVision;
+            console.log('🔍 DEBUG: HandLandmarker:', typeof HandLandmarker);
+            console.log('🔍 DEBUG: FilesetResolver:', typeof FilesetResolver);
 
             console.log('📦 Loading vision tasks WASM...');
 
@@ -65,10 +85,10 @@ class HandTracking {
 
             console.log('📦 Creating hand landmarker...');
 
-            // Create hand landmarker
+            // Create hand landmarker with LOCAL model
             this.handLandmarker = await HandLandmarker.createFromOptions(vision, {
                 baseOptions: {
-                    modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',
+                    modelAssetPath: 'models/hand_landmarker.task',
                     delegate: 'GPU'
                 },
                 runningMode: this.runningMode,

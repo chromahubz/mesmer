@@ -306,13 +306,13 @@ class GenerativeMusic {
         // Drum FX Chain
         this.effects.drumReverb = new Tone.Reverb({
             decay: reverbConfig.decay,
-            wet: 0.5  // Default 50%
+            wet: 0.0  // Default 0% (dry)
         }).connect(this.effects.delay);
 
         this.effects.drumDelay = new Tone.FeedbackDelay({
             delayTime: delayConfig.delayTime,
             feedback: delayConfig.feedback,
-            wet: 0.5  // Default 50%
+            wet: 0.0  // Default 0% (dry)
         }).connect(this.effects.drumReverb);
 
         this.drumVolume = new Tone.Volume(-6).connect(this.effects.drumDelay);
@@ -367,7 +367,7 @@ class GenerativeMusic {
         // Lead synth (melodic elements)
         this.instruments.lead = new Tone.Synth({
             oscillator: {
-                type: 'triangle'
+                type: 'sine'
             },
             envelope: {
                 attack: 0.05,
@@ -380,7 +380,7 @@ class GenerativeMusic {
         // Arp synth (rhythmic patterns)
         this.instruments.arp = new Tone.Synth({
             oscillator: {
-                type: 'square'
+                type: 'sine'
             },
             envelope: {
                 attack: 0.01,
@@ -772,6 +772,41 @@ class GenerativeMusic {
     }
 
     /**
+     * Manually trigger a drum sound (for beatbox mode)
+     */
+    triggerDrum(drumType) {
+        if (!this.drumSamples) {
+            console.warn('Drum samples not loaded');
+            return;
+        }
+
+        // Map beatbox names to drum sample names
+        const drumMap = {
+            'kick': 'kick',
+            'snare': 'snare',
+            'hihat': 'hihat',
+            'hh': 'hihat',
+            'closedhat': 'hihat',
+            'openhat': 'openhat',
+            'oh': 'openhat',
+            'clap': 'clap',
+            'rim': 'rim'
+        };
+
+        const sampleName = drumMap[drumType.toLowerCase()] || drumType.toLowerCase();
+
+        if (this.drumSamples.has(sampleName)) {
+            const player = this.drumSamples.player(sampleName);
+            const volume = this.drumVolumes[sampleName] || 0.8;
+            player.volume.value = Tone.gainToDb(volume * this.drumVolumes.master * this.drumVolumeMultiplier);
+            player.start();
+            console.log(`🥁 Triggered ${drumType} -> ${sampleName}`);
+        } else {
+            console.warn(`Drum sample "${sampleName}" not found in current drum machine`);
+        }
+    }
+
+    /**
      * Change drum machine
      */
     async changeDrumMachine(machineName) {
@@ -940,6 +975,43 @@ class GenerativeMusic {
     }
 
     /**
+     * Change Tone.js synth preset (oscillator type)
+     */
+    changeTonejsPreset(instrument, oscillatorType) {
+        if (!this.instruments[instrument]) {
+            console.error(`Instrument "${instrument}" not found`);
+            return;
+        }
+
+        try {
+            // Handle mute (none)
+            if (oscillatorType === 'none') {
+                this.instruments[instrument].volume.value = -Infinity;
+                console.log(`🔇 Muted ${instrument}`);
+                return;
+            }
+
+            // Unmute if it was muted
+            this.instruments[instrument].volume.value = 0;
+
+            // For PolySynth (pad), we need to set it on each voice
+            if (instrument === 'pad') {
+                this.instruments[instrument].set({
+                    oscillator: {
+                        type: oscillatorType
+                    }
+                });
+            } else {
+                // For MonoSynth and regular Synth (bass, lead, arp)
+                this.instruments[instrument].oscillator.type = oscillatorType;
+            }
+            console.log(`🎹 Changed ${instrument} to ${oscillatorType}`);
+        } catch (error) {
+            console.error(`Error changing ${instrument} preset:`, error);
+        }
+    }
+
+    /**
      * Set master reverb amount (global)
      */
     setReverb(value) {
@@ -1025,6 +1097,7 @@ class GenerativeMusic {
      * Set root note/key
      */
     setKey(key) {
+        this.previousRootNote = this.rootNote;
         this.rootNote = key;
         console.log('Key (root note) changed to:', key);
     }
@@ -1050,131 +1123,177 @@ class GenerativeMusic {
         this.currentGenre = genre;
         console.log('Genre changed to:', genre);
 
-        // Update musical parameters based on genre (BPM stays at user-selected value)
+        let bpm = 120; // Default BPM
+
+        // Update musical parameters based on genre including BPM
         switch(genre) {
             case 'ambient':
                 this.currentScale = this.scales.minor;
                 this.rootNote = 'C3';
+                bpm = 80;
                 break;
             case 'techno':
                 this.currentScale = this.scales.phrygian;
                 this.rootNote = 'E3';
+                bpm = 130;
                 break;
             case 'house':
                 this.currentScale = this.scales.major;
                 this.rootNote = 'G3';
+                bpm = 125;
                 break;
             case 'trance':
                 this.currentScale = this.scales.minor;
                 this.rootNote = 'A3';
+                bpm = 138;
                 break;
             case 'dnb':
                 this.currentScale = this.scales.minor;
                 this.rootNote = 'D3';
+                bpm = 174;
                 break;
             case 'dubstep':
                 this.currentScale = this.scales.phrygian;
                 this.rootNote = 'F#2';
+                bpm = 140;
                 break;
             case 'jazz':
                 this.currentScale = this.scales.dorian;
                 this.rootNote = 'D3';
+                bpm = 120;
                 break;
             case 'funk':
                 this.currentScale = this.scales.dorian;
                 this.rootNote = 'E3';
+                bpm = 110;
                 break;
             case 'soul':
                 this.currentScale = this.scales.minor;
                 this.rootNote = 'C3';
+                bpm = 95;
                 break;
             case 'hiphop':
                 this.currentScale = this.scales.minor;
                 this.rootNote = 'A2';
+                bpm = 90;
                 break;
             case 'trap':
                 this.currentScale = this.scales.minor;
                 this.rootNote = 'F#2';
+                bpm = 140;
                 break;
             case 'lofi':
                 this.currentScale = this.scales.pentatonic;
                 this.rootNote = 'F3';
+                bpm = 85;
                 break;
             case 'chillwave':
                 this.currentScale = this.scales.major;
                 this.rootNote = 'D3';
+                bpm = 95;
                 break;
             case 'vaporwave':
                 this.currentScale = this.scales.major;
                 this.rootNote = 'F3';
+                bpm = 70;
                 break;
             case 'synthwave':
                 this.currentScale = this.scales.minor;
                 this.rootNote = 'E3';
+                bpm = 120;
                 break;
             case 'industrial':
                 this.currentScale = this.scales.phrygian;
                 this.rootNote = 'C3';
+                bpm = 135;
                 break;
             case 'drone':
                 this.currentScale = this.scales.pentatonic;
                 this.rootNote = 'A2';
+                bpm = 60;
                 break;
             case 'psychedelic':
                 this.currentScale = this.scales.minor;
                 this.rootNote = 'B2';
+                bpm = 105;
                 break;
             case 'experimental':
                 this.currentScale = this.scales.phrygian;
                 this.rootNote = 'G#2';
+                bpm = 100;
                 break;
             case 'minimal':
                 this.currentScale = this.scales.pentatonic;
                 this.rootNote = 'C3';
+                bpm = 128;
                 break;
             case 'idm':
                 this.currentScale = this.scales.dorian;
                 this.rootNote = 'F#3';
+                bpm = 145;
                 break;
             case 'breakbeat':
                 this.currentScale = this.scales.minor;
                 this.rootNote = 'E3';
+                bpm = 135;
                 break;
             case 'jungle':
                 this.currentScale = this.scales.pentatonic;
                 this.rootNote = 'D3';
+                bpm = 165;
                 break;
             case 'downtempo':
                 this.currentScale = this.scales.minor;
                 this.rootNote = 'G3';
+                bpm = 75;
                 break;
             case 'chillout':
                 this.currentScale = this.scales.major;
                 this.rootNote = 'C3';
+                bpm = 80;
                 break;
             case 'trip':
                 this.currentScale = this.scales.minor;
                 this.rootNote = 'E2';
+                bpm = 90;
                 break;
             case 'garage':
                 this.currentScale = this.scales.minor;
                 this.rootNote = 'G3';
+                bpm = 130;
                 break;
             case 'bassline':
                 this.currentScale = this.scales.minor;
                 this.rootNote = 'F2';
+                bpm = 138;
                 break;
             case 'grime':
                 this.currentScale = this.scales.phrygian;
                 this.rootNote = 'E2';
+                bpm = 140;
                 break;
             case 'footwork':
                 this.currentScale = this.scales.minor;
                 this.rootNote = 'C3';
+                bpm = 160;
                 break;
             default:
                 this.currentScale = this.scales.minor;
                 this.rootNote = 'C3';
+                bpm = 120;
+        }
+
+        // Update BPM
+        this.setBPM(bpm);
+
+        // Update BPM slider in UI
+        const bpmSlider = document.getElementById('bpmSlider');
+        const bpmValue = document.querySelector('#bpmSlider + .value');
+        if (bpmSlider) {
+            bpmSlider.value = bpm;
+            if (bpmValue) {
+                bpmValue.textContent = `${bpm}`;
+            }
         }
 
         // If music is playing, restart with new settings

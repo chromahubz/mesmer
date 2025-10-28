@@ -13,7 +13,7 @@ class MainShader {
         }
 
         this.shaders = [];
-        this.currentShaderIndex = 0;
+        this.currentShaderIndex = 5; // Default to Liquid Metal
         this.startTime = Date.now();
 
         // Color controls
@@ -61,18 +61,18 @@ class MainShader {
             fragment: this.getPlasmaFieldShader()
         });
 
-        // Add presets from shader library
+        // Add presets from shader library WITH COLOR FILTER
         if (typeof ShaderPresets !== 'undefined') {
             ShaderPresets.glsl.forEach(preset => {
                 this.shaders.push({
                     name: preset.name,
                     vertex: this.getVertexShader(),
-                    fragment: preset.code
+                    fragment: this.injectColorFilter(preset.code)
                 });
             });
         }
 
-        // Add OSMOS shaders
+        // Add OSMOS shaders WITH COLOR FILTER
         if (typeof OsmosShaders !== 'undefined') {
             for (let key in OsmosShaders) {
                 const shader = OsmosShaders[key];
@@ -80,13 +80,13 @@ class MainShader {
                     this.shaders.push({
                         name: shader.name,
                         vertex: this.getVertexShader(),
-                        fragment: shader.code
+                        fragment: this.injectColorFilter(shader.code)
                     });
                 }
             }
         }
 
-        // Add TRON shaders
+        // Add TRON shaders WITH COLOR FILTER
         if (typeof TronShaders !== 'undefined') {
             for (let key in TronShaders) {
                 const shader = TronShaders[key];
@@ -94,17 +94,75 @@ class MainShader {
                     this.shaders.push({
                         name: shader.name,
                         vertex: this.getVertexShader(),
-                        fragment: shader.code
+                        fragment: this.injectColorFilter(shader.code)
                     });
                 }
             }
         }
 
         // Compile all shaders
+        console.log('🔧 Compiling shaders with color filter support...');
         this.shaders.forEach((shader, index) => {
             shader.program = this.createProgram(shader.vertex, shader.fragment);
-            console.log(`✓ Compiled shader ${index}: ${shader.name}`);
+            if (shader.program) {
+                console.log(`✓ Compiled shader ${index}: ${shader.name}`);
+            } else {
+                console.error(`❌ Failed to compile shader ${index}: ${shader.name}`);
+            }
         });
+    }
+
+    // Inject color filter code into any shader
+    injectColorFilter(shaderCode) {
+        // Add color uniforms after version and precision
+        const colorUniforms = `
+uniform float u_colorHue;
+uniform float u_colorSaturation;
+uniform float u_colorBrightness;
+
+// HSB color transformation helpers
+vec3 rgb2hsv(vec3 c) {
+    vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+    vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
+    vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));
+    float d = q.x - min(q.w, q.y);
+    float e = 1.0e-10;
+    return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
+}
+
+vec3 hsv2rgb(vec3 c) {
+    vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+    vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+    return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+}
+
+vec3 applyColorFilter(vec3 color) {
+    vec3 hsv = rgb2hsv(color);
+    hsv.x = fract(hsv.x + u_colorHue);
+    hsv.y *= u_colorSaturation;
+    hsv.z *= u_colorBrightness;
+    return hsv2rgb(hsv);
+}
+`;
+
+        // Find where to inject (after precision statement, before first uniform/function)
+        let modifiedCode = shaderCode;
+
+        // Find the position after "precision" statement
+        const precisionMatch = modifiedCode.match(/(precision\s+\w+\s+float\s*;)/);
+        if (precisionMatch) {
+            const insertPos = precisionMatch.index + precisionMatch[0].length;
+            modifiedCode = modifiedCode.slice(0, insertPos) + '\n' + colorUniforms + '\n' + modifiedCode.slice(insertPos);
+        }
+
+        // Now find all fragColor assignments and wrap them with color filter
+        // Match patterns like: fragColor = vec4(xxx, 1.0);
+        modifiedCode = modifiedCode.replace(
+            /fragColor\s*=\s*vec4\(([^,]+),\s*([^)]+)\)\s*;/g,
+            'fragColor = vec4(applyColorFilter($1), $2);'
+        );
+
+        return modifiedCode;
     }
 
     getVertexShader() {
@@ -125,8 +183,36 @@ class MainShader {
             uniform float u_audioLow;
             uniform float u_audioMid;
             uniform float u_audioHigh;
+            uniform float u_colorHue;
+            uniform float u_colorSaturation;
+            uniform float u_colorBrightness;
 
             out vec4 fragColor;
+
+            // HSB color transformation helpers
+            vec3 rgb2hsv(vec3 c) {
+                vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+                vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
+                vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));
+                float d = q.x - min(q.w, q.y);
+                float e = 1.0e-10;
+                return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
+            }
+
+            vec3 hsv2rgb(vec3 c) {
+                vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+                vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+                return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+            }
+
+            // Apply color filters (hue, saturation, brightness)
+            vec3 applyColorFilter(vec3 color) {
+                vec3 hsv = rgb2hsv(color);
+                hsv.x = fract(hsv.x + u_colorHue); // Hue shift
+                hsv.y *= u_colorSaturation;         // Saturation
+                hsv.z *= u_colorBrightness;         // Brightness
+                return hsv2rgb(hsv);
+            }
 
             // Smooth minimum for blending SDFs
             float smin(float a, float b, float k) {
@@ -229,6 +315,9 @@ class MainShader {
                 float glow = 0.02 / (0.01 + t * 0.1);
                 col += vec3(0.4, 0.2, 0.8) * glow * (u_audioLow + u_audioMid + u_audioHigh);
 
+                // Apply color filters
+                col = applyColorFilter(col);
+
                 fragColor = vec4(col, 1.0);
             }
         `;
@@ -243,8 +332,35 @@ class MainShader {
             uniform float u_audioLow;
             uniform float u_audioMid;
             uniform float u_audioHigh;
+            uniform float u_colorHue;
+            uniform float u_colorSaturation;
+            uniform float u_colorBrightness;
 
             out vec4 fragColor;
+
+            // HSB color transformation helpers
+            vec3 rgb2hsv(vec3 c) {
+                vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+                vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
+                vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));
+                float d = q.x - min(q.w, q.y);
+                float e = 1.0e-10;
+                return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
+            }
+
+            vec3 hsv2rgb(vec3 c) {
+                vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+                vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+                return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+            }
+
+            vec3 applyColorFilter(vec3 color) {
+                vec3 hsv = rgb2hsv(color);
+                hsv.x = fract(hsv.x + u_colorHue);
+                hsv.y *= u_colorSaturation;
+                hsv.z *= u_colorBrightness;
+                return hsv2rgb(hsv);
+            }
 
             void main() {
                 vec2 uv = gl_FragCoord.xy / u_resolution;
@@ -273,6 +389,9 @@ class MainShader {
                 col *= 1.5;
                 col = pow(col, vec3(0.8));
 
+                // Apply color filters
+                col = applyColorFilter(col);
+
                 fragColor = vec4(col, 1.0);
             }
         `;
@@ -287,8 +406,35 @@ class MainShader {
             uniform float u_audioLow;
             uniform float u_audioMid;
             uniform float u_audioHigh;
+            uniform float u_colorHue;
+            uniform float u_colorSaturation;
+            uniform float u_colorBrightness;
 
             out vec4 fragColor;
+
+            // HSB color transformation helpers
+            vec3 rgb2hsv(vec3 c) {
+                vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+                vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
+                vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));
+                float d = q.x - min(q.w, q.y);
+                float e = 1.0e-10;
+                return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
+            }
+
+            vec3 hsv2rgb(vec3 c) {
+                vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+                vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+                return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+            }
+
+            vec3 applyColorFilter(vec3 color) {
+                vec3 hsv = rgb2hsv(color);
+                hsv.x = fract(hsv.x + u_colorHue);
+                hsv.y *= u_colorSaturation;
+                hsv.z *= u_colorBrightness;
+                return hsv2rgb(hsv);
+            }
 
             void main() {
                 vec2 uv = gl_FragCoord.xy / u_resolution;
@@ -315,6 +461,9 @@ class MainShader {
                 // Add some shimmer
                 float shimmer = sin(t * 3.0 + c * 10.0) * 0.1;
                 col += shimmer;
+
+                // Apply color filters
+                col = applyColorFilter(col);
 
                 fragColor = vec4(col, 1.0);
             }
@@ -400,14 +549,17 @@ class MainShader {
 
     setColorHue(value) {
         this.colorHue = value;
+        console.log('🎨 Color Hue set to:', value);
     }
 
     setColorSaturation(value) {
         this.colorSaturation = value;
+        console.log('🎨 Color Saturation set to:', value);
     }
 
     setColorBrightness(value) {
         this.colorBrightness = value;
+        console.log('🎨 Color Brightness set to:', value);
     }
 
     resize(width, height) {

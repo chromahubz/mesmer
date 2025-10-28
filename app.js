@@ -25,6 +25,9 @@ class Mesmer {
         this.musicMapper = null;
         this.handTracking = null;
 
+        // Voice control engine
+        this.voiceControl = null;
+
         // State
         this.isPlaying = false;
         this.mainLayerEnabled = true;
@@ -87,6 +90,13 @@ class Mesmer {
             this.handTracking = new HandTracking(this.gestureRecognizer, this.musicMapper);
             console.log('✓ Hand tracking modules ready');
             if (window.DEBUG) DEBUG.success('Hand tracking modules ready');
+
+            // Initialize voice control
+            console.log('🎤 Setting up voice control...');
+            if (window.DEBUG) DEBUG.info('Setting up voice control...');
+            this.voiceControl = new VoiceControl(this);
+            console.log('✓ Voice control ready');
+            if (window.DEBUG) DEBUG.success('Voice control ready');
 
             // Connect audio for analysis
             this.connectAudio();
@@ -161,6 +171,16 @@ class Mesmer {
         // Play/Pause button
         const playBtn = document.getElementById('playBtn');
         playBtn.addEventListener('click', () => this.togglePlay());
+
+        // Master Volume slider (controls Tone.Destination.volume)
+        const volumeSlider = document.getElementById('volumeSlider');
+        volumeSlider.addEventListener('input', (e) => {
+            const value = parseInt(e.target.value);
+            // Convert 0-100 to dB (-60 to 0)
+            const db = (value / 100) * 60 - 60;
+            Tone.Destination.volume.rampTo(db, 0.1);
+            document.querySelector('#volumeSlider + .value').textContent = `${value}%`;
+        });
 
         // Synth Volume slider
         const synthVolumeSlider = document.getElementById('synthVolumeSlider');
@@ -254,6 +274,12 @@ class Mesmer {
             const engineType = e.target.value;
             this.musicEngine.setSynthEngine(engineType);
 
+            // Show/hide Tone.js controls
+            const tonejsControls = document.querySelectorAll('.tonejs-controls');
+            tonejsControls.forEach(control => {
+                control.style.display = engineType === 'tonejs' ? 'block' : 'none';
+            });
+
             // Show/hide WAD controls
             const wadControls = document.querySelectorAll('.wad-controls');
             wadControls.forEach(control => {
@@ -266,6 +292,38 @@ class Mesmer {
                 control.style.display = engineType === 'dirt' ? 'block' : 'none';
             });
         });
+
+        // Tone.js Pad preset selector
+        const tonejsPadPreset = document.getElementById('tonejsPadPreset');
+        if (tonejsPadPreset) {
+            tonejsPadPreset.addEventListener('change', (e) => {
+                this.musicEngine.changeTonejsPreset('pad', e.target.value);
+            });
+        }
+
+        // Tone.js Lead preset selector
+        const tonejsLeadPreset = document.getElementById('tonejsLeadPreset');
+        if (tonejsLeadPreset) {
+            tonejsLeadPreset.addEventListener('change', (e) => {
+                this.musicEngine.changeTonejsPreset('lead', e.target.value);
+            });
+        }
+
+        // Tone.js Bass preset selector
+        const tonejsBassPreset = document.getElementById('tonejsBassPreset');
+        if (tonejsBassPreset) {
+            tonejsBassPreset.addEventListener('change', (e) => {
+                this.musicEngine.changeTonejsPreset('bass', e.target.value);
+            });
+        }
+
+        // Tone.js Arp preset selector
+        const tonejsArpPreset = document.getElementById('tonejsArpPreset');
+        if (tonejsArpPreset) {
+            tonejsArpPreset.addEventListener('change', (e) => {
+                this.musicEngine.changeTonejsPreset('arp', e.target.value);
+            });
+        }
 
         // WAD Pad preset selector
         const wadPadPreset = document.getElementById('wadPadPreset');
@@ -327,24 +385,26 @@ class Mesmer {
         const scaleSelect = document.getElementById('scaleSelect');
         scaleSelect.addEventListener('change', (e) => {
             this.musicEngine.setScale(e.target.value);
-            // Update piano roll if synth sequencer is visible
-            const synthSeqPanel = document.getElementById('synthSequencerPanel');
-            if (synthSeqPanel && synthSeqPanel.style.display !== 'none') {
+            // Always update piano roll and key display
+            if (this.synthSeqState) {
+                this.transposeNotesToNewScale();
                 this.renderPianoRoll();
-                console.log('🎹 Piano roll updated to reflect new scale');
+                this.updateKeyDisplay();
             }
+            console.log('🎹 Scale changed, piano roll updated');
         });
 
         // Key selector (root note)
         const keySelect = document.getElementById('keySelect');
         keySelect.addEventListener('change', (e) => {
             this.musicEngine.setKey(e.target.value);
-            // Update piano roll if synth sequencer is visible
-            const synthSeqPanel = document.getElementById('synthSequencerPanel');
-            if (synthSeqPanel && synthSeqPanel.style.display !== 'none') {
+            // Always update piano roll and key display
+            if (this.synthSeqState) {
+                this.transposeNotesToNewKey();
                 this.renderPianoRoll();
-                console.log('🎹 Piano roll updated to reflect new key');
+                this.updateKeyDisplay();
             }
+            console.log('🎹 Key changed, piano roll and display updated');
         });
 
         // Reverb type selector
@@ -361,8 +421,15 @@ class Mesmer {
 
         // Drum machine toggle
         const drumsToggle = document.getElementById('drumsToggle');
-        drumsToggle.addEventListener('change', (e) => {
-            this.musicEngine.setDrums(e.target.checked);
+        drumsToggle.addEventListener('click', () => {
+            const isActive = drumsToggle.getAttribute('data-active') === 'true';
+            const newState = !isActive;
+            drumsToggle.setAttribute('data-active', newState.toString());
+            const statusSpan = drumsToggle.querySelector('.status');
+            if (statusSpan) {
+                statusSpan.textContent = newState ? 'ON' : 'OFF';
+            }
+            this.musicEngine.setDrums(newState);
         });
 
         // Populate drum machine dropdown
@@ -555,12 +622,12 @@ class Mesmer {
 
             const controls = document.getElementById('controls');
             const debugOverlay = document.getElementById('debugOverlay');
-            const shaderEditor = document.getElementById('shaderEditor');
+            const shaderEditorLeft = document.getElementById('shaderEditorLeft');
 
             console.log('📍 Elements found:', {
                 controls: !!controls,
                 debugOverlay: !!debugOverlay,
-                shaderEditor: !!shaderEditor
+                shaderEditorLeft: !!shaderEditorLeft
             });
 
             // Check if we're in fullscreen (works across browsers)
@@ -586,13 +653,13 @@ class Mesmer {
                     debugOverlay.style.display = 'none';
                     console.log('  ↳ Debug overlay hidden');
                 }
-                if (shaderEditor) {
-                    shaderEditor.style.display = 'none';
+                if (shaderEditorLeft) {
+                    shaderEditorLeft.style.display = 'none';
                     console.log('  ↳ Shader editor hidden');
                 }
             } else {
-                // Exiting fullscreen - show controls and shader editor
-                console.log('🖥️ ✅ EXITING FULLSCREEN - showing controls and shader editor');
+                // Exiting fullscreen - show controls (but NOT shader editor - user can toggle it)
+                console.log('🖥️ ✅ EXITING FULLSCREEN - showing controls');
                 if (controls) {
                     controls.style.display = 'block';
                     console.log('  ↳ Controls shown');
@@ -601,10 +668,7 @@ class Mesmer {
                     debugOverlay.style.display = 'block';
                     console.log('  ↳ Debug overlay shown');
                 }
-                if (shaderEditor) {
-                    shaderEditor.style.display = 'block';
-                    console.log('  ↳ Shader editor shown');
-                }
+                // Don't auto-show shader editor - let user toggle it manually
             }
         };
 
@@ -615,6 +679,91 @@ class Mesmer {
         document.addEventListener('mozfullscreenchange', handleFullscreenChange);
         document.addEventListener('MSFullscreenChange', handleFullscreenChange);
         console.log('✅ Fullscreen event listeners registered');
+
+        // Shader Editor Toggle Button (in right menu)
+        const shaderEditorToggleBtn = document.getElementById('shaderEditorToggleBtn');
+        const shaderEditorLeft = document.getElementById('shaderEditorLeft');
+        const closeShaderEditor = document.getElementById('closeShaderEditor');
+
+        if (shaderEditorToggleBtn && shaderEditorLeft) {
+            shaderEditorToggleBtn.addEventListener('click', () => {
+                const isHidden = shaderEditorLeft.style.display === 'none';
+                if (isHidden) {
+                    shaderEditorLeft.style.display = 'block';
+                    console.log('📝 Shader editor opened');
+                } else {
+                    shaderEditorLeft.style.display = 'none';
+                    console.log('📝 Shader editor closed');
+                }
+            });
+            console.log('✅ Shader editor toggle button initialized');
+        }
+
+        // Shader Editor Close Button (X in upper corner)
+        if (closeShaderEditor && shaderEditorLeft) {
+            closeShaderEditor.addEventListener('click', (e) => {
+                e.stopPropagation(); // Prevent drag from triggering
+                shaderEditorLeft.style.display = 'none';
+                console.log('📝 Shader editor closed via X button');
+            });
+            console.log('✅ Shader editor close button initialized');
+        }
+
+        // Make shader editor draggable
+        const shaderEditorHeader = shaderEditorLeft?.querySelector('.editor-header');
+        let shaderEditorDragging = false;
+        let shaderEditorDragOffset = { x: 0, y: 0 };
+
+        if (shaderEditorHeader && shaderEditorLeft) {
+            // Change cursor to move on header (but not on buttons)
+            shaderEditorHeader.style.cursor = 'move';
+
+            // Prevent buttons from having move cursor
+            const headerButtons = shaderEditorHeader.querySelectorAll('button');
+            headerButtons.forEach(btn => {
+                btn.style.cursor = 'pointer';
+            });
+
+            shaderEditorHeader.addEventListener('mousedown', (e) => {
+                // Don't drag if clicking on buttons
+                if (e.target.closest('button')) return;
+                if (e.target.closest('svg')) return;
+
+                shaderEditorDragging = true;
+                const rect = shaderEditorLeft.getBoundingClientRect();
+                shaderEditorDragOffset = {
+                    x: e.clientX - rect.left,
+                    y: e.clientY - rect.top
+                };
+
+                e.preventDefault();
+                console.log('🖱️ Shader Editor drag started');
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!shaderEditorDragging) return;
+
+                requestAnimationFrame(() => {
+                    const x = e.clientX - shaderEditorDragOffset.x;
+                    const y = e.clientY - shaderEditorDragOffset.y;
+
+                    const maxX = window.innerWidth - shaderEditorLeft.offsetWidth;
+                    const maxY = window.innerHeight - shaderEditorLeft.offsetHeight;
+
+                    shaderEditorLeft.style.left = `${Math.max(0, Math.min(x, maxX))}px`;
+                    shaderEditorLeft.style.top = `${Math.max(0, Math.min(y, maxY))}px`;
+                });
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (shaderEditorDragging) {
+                    shaderEditorDragging = false;
+                    console.log('🖱️ Shader Editor drag ended');
+                }
+            });
+
+            console.log('✅ Shader editor draggable initialized');
+        }
 
         // MPC Pad Controller
         this.setupMPCPads();
@@ -627,6 +776,211 @@ class Mesmer {
 
         // Hand Tracking
         this.setupHandTracking();
+
+        // Voice Control
+        this.setupVoiceControl();
+    }
+
+    setupVoiceControl() {
+        console.log('🎤 Setting up Voice Control UI...');
+
+        const openVoiceControlBtn = document.getElementById('openVoiceControl');
+        const voiceControlPanel = document.getElementById('voiceControlPanel');
+        const audioModeButtons = document.getElementById('audioModeButtons');
+        const closeVoicePanel = document.getElementById('closeVoicePanel');
+        const startVoiceControlBtn = document.getElementById('startVoiceControl');
+        const stopVoiceControlBtn = document.getElementById('stopVoiceControl');
+        const toggleVoiceFeedbackBtn = document.getElementById('toggleVoiceFeedback');
+        const toggleAudioModesBtn = document.getElementById('toggleAudioModes');
+        const toggleBeatboxModeBtn = document.getElementById('toggleBeatboxMode');
+        const togglePitchModeBtn = document.getElementById('togglePitchMode');
+
+        // Open voice control panel
+        openVoiceControlBtn.addEventListener('click', () => {
+            voiceControlPanel.style.display = 'block';
+            audioModeButtons.style.display = 'block';
+            console.log('🎤 Voice control panel opened');
+        });
+
+        // Close voice control panel
+        closeVoicePanel.addEventListener('click', () => {
+            voiceControlPanel.style.display = 'none';
+            audioModeButtons.style.display = 'none';
+            if (this.voiceControl && this.voiceControl.isListening) {
+                this.voiceControl.stop();
+                startVoiceControlBtn.style.display = 'flex';
+                stopVoiceControlBtn.style.display = 'none';
+            }
+            console.log('🎤 Voice control panel closed');
+        });
+
+        // Start voice control
+        startVoiceControlBtn.addEventListener('click', () => {
+            if (this.voiceControl) {
+                this.voiceControl.start();
+                startVoiceControlBtn.style.display = 'none';
+                stopVoiceControlBtn.style.display = 'flex';
+                console.log('🎤 Voice control started');
+            }
+        });
+
+        // Stop voice control
+        stopVoiceControlBtn.addEventListener('click', () => {
+            if (this.voiceControl) {
+                this.voiceControl.stop();
+                startVoiceControlBtn.style.display = 'flex';
+                stopVoiceControlBtn.style.display = 'none';
+                console.log('🎤 Voice control stopped');
+            }
+        });
+
+        // Toggle voice feedback
+        toggleVoiceFeedbackBtn.addEventListener('click', () => {
+            if (this.voiceControl) {
+                this.voiceControl.toggleVoiceFeedback();
+                const icon = '<svg style="width: 14px; height: 14px; fill: currentColor;" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>';
+                toggleVoiceFeedbackBtn.innerHTML = icon + (this.voiceControl.voiceFeedbackEnabled ? 'TTS On' : 'TTS Off');
+            }
+        });
+
+        // Toggle audio modes panel
+        toggleAudioModesBtn.addEventListener('click', () => {
+            const isVisible = audioModeButtons.style.display === 'block';
+            audioModeButtons.style.display = isVisible ? 'none' : 'block';
+            console.log(`🎵 Audio modes panel ${isVisible ? 'hidden' : 'shown'}`);
+        });
+
+        // Toggle beatbox mode
+        toggleBeatboxModeBtn.addEventListener('click', async () => {
+            if (!this.voiceControl) return;
+
+            if (!this.voiceControl.beatboxMode) {
+                // Start beatbox mode
+                await this.voiceControl.commands.simple['START BEATBOX MODE']();
+                toggleBeatboxModeBtn.setAttribute('data-active', 'true');
+                toggleBeatboxModeBtn.querySelector('.mode-label').textContent = '🥁 Beatbox Mode';
+                toggleBeatboxModeBtn.querySelector('.mode-status').textContent = 'ON';
+                console.log('🥁 Beatbox mode enabled via button');
+            } else {
+                // Stop beatbox mode
+                this.voiceControl.commands.simple['STOP BEATBOX MODE']();
+                toggleBeatboxModeBtn.setAttribute('data-active', 'false');
+                toggleBeatboxModeBtn.querySelector('.mode-label').textContent = 'Beatbox Mode';
+                toggleBeatboxModeBtn.querySelector('.mode-status').textContent = 'OFF';
+                console.log('🥁 Beatbox mode disabled via button');
+            }
+        });
+
+        // Toggle pitch mode
+        togglePitchModeBtn.addEventListener('click', async () => {
+            if (!this.voiceControl) return;
+
+            if (!this.voiceControl.pitchMode) {
+                // Start pitch mode
+                await this.voiceControl.commands.simple['START PITCH MODE']();
+                togglePitchModeBtn.setAttribute('data-active', 'true');
+                togglePitchModeBtn.querySelector('.mode-label').textContent = '🎶 Pitch Mode';
+                togglePitchModeBtn.querySelector('.mode-status').textContent = 'ON';
+                console.log('🎶 Pitch mode enabled via button');
+            } else {
+                // Stop pitch mode
+                this.voiceControl.commands.simple['STOP PITCH MODE']();
+                togglePitchModeBtn.setAttribute('data-active', 'false');
+                togglePitchModeBtn.querySelector('.mode-label').textContent = 'Pitch Mode';
+                togglePitchModeBtn.querySelector('.mode-status').textContent = 'OFF';
+                console.log('🎶 Pitch mode disabled via button');
+            }
+        });
+
+        // Make voice control panel draggable
+        const voicePanelHeader = voiceControlPanel.querySelector('div'); // First div is the header
+        let voicePanelDragging = false;
+        let voicePanelDragOffset = { x: 0, y: 0 };
+
+        voicePanelHeader.style.cursor = 'move';
+
+        voicePanelHeader.addEventListener('mousedown', (e) => {
+            if (e.target.closest('button')) return; // Don't drag when clicking close button
+
+            voicePanelDragging = true;
+            const rect = voiceControlPanel.getBoundingClientRect();
+            voicePanelDragOffset = {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top
+            };
+
+            e.preventDefault();
+            console.log('🖱️ Voice Control Panel drag started');
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!voicePanelDragging) return;
+
+            requestAnimationFrame(() => {
+                const x = e.clientX - voicePanelDragOffset.x;
+                const y = e.clientY - voicePanelDragOffset.y;
+
+                const maxX = window.innerWidth - voiceControlPanel.offsetWidth;
+                const maxY = window.innerHeight - voiceControlPanel.offsetHeight;
+
+                voiceControlPanel.style.left = `${Math.max(0, Math.min(x, maxX))}px`;
+                voiceControlPanel.style.top = `${Math.max(0, Math.min(y, maxY))}px`;
+            });
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (voicePanelDragging) {
+                voicePanelDragging = false;
+                console.log('🖱️ Voice Control Panel drag ended');
+            }
+        });
+
+        // Make audio modes panel draggable
+        const audioModesPanel = audioModeButtons;
+        const audioModesPanelHeader = audioModesPanel.querySelector('div > h4'); // The header with "Audio Modes"
+        let audioModesDragging = false;
+        let audioModesDragOffset = { x: 0, y: 0 };
+
+        if (audioModesPanelHeader) {
+            audioModesPanelHeader.style.cursor = 'move';
+            audioModesPanelHeader.parentElement.style.cursor = 'move'; // Make the whole header div draggable
+
+            audioModesPanelHeader.parentElement.addEventListener('mousedown', (e) => {
+                if (e.target.closest('button')) return; // Don't drag when clicking buttons
+
+                audioModesDragging = true;
+                const rect = audioModesPanel.getBoundingClientRect();
+                audioModesDragOffset = {
+                    x: e.clientX - rect.left,
+                    y: e.clientY - rect.top
+                };
+
+                e.preventDefault();
+                console.log('🖱️ Audio Modes Panel drag started');
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!audioModesDragging) return;
+
+                requestAnimationFrame(() => {
+                    const x = e.clientX - audioModesDragOffset.x;
+                    const y = e.clientY - audioModesDragOffset.y;
+
+                    const maxX = window.innerWidth - audioModesPanel.offsetWidth;
+                    const maxY = window.innerHeight - audioModesPanel.offsetHeight;
+
+                    audioModesPanel.style.left = `${Math.max(0, Math.min(x, maxX))}px`;
+                    audioModesPanel.style.top = `${Math.max(0, Math.min(y, maxY))}px`;
+                });
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (audioModesDragging) {
+                    audioModesDragging = false;
+                    console.log('🖱️ Audio Modes Panel drag ended');
+                }
+            });
+        }
     }
 
     setupHandTracking() {
@@ -712,6 +1066,49 @@ class Mesmer {
             const status = this.handTracking.getStatus();
             toggleSkeletonBtn.style.opacity = status.drawLandmarks ? '1' : '0.5';
             console.log(`✋ Skeleton ${status.drawLandmarks ? 'shown' : 'hidden'}`);
+        });
+
+        // Make hand tracking panel draggable
+        const handPanelHeader = handTrackingPanel.querySelector('div'); // First div is the header
+        let handPanelDragging = false;
+        let handPanelDragOffset = { x: 0, y: 0 };
+
+        handPanelHeader.style.cursor = 'move';
+
+        handPanelHeader.addEventListener('mousedown', (e) => {
+            if (e.target.closest('button')) return; // Don't drag when clicking close button
+
+            handPanelDragging = true;
+            const rect = handTrackingPanel.getBoundingClientRect();
+            handPanelDragOffset = {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top
+            };
+
+            e.preventDefault();
+            console.log('🖱️ Hand Tracking Panel drag started');
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!handPanelDragging) return;
+
+            requestAnimationFrame(() => {
+                const x = e.clientX - handPanelDragOffset.x;
+                const y = e.clientY - handPanelDragOffset.y;
+
+                const maxX = window.innerWidth - handTrackingPanel.offsetWidth;
+                const maxY = window.innerHeight - handTrackingPanel.offsetHeight;
+
+                handTrackingPanel.style.left = `${Math.max(0, Math.min(x, maxX))}px`;
+                handTrackingPanel.style.top = `${Math.max(0, Math.min(y, maxY))}px`;
+            });
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (handPanelDragging) {
+                handPanelDragging = false;
+                console.log('🖱️ Hand Tracking Panel drag ended');
+            }
         });
 
         console.log('✅ Hand tracking UI setup complete');
@@ -1157,12 +1554,21 @@ class Mesmer {
         // Track selector buttons
         const trackBtns = document.querySelectorAll('.synth-track-btn');
         trackBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                trackBtns.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                this.synthSeqState.currentTrack = btn.dataset.track;
-                this.renderPianoRoll();
-                console.log('🎹 Switched to track:', this.synthSeqState.currentTrack);
+            // Left click: switch track
+            btn.addEventListener('click', (e) => {
+                if (e.button === 0) { // Left click only
+                    trackBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    this.synthSeqState.currentTrack = btn.dataset.track;
+                    this.renderPianoRoll();
+                    console.log('🎹 Switched to track:', this.synthSeqState.currentTrack);
+                }
+            });
+
+            // Right click: open preset selector
+            btn.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                this.showPresetMenu(btn.dataset.track, e.clientX, e.clientY);
             });
         });
 
@@ -1264,6 +1670,54 @@ class Mesmer {
         });
 
         console.log('✅ Synth Sequencer initialized');
+    }
+
+    /**
+     * Transpose existing notes when scale changes
+     */
+    transposeNotesToNewScale() {
+        // For simplicity, we'll keep existing notes as-is since transposing
+        // between different scale types (e.g., Major to Minor) can be complex
+        // The piano roll will just show the new scale notes
+        console.log('🎼 Scale changed - piano roll will show new scale');
+    }
+
+    /**
+     * Transpose existing notes when key (root note) changes
+     */
+    transposeNotesToNewKey() {
+        if (!this.musicEngine || !this.musicEngine.rootNote || !this.musicEngine.previousRootNote) {
+            console.log('⚠️ Cannot transpose - missing key information');
+            return;
+        }
+
+        const oldRoot = this.musicEngine.previousRootNote;
+        const newRoot = this.musicEngine.rootNote;
+
+        // Calculate semitone difference
+        const oldFreq = Tone.Frequency(oldRoot);
+        const newFreq = Tone.Frequency(newRoot);
+        const semitoneShift = Math.round(newFreq.toMidi() - oldFreq.toMidi());
+
+        if (semitoneShift === 0) return;
+
+        // Transpose all patterns
+        Object.keys(this.synthSeqState.patterns).forEach(track => {
+            const pattern = this.synthSeqState.patterns[track];
+            pattern.forEach(step => {
+                step.notes = step.notes.map(noteData => {
+                    try {
+                        const transposedNote = Tone.Frequency(noteData.note).transpose(semitoneShift).toNote();
+                        return { ...noteData, note: transposedNote };
+                    } catch (e) {
+                        console.warn('Failed to transpose note:', noteData.note);
+                        return noteData;
+                    }
+                });
+            });
+        });
+
+        console.log(`🎹 Transposed notes by ${semitoneShift} semitones (${oldRoot} → ${newRoot})`);
     }
 
     renderPianoRoll() {
@@ -1434,6 +1888,113 @@ class Mesmer {
 
         // Re-render to show new duration
         this.renderPianoRoll();
+    }
+
+    /**
+     * Show preset selection menu for track
+     */
+    showPresetMenu(track, x, y) {
+        // Remove any existing menu
+        const existingMenu = document.getElementById('preset-context-menu');
+        if (existingMenu) {
+            existingMenu.remove();
+        }
+
+        // Get preset options for this track
+        const presetMap = {
+            pad: 'tonejsPadPreset',
+            lead: 'tonejsLeadPreset',
+            bass: 'tonejsBassPreset',
+            arp: 'tonejsArpPreset'
+        };
+
+        const selectId = presetMap[track];
+        if (!selectId) return;
+
+        const select = document.getElementById(selectId);
+        if (!select) return;
+
+        // Create context menu
+        const menu = document.createElement('div');
+        menu.id = 'preset-context-menu';
+        menu.style.cssText = `
+            position: fixed;
+            left: ${x}px;
+            top: ${y}px;
+            background: rgba(20, 20, 30, 0.98);
+            border: 2px solid rgba(139, 92, 246, 0.5);
+            border-radius: 8px;
+            padding: 8px;
+            z-index: 10000;
+            min-width: 180px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        `;
+
+        // Add title
+        const title = document.createElement('div');
+        title.textContent = `${track.toUpperCase()} Preset`;
+        title.style.cssText = `
+            color: rgba(139, 92, 246, 1);
+            font-weight: 600;
+            padding: 8px 12px;
+            border-bottom: 1px solid rgba(139, 92, 246, 0.3);
+            margin-bottom: 4px;
+            font-size: 12px;
+            text-transform: uppercase;
+        `;
+        menu.appendChild(title);
+
+        // Add preset options
+        Array.from(select.options).forEach(option => {
+            const item = document.createElement('div');
+            item.textContent = option.textContent;
+            item.style.cssText = `
+                padding: 10px 12px;
+                cursor: pointer;
+                color: rgba(255, 255, 255, 0.8);
+                font-size: 14px;
+                border-radius: 4px;
+                transition: all 0.2s;
+            `;
+
+            if (option.value === select.value) {
+                item.style.background = 'rgba(139, 92, 246, 0.3)';
+                item.style.color = '#ffffff';
+                item.textContent = '✓ ' + item.textContent;
+            }
+
+            item.addEventListener('mouseenter', () => {
+                item.style.background = 'rgba(139, 92, 246, 0.4)';
+                item.style.color = '#ffffff';
+            });
+
+            item.addEventListener('mouseleave', () => {
+                if (option.value !== select.value) {
+                    item.style.background = 'transparent';
+                    item.style.color = 'rgba(255, 255, 255, 0.8)';
+                }
+            });
+
+            item.addEventListener('click', () => {
+                select.value = option.value;
+                select.dispatchEvent(new Event('change'));
+                menu.remove();
+                console.log(`🎹 Changed ${track} preset to:`, option.textContent);
+            });
+
+            menu.appendChild(item);
+        });
+
+        document.body.appendChild(menu);
+
+        // Close on click outside
+        const closeMenu = (e) => {
+            if (!menu.contains(e.target)) {
+                menu.remove();
+                document.removeEventListener('click', closeMenu);
+            }
+        };
+        setTimeout(() => document.addEventListener('click', closeMenu), 100);
     }
 
     randomizePattern() {

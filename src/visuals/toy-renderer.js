@@ -8,7 +8,7 @@ class ToyRenderer {
         this.canvas = canvas;
         this.toyEngine = new ShaderToyLite(canvas);
         this.shaders = [];
-        this.currentShaderIndex = 0;
+        this.currentShaderIndex = 22; // Star Field
 
         // Color controls
         this.colorHue = 0.0;
@@ -16,7 +16,7 @@ class ToyRenderer {
         this.colorBrightness = 1.0;
 
         this.initShaders();
-        this.loadShader(0);
+        this.loadShader(22); // Star Field
     }
 
     initShaders() {

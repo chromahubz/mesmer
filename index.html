@@ -13,41 +13,46 @@
         <canvas id="toyCanvas"></canvas>
 
         <!-- Debug Overlay -->
-        <div id="debugOverlay" style="position: fixed; bottom: 20px; left: 20px; background: rgba(0,0,0,0.9); color: #0f0; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 11px; z-index: 1000; max-width: 300px; border: 2px solid #0f0;">
+        <div id="debugOverlay" style="position: fixed; bottom: 20px; left: 20px; background: rgba(0,0,0,0.9); color: #0f0; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 11px; z-index: 1000; max-width: 300px; border: 2px solid #0f0; display: none;">
             <div style="font-weight: bold; margin-bottom: 10px; color: #ff0;">MESMER DEBUG</div>
             <div id="debugContent">Initializing...</div>
             <button onclick="document.getElementById('debugOverlay').style.display='none'" style="margin-top: 10px; padding: 5px 10px; background: #f00; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 10px;">Hide</button>
         </div>
 
         <!-- Hand Tracking Panel -->
-        <div id="handTrackingPanel" style="position: fixed; top: 20px; right: 20px; width: 400px; background: rgba(0,0,0,0.85); border: 2px solid #00ff00; border-radius: 12px; padding: 15px; z-index: 1000; display: none;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <h3 style="margin: 0; color: #00ff00; font-family: monospace; font-size: 18px;">👋 Hand Tracking</h3>
-                <button id="closeHandTracking" style="background: #ff0000; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer; font-size: 12px;">Close</button>
+        <div id="handTrackingPanel" style="position: fixed; top: 20px; right: 20px; width: 600px; background: rgba(10, 10, 15, 0.98); border: 2px solid rgba(139, 92, 246, 0.5); border-radius: 12px; padding: 0; z-index: 1000; display: none; box-shadow: 0 0 40px rgba(139, 92, 246, 0.4); backdrop-filter: blur(12px); resize: both; overflow: auto; min-width: 400px; min-height: 300px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(99, 102, 241, 0.2)); border-bottom: 1px solid rgba(139, 92, 246, 0.3); border-radius: 10px 10px 0 0;">
+                <h3 style="margin: 0; color: rgba(167, 139, 250, 1); font-family: monospace; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Hand Tracking</h3>
+                <button id="closeHandTracking" class="btn-icon" title="Close">
+                    <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                    </svg>
+                </button>
             </div>
 
-            <!-- Video container -->
-            <div style="position: relative; width: 100%; aspect-ratio: 16/9; background: #000; border-radius: 8px; overflow: hidden; margin-bottom: 10px;">
-                <video id="handTrackingVideo" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none;"></video>
-                <canvas id="handTrackingCanvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></canvas>
-            </div>
+            <div style="padding: 15px;">
+                <!-- Video container -->
+                <div style="position: relative; width: 100%; aspect-ratio: 16/9; background: rgba(0, 0, 0, 0.8); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 8px; overflow: hidden; margin-bottom: 10px;">
+                    <video id="handTrackingVideo" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none;"></video>
+                    <canvas id="handTrackingCanvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></canvas>
+                </div>
 
-            <!-- Status display -->
-            <div id="handTrackingStatus" style="font-family: monospace; font-size: 12px; color: #ffff00; margin-bottom: 10px; min-height: 60px;">
-                <div id="gestureStatus">Waiting for initialization...</div>
-            </div>
+                <!-- Status display -->
+                <div id="handTrackingStatus" style="font-family: monospace; font-size: 11px; color: rgba(167, 139, 250, 0.9); margin-bottom: 10px; min-height: 60px;">
+                    <div id="gestureStatus">Waiting for initialization...</div>
+                </div>
 
-            <!-- Controls -->
-            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                <button id="startHandTracking" style="flex: 1; background: #00ff00; color: #000; border: none; border-radius: 4px; padding: 8px; cursor: pointer; font-weight: bold; font-size: 13px;">▶️ Start</button>
-                <button id="stopHandTracking" style="flex: 1; background: #ff6600; color: #fff; border: none; border-radius: 4px; padding: 8px; cursor: pointer; font-weight: bold; font-size: 13px; display: none;">⏸️ Stop</button>
-                <button id="toggleVideo" style="flex: 1; background: #0099ff; color: #fff; border: none; border-radius: 4px; padding: 8px; cursor: pointer; font-size: 13px;">📹 Video</button>
-                <button id="toggleSkeleton" style="flex: 1; background: #ff00ff; color: #fff; border: none; border-radius: 4px; padding: 8px; cursor: pointer; font-size: 13px;">✋ Skeleton</button>
-            </div>
+                <!-- Controls -->
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button id="startHandTracking" style="flex: 1; background: rgba(139, 92, 246, 0.6); color: #fff; border: none; border-radius: 6px; padding: 8px; cursor: pointer; font-weight: 600; font-size: 12px; transition: all 0.2s;">▶ Start</button>
+                    <button id="stopHandTracking" style="flex: 1; background: rgba(99, 102, 241, 0.6); color: #fff; border: none; border-radius: 6px; padding: 8px; cursor: pointer; font-weight: 600; font-size: 12px; display: none; transition: all 0.2s;">⏸ Stop</button>
+                    <button id="toggleVideo" style="flex: 1; background: rgba(79, 70, 229, 0.6); color: #fff; border: none; border-radius: 6px; padding: 8px; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.2s;">📹 Video</button>
+                    <button id="toggleSkeleton" style="flex: 1; background: rgba(109, 40, 217, 0.6); color: #fff; border: none; border-radius: 6px; padding: 8px; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.2s;">✋ Skeleton</button>
+                </div>
 
-            <!-- Gesture Guide -->
-            <details style="margin-top: 10px;">
-                <summary style="color: #00ff00; cursor: pointer; font-family: monospace; font-size: 12px; padding: 5px;">📖 Gesture Guide</summary>
+                <!-- Gesture Guide -->
+                <details style="margin-top: 10px;">
+                    <summary style="color: rgba(167, 139, 250, 1); cursor: pointer; font-family: monospace; font-size: 11px; padding: 5px; font-weight: 600;">📖 Gesture Guide</summary>
                 <div style="margin-top: 10px; font-family: monospace; font-size: 11px; color: #fff; line-height: 1.6; max-height: 300px; overflow-y: auto;">
                     <div style="color: #00ff00; font-weight: bold; margin-bottom: 5px;">LEFT HAND (Chords):</div>
                     <div>👍 Thumbs-Up → I chord</div>
@@ -75,10 +80,270 @@
                     <div>🖐️ Both → Cycle drum patterns</div>
                 </div>
             </details>
+            </div>
+        </div>
+
+        <!-- Voice Control Panel -->
+        <div id="voiceControlPanel" style="position: fixed; top: 20px; left: 20px; width: 350px; background: rgba(10, 10, 15, 0.98); border: 2px solid rgba(139, 92, 246, 0.5); border-radius: 12px; padding: 0; z-index: 1001; display: none; box-shadow: 0 0 40px rgba(139, 92, 246, 0.4); backdrop-filter: blur(12px);">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(99, 102, 241, 0.2)); border-bottom: 1px solid rgba(139, 92, 246, 0.3); border-radius: 10px 10px 0 0;">
+                <h3 style="margin: 0; color: rgba(167, 139, 250, 1); font-family: monospace; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Voice Control</h3>
+                <button id="closeVoicePanel" class="btn-icon" title="Close">
+                    <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div style="padding: 15px;">
+                <!-- Voice indicator -->
+                <div id="voiceIndicator" class="voice-indicator stopped" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 6px; padding: 10px; margin-bottom: 10px; font-family: monospace; font-size: 12px; color: rgba(248, 113, 113, 0.8); text-align: center;">
+                    Voice Control Off
+                </div>
+
+                <!-- Transcript display -->
+                <div style="margin-bottom: 10px;">
+                    <div style="font-family: monospace; font-size: 10px; color: rgba(156, 163, 175, 0.7); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px;">Last Command:</div>
+                    <div id="voiceTranscript" style="background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 4px; padding: 8px; font-family: monospace; font-size: 11px; color: rgba(167, 139, 250, 0.9); min-height: 30px; word-wrap: break-word;">
+                        Waiting...
+                    </div>
+                </div>
+
+                <!-- Feedback message -->
+                <div id="voiceFeedback" class="voice-feedback" style="background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 4px; padding: 8px; font-family: monospace; font-size: 11px; color: rgba(167, 139, 250, 0.9); min-height: 30px; margin-bottom: 10px; opacity: 0; transition: opacity 0.3s;">
+                    Ready
+                </div>
+
+                <!-- Controls -->
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px;">
+                    <button id="startVoiceControl" style="flex: 1; background: rgba(139, 92, 246, 0.6); color: #fff; border: none; border-radius: 6px; padding: 10px; cursor: pointer; font-weight: 600; font-size: 12px; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px;"><svg style="width: 14px; height: 14px; fill: currentColor;" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>Start</button>
+                    <button id="stopVoiceControl" style="flex: 1; background: rgba(99, 102, 241, 0.6); color: #fff; border: none; border-radius: 6px; padding: 10px; cursor: pointer; font-weight: 600; font-size: 12px; display: none; transition: all 0.2s;">⏸ Stop</button>
+                    <button id="toggleVoiceFeedback" style="flex: 1; background: rgba(79, 70, 229, 0.6); color: #fff; border: none; border-radius: 6px; padding: 10px; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px;"><svg style="width: 14px; height: 14px; fill: currentColor;" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>TTS</button>
+                </div>
+                <button id="toggleAudioModes" style="width: 100%; background: rgba(255, 255, 255, 0.05); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; cursor: pointer; font-weight: 600; font-size: 12px; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 10px;"><svg style="width: 16px; height: 16px; fill: currentColor;" viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>Audio Modes</button>
+
+            <!-- Command history -->
+            <details style="margin-top: 10px;">
+                <summary style="color: #00ff00; cursor: pointer; font-family: monospace; font-size: 12px; padding: 5px;">📜 Command History</summary>
+                <div id="voiceHistory" style="margin-top: 10px; font-family: monospace; font-size: 11px; color: #fff; line-height: 1.8; max-height: 150px; overflow-y: auto;">
+                    <div class="history-item">No commands yet...</div>
+                </div>
+            </details>
+
+            <!-- Command Guide -->
+            <details style="margin-top: 10px;">
+                <summary style="color: #00ff00; cursor: pointer; font-family: monospace; font-size: 12px; padding: 5px;">📖 Complete Voice Commands Guide</summary>
+                <div style="margin-top: 10px; font-family: monospace; font-size: 9px; color: #fff; line-height: 1.7; max-height: 400px; overflow-y: auto; padding-right: 5px;">
+
+                    <!-- Getting Started -->
+                    <div style="background: rgba(0,255,0,0.1); border-left: 3px solid #00ff00; padding: 8px; margin-bottom: 12px;">
+                        <div style="color: #00ff00; font-weight: bold; font-size: 10px; margin-bottom: 4px;">🚀 GETTING STARTED</div>
+                        <div style="font-size: 8px; color: #ccc;">1. Click "▶️ Start Listening"</div>
+                        <div style="font-size: 8px; color: #ccc;">2. Speak clearly into microphone</div>
+                        <div style="font-size: 8px; color: #ccc;">3. Wait for green confirmation</div>
+                        <div style="font-size: 8px; color: #ccc;">4. Commands work instantly!</div>
+                    </div>
+
+                    <!-- Basic Playback -->
+                    <div style="color: #00ff00; font-weight: bold; margin-bottom: 5px; border-bottom: 1px solid #00ff00; padding-bottom: 3px;">🎮 BASIC PLAYBACK</div>
+                    <div style="margin-left: 8px; margin-bottom: 3px;">
+                        <div style="color: #0f0;">▶️ "PLAY"</div>
+                        <div style="font-size: 8px; color: #888; margin-left: 12px;">→ Starts the music engine</div>
+                    </div>
+                    <div style="margin-left: 8px; margin-bottom: 3px;">
+                        <div style="color: #0f0;">⏹️ "STOP" or "PAUSE"</div>
+                        <div style="font-size: 8px; color: #888; margin-left: 12px;">→ Stops all sounds</div>
+                    </div>
+                    <div style="margin-left: 8px; margin-bottom: 3px;">
+                        <div style="color: #0f0;">🥁 "DRUMS" / "DRUMS ON" / "DRUMS OFF"</div>
+                        <div style="font-size: 8px; color: #888; margin-left: 12px;">→ Toggle or set drum machine</div>
+                    </div>
+                    <div style="margin-left: 8px; margin-bottom: 3px;">
+                        <div style="color: #0f0;">⏩ "FASTER" / ⏪ "SLOWER"</div>
+                        <div style="font-size: 8px; color: #888; margin-left: 12px;">→ Adjust tempo by 10 BPM</div>
+                    </div>
+
+                    <!-- Volume Control -->
+                    <div style="color: #ff00ff; font-weight: bold; margin-top: 10px; margin-bottom: 5px; border-bottom: 1px solid #ff00ff; padding-bottom: 3px;">🎚️ VOLUME CONTROL</div>
+                    <div style="margin-left: 8px; margin-bottom: 3px;">
+                        <div style="color: #f0f;">🔊 "VOLUME 70"</div>
+                        <div style="font-size: 8px; color: #888; margin-left: 12px;">→ Master volume (0-100)</div>
+                    </div>
+                    <div style="margin-left: 8px; margin-bottom: 3px;">
+                        <div style="color: #f0f;">🎹 "SYNTH VOLUME 60"</div>
+                        <div style="font-size: 8px; color: #888; margin-left: 12px;">→ Synth instruments only</div>
+                    </div>
+                    <div style="margin-left: 8px; margin-bottom: 3px;">
+                        <div style="color: #f0f;">🥁 "DRUM VOLUME 80"</div>
+                        <div style="font-size: 8px; color: #888; margin-left: 12px;">→ Drum machine only</div>
+                    </div>
+                    <div style="margin-left: 8px; margin-bottom: 3px;">
+                        <div style="color: #f0f;">🔊 "LOUDER" / 🔉 "QUIETER"</div>
+                        <div style="font-size: 8px; color: #888; margin-left: 12px;">→ Quick volume adjustments (+/- 10)</div>
+                    </div>
+
+                    <!-- Beatbox Mode DETAILED -->
+                    <div style="color: #ff00ff; font-weight: bold; margin-top: 12px; margin-bottom: 5px; border-bottom: 1px solid #ff00ff; padding-bottom: 3px;">🎤 BEATBOX MODE (Real Drums!)</div>
+                    <div style="background: rgba(255,0,255,0.1); padding: 6px; margin-bottom: 6px; border-radius: 4px;">
+                        <div style="color: #ff00ff; font-weight: bold; font-size: 9px;">HOW TO USE:</div>
+                        <div style="font-size: 8px; color: #ccc; margin-left: 8px;">1. Say: "BEATBOX MODE ON"</div>
+                        <div style="font-size: 8px; color: #ccc; margin-left: 8px;">2. Make drum sounds with your mouth</div>
+                        <div style="font-size: 8px; color: #ccc; margin-left: 8px;">3. Hear drums INSTANTLY!</div>
+                        <div style="font-size: 8px; color: #ccc; margin-left: 8px;">4. Say: "BEATBOX MODE OFF" when done</div>
+                        <div style="font-size: 8px; color: #ccc; margin-left: 8px;">5. Say: "PLAY PATTERN" to loop it!</div>
+                    </div>
+                    <div style="margin-left: 8px; margin-bottom: 3px;">
+                        <div style="color: #f0f;">🎤 Commands:</div>
+                        <div style="font-size: 8px; margin-left: 12px;">"BEATBOX MODE ON/OFF"</div>
+                        <div style="font-size: 8px; margin-left: 12px;">"START/STOP BEATBOX MODE"</div>
+                        <div style="font-size: 8px; margin-left: 12px;">"DRUM MODE ON/OFF"</div>
+                    </div>
+                    <div style="margin-left: 8px; margin-bottom: 3px;">
+                        <div style="color: #f0f;">🥁 Drum Sounds:</div>
+                        <div style="font-size: 8px; margin-left: 12px;">"BOOTS" / "BOOM" → Kick drum</div>
+                        <div style="font-size: 8px; margin-left: 12px;">"CATS" / "K" → Snare drum</div>
+                        <div style="font-size: 8px; margin-left: 12px;">"TSS" / "CH" → Hi-hat</div>
+                    </div>
+
+                    <!-- Pitch Mode DETAILED -->
+                    <div style="color: #00ffff; font-weight: bold; margin-top: 12px; margin-bottom: 5px; border-bottom: 1px solid #00ffff; padding-bottom: 3px;">🎶 PITCH MODE (Sing & Play!)</div>
+                    <div style="background: rgba(0,255,255,0.1); padding: 6px; margin-bottom: 6px; border-radius: 4px;">
+                        <div style="color: #00ffff; font-weight: bold; font-size: 9px;">HOW TO USE:</div>
+                        <div style="font-size: 8px; color: #ccc; margin-left: 8px;">1. Say: "PITCH MODE ON"</div>
+                        <div style="font-size: 8px; color: #ccc; margin-left: 8px;">2. Hum or sing any melody</div>
+                        <div style="font-size: 8px; color: #ccc; margin-left: 8px;">3. Hear synth play along LIVE!</div>
+                        <div style="font-size: 8px; color: #ccc; margin-left: 8px;">4. Say: "PITCH MODE OFF" when done</div>
+                        <div style="font-size: 8px; color: #ccc; margin-left: 8px;">5. Say: "PLAY MELODY" to replay it!</div>
+                        <div style="font-size: 8px; color: #ccc; margin-left: 8px;">6. Say: "HARMONIZE" for harmony!</div>
+                    </div>
+                    <div style="margin-left: 8px; margin-bottom: 6px;">
+                        <div style="color: #0ff;">🎤 Commands:</div>
+                        <div style="font-size: 8px; margin-left: 12px;">"PITCH MODE ON/OFF"</div>
+                        <div style="font-size: 8px; margin-left: 12px;">"START/STOP PITCH MODE"</div>
+                        <div style="font-size: 8px; margin-left: 12px;">"PLAY MELODY"</div>
+                        <div style="font-size: 8px; margin-left: 12px;">"HARMONIZE"</div>
+                    </div>
+                    <div style="background: rgba(0,255,255,0.15); padding: 6px; margin-bottom: 6px; border-radius: 4px; border: 1px solid rgba(0,255,255,0.3);">
+                        <div style="color: #00ffff; font-weight: bold; font-size: 9px; margin-bottom: 3px;">🎵 SINGING STYLES:</div>
+                        <div style="font-size: 8px; color: #ccc; margin-left: 8px;">
+                            <strong style="color: #0ff;">LEGATO (Smooth):</strong><br/>
+                            <span style="margin-left: 8px;">→ Sing continuously without stopping</span><br/>
+                            <span style="margin-left: 8px;">→ Notes SUSTAIN while you hold them</span><br/>
+                            <span style="margin-left: 8px;">→ Perfect for melodies & vowel sounds</span><br/>
+                            <span style="margin-left: 8px;">→ Example: "Aaaaah~ Eeeeeh~ Ooooh~"</span>
+                        </div>
+                        <div style="font-size: 8px; color: #ccc; margin-left: 8px; margin-top: 4px;">
+                            <strong style="color: #0ff;">STACCATO (Short):</strong><br/>
+                            <span style="margin-left: 8px;">→ Sing short, separated notes</span><br/>
+                            <span style="margin-left: 8px;">→ Notes STOP when you stop singing</span><br/>
+                            <span style="margin-left: 8px;">→ Great for rhythmic patterns</span><br/>
+                            <span style="margin-left: 8px;">→ Example: "La la la" (with pauses)</span>
+                        </div>
+                        <div style="font-size: 8px; color: #ff0; margin-left: 8px; margin-top: 4px;">
+                            💡 TIP: System auto-detects both styles!
+                        </div>
+                    </div>
+
+                    <!-- Effects -->
+                    <div style="color: #ffff00; font-weight: bold; margin-top: 10px; margin-bottom: 5px; border-bottom: 1px solid #ffff00; padding-bottom: 3px;">✨ EFFECTS & TEMPO</div>
+                    <div style="margin-left: 8px; margin-bottom: 3px;">
+                        <div style="color: #ff0;">🌊 "REVERB 50" (0-100)</div>
+                        <div style="font-size: 8px; color: #888; margin-left: 12px;">→ Echo/space amount</div>
+                    </div>
+                    <div style="margin-left: 8px; margin-bottom: 3px;">
+                        <div style="color: #ff0;">🔁 "DELAY 30" (0-100)</div>
+                        <div style="font-size: 8px; color: #888; margin-left: 12px;">→ Delay/repeat amount</div>
+                    </div>
+                    <div style="margin-left: 8px; margin-bottom: 3px;">
+                        <div style="color: #ff0;">⏱️ "TEMPO 128" (60-200)</div>
+                        <div style="font-size: 8px; color: #888; margin-left: 12px;">→ Set BPM speed</div>
+                    </div>
+
+                    <!-- Genres -->
+                    <div style="color: #ff6600; font-weight: bold; margin-top: 10px; margin-bottom: 5px; border-bottom: 1px solid #ff6600; padding-bottom: 3px;">🎵 MUSIC GENRES</div>
+                    <div style="margin-left: 8px;">
+                        <div style="font-size: 8px;">🌌 "AMBIENT" - Calm, spacey</div>
+                        <div style="font-size: 8px;">🎛️ "TECHNO" - Energetic beats</div>
+                        <div style="font-size: 8px;">🎷 "JAZZ" - Smooth & complex</div>
+                        <div style="font-size: 8px;">〰️ "DRONE" - Sustained tones</div>
+                    </div>
+
+                    <!-- Drum Patterns -->
+                    <div style="color: #ff6600; font-weight: bold; margin-top: 10px; margin-bottom: 5px; border-bottom: 1px solid #ff6600; padding-bottom: 3px;">🥁 DRUM MACHINES & PATTERNS</div>
+                    <div style="margin-left: 8px; margin-bottom: 3px;">
+                        <div style="color: #f60;">🥁 "EIGHT OH EIGHT"</div>
+                        <div style="font-size: 8px; color: #888; margin-left: 12px;">→ Classic TR-808 drums</div>
+                    </div>
+                    <div style="margin-left: 8px; margin-bottom: 3px;">
+                        <div style="color: #f60;">🥁 "NINE OH NINE"</div>
+                        <div style="font-size: 8px; color: #888; margin-left: 12px;">→ TR-909 techno drums</div>
+                    </div>
+                    <div style="margin-left: 8px; margin-bottom: 3px;">
+                        <div style="color: #f60;">🔄 "NEXT PATTERN"</div>
+                        <div style="font-size: 8px; color: #888; margin-left: 12px;">→ Cycle through rhythms</div>
+                    </div>
+
+                    <!-- Visuals -->
+                    <div style="color: #00ff00; font-weight: bold; margin-top: 10px; margin-bottom: 5px; border-bottom: 1px solid #00ff00; padding-bottom: 3px;">🎨 VISUAL CONTROLS</div>
+                    <div style="margin-left: 8px;">
+                        <div style="font-size: 8px;">🔴 "RED" / "BLUE" / "GREEN" / "PURPLE"</div>
+                        <div style="font-size: 8px;">💡 "BRIGHTER" / "DARKER"</div>
+                        <div style="font-size: 8px;">👁️ "SHOW/HIDE MAIN LAYER"</div>
+                    </div>
+
+                    <!-- Natural Language -->
+                    <div style="color: #ff6600; font-weight: bold; margin-top: 10px; margin-bottom: 5px; border-bottom: 1px solid #ff6600; padding-bottom: 3px;">💬 NATURAL LANGUAGE (Smart Commands)</div>
+                    <div style="margin-left: 8px;">
+                        <div style="font-size: 8px;">✨ "MAKE IT LOUDER" → Volume up</div>
+                        <div style="font-size: 8px;">✨ "ADD MORE REVERB" → Reverb up</div>
+                        <div style="font-size: 8px;">✨ "MAKE IT DREAMY" → Ambient preset</div>
+                        <div style="font-size: 8px;">✨ "COSMIC MODE" → Space vibes</div>
+                        <div style="font-size: 8px;">✨ "UNDERWATER VIBES" → Deep preset</div>
+                    </div>
+
+                    <!-- Pro Tips -->
+                    <div style="background: rgba(255,255,0,0.1); border-left: 3px solid #ff0; padding: 8px; margin-top: 12px;">
+                        <div style="color: #ff0; font-weight: bold; font-size: 10px; margin-bottom: 4px;">💡 PRO TIPS</div>
+                        <div style="font-size: 8px; color: #ccc;">✓ Speak clearly, pause between words</div>
+                        <div style="font-size: 8px; color: #ccc;">✓ Wait for green confirmation</div>
+                        <div style="font-size: 8px; color: #ccc;">✓ Use buttons for beatbox/pitch modes</div>
+                        <div style="font-size: 8px; color: #ccc;">✓ Beatbox: Say "BOOTS CATS TSS"</div>
+                        <div style="font-size: 8px; color: #ccc;">✓ Pitch: Hum single notes clearly</div>
+                        <div style="font-size: 8px; color: #ccc;">✓ Combine voice + hand tracking!</div>
+                    </div>
+                </div>
+            </details>
+            </div>
+        </div>
+
+        <!-- Audio Mode Buttons (below voice panel) -->
+        <div id="audioModeButtons" style="position: fixed; top: 20px; left: 390px; width: 200px; z-index: 1001; display: none;">
+            <div style="background: rgba(10, 10, 15, 0.98); border: 2px solid rgba(139, 92, 246, 0.5); border-radius: 12px; padding: 0; box-shadow: 0 0 40px rgba(139, 92, 246, 0.4); backdrop-filter: blur(12px);">
+                <h4 style="margin: 0; padding: 12px 16px; background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(99, 102, 241, 0.2)); border-bottom: 1px solid rgba(139, 92, 246, 0.3); border-radius: 10px 10px 0 0; color: rgba(167, 139, 250, 1); font-family: monospace; font-size: 13px; text-align: center; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Audio Modes</h4>
+
+                <div style="padding: 12px;">
+                    <!-- Beatbox Mode Toggle -->
+                    <button id="toggleBeatboxMode" class="audio-mode-btn" data-active="false" style="width: 100%; background: rgba(255, 255, 255, 0.05); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; cursor: pointer; font-weight: 600; font-size: 12px; margin-bottom: 8px; transition: all 0.2s; display: flex; flex-direction: column; align-items: center;">
+                        <span class="mode-label">🥁 Beatbox Mode</span>
+                        <div class="mode-status" style="font-size: 10px; font-weight: normal; margin-top: 4px; opacity: 0.6;">OFF</div>
+                    </button>
+
+                    <!-- Pitch/Humming Mode Toggle -->
+                    <button id="togglePitchMode" class="audio-mode-btn" data-active="false" style="width: 100%; background: rgba(255, 255, 255, 0.05); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; cursor: pointer; font-weight: 600; font-size: 12px; transition: all 0.2s; display: flex; flex-direction: column; align-items: center;">
+                        <span class="mode-label">🎶 Pitch Mode</span>
+                        <div class="mode-status" style="font-size: 10px; font-weight: normal; margin-top: 4px; opacity: 0.6;">OFF</div>
+                    </button>
+
+                    <div style="margin-top: 10px; padding: 8px; background: rgba(139, 92, 246, 0.05); border: 1px solid rgba(139, 92, 246, 0.2); border-radius: 6px; font-family: monospace; font-size: 9px; color: rgba(156, 163, 175, 0.8); line-height: 1.4;">
+                        <div style="color: rgba(167, 139, 250, 1); font-weight: 600; margin-bottom: 4px;">💡 TIP:</div>
+                        <div><strong>Beatbox:</strong> Drum sounds<br/>(boots, cats, tss)</div>
+                        <div style="margin-top: 4px;"><strong>Pitch:</strong> Hum melody</div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Shader Editor Panel (Left Side) -->
-        <div class="shader-editor-left collapsed" id="shaderEditorLeft">
+        <div class="shader-editor-left" id="shaderEditorLeft" style="display: none;">
             <div class="editor-header">
                 <h3>
                     <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
@@ -86,11 +351,18 @@
                     </svg>
                     Shader Editor
                 </h3>
-                <button id="toggleEditorLeft" class="btn-icon">
-                    <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/>
-                    </svg>
-                </button>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <button id="toggleEditorLeft" class="btn-icon" title="Collapse/Expand" style="order: 1;">
+                        <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/>
+                        </svg>
+                    </button>
+                    <button id="closeShaderEditor" class="btn-icon" title="Close" style="order: 2;">
+                        <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                        </svg>
+                    </button>
+                </div>
             </div>
 
             <div class="editor-content" id="editorContentLeft">
@@ -267,7 +539,7 @@
                                 <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
                                     <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
                                 </svg>
-                                Prod/DAW
+                                PROD
                             </button>
                         </div>
                     </div>
@@ -277,6 +549,16 @@
                         </svg>
                         <span>Play</span>
                     </button>
+                    <div class="slider-group">
+                        <label>
+                            <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/>
+                            </svg>
+                            Master Volume
+                        </label>
+                        <input type="range" id="volumeSlider" min="0" max="100" value="70">
+                        <span class="value">70%</span>
+                    </div>
                     <div class="slider-group">
                         <label>
                             <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
@@ -315,8 +597,8 @@
                             </svg>
                             Master Reverb
                         </label>
-                        <input type="range" id="reverbSlider" min="0" max="100" value="30">
-                        <span class="value">30%</span>
+                        <input type="range" id="reverbSlider" min="0" max="100" value="0">
+                        <span class="value">0%</span>
                     </div>
                     <div class="slider-group">
                         <label>
@@ -325,8 +607,8 @@
                             </svg>
                             Master Delay
                         </label>
-                        <input type="range" id="delaySlider" min="0" max="100" value="20">
-                        <span class="value">20%</span>
+                        <input type="range" id="delaySlider" min="0" max="100" value="0">
+                        <span class="value">0%</span>
                     </div>
 
                     <!-- Synth FX (Collapsible) -->
@@ -374,8 +656,8 @@
                                 </svg>
                                 Drum Reverb
                             </label>
-                            <input type="range" id="drumReverbSlider" min="0" max="100" value="50">
-                            <span class="value">50%</span>
+                            <input type="range" id="drumReverbSlider" min="0" max="100" value="0">
+                            <span class="value">0%</span>
                         </div>
                         <div class="slider-group">
                             <label>
@@ -384,8 +666,8 @@
                                 </svg>
                                 Drum Delay
                             </label>
-                            <input type="range" id="drumDelaySlider" min="0" max="100" value="50">
-                            <span class="value">50%</span>
+                            <input type="range" id="drumDelaySlider" min="0" max="100" value="0">
+                            <span class="value">0%</span>
                         </div>
                     </details>
                     <div class="slider-group">
@@ -458,60 +740,158 @@
                             Synth Engine
                         </label>
                         <select id="synthEngineSelect">
-                            <option value="tonejs" selected>Tone.js (Classic)</option>
-                            <option value="wad">WAD (Sound Banks)</option>
-                            <option value="dirt">Dirt (Samples)</option>
+                            <option value="tonejs" selected>Celestial</option>
+                            <option value="wad">Magma</option>
+                            <option value="dirt">Chaos</option>
                         </select>
                     </div>
-                    <div class="shader-selector wad-controls" style="display: none;">
-                        <label>
-                            <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/>
-                            </svg>
-                            Pad Sound
-                        </label>
-                        <select id="wadPadPreset">
-                            <option value="warmPad" selected>Warm Pad</option>
-                            <option value="spacePad">Space Pad</option>
-                            <option value="dreamPad">Dream Pad</option>
-                            <option value="atmosphericPad">Atmospheric</option>
-                            <option value="drone">Drone</option>
-                        </select>
+                    <div class="synth-instrument-group tonejs-controls">
+                        <div class="shader-selector">
+                            <label>
+                                <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/>
+                                </svg>
+                                Pad Synth
+                            </label>
+                            <select id="tonejsPadPreset">
+                                <option value="none">None (Mute)</option>
+                                <option value="sine" selected>Smooth Sine</option>
+                                <option value="triangle">Warm Triangle</option>
+                                <option value="sawtooth">Rich Sawtooth</option>
+                                <option value="square">Hollow Square</option>
+                                <option value="fatsine">Fat Sine</option>
+                                <option value="fatsawtooth">Fat Sawtooth</option>
+                                <option value="fatsquare">Fat Square</option>
+                                <option value="fattriangle">Fat Triangle</option>
+                            </select>
+                        </div>
+                        <div class="shader-selector">
+                            <label>
+                                <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/>
+                                </svg>
+                                Lead Synth
+                            </label>
+                            <select id="tonejsLeadPreset">
+                                <option value="none">None (Mute)</option>
+                                <option value="sine" selected>Pure Sine</option>
+                                <option value="triangle">Soft Triangle</option>
+                                <option value="sawtooth">Bright Sawtooth</option>
+                                <option value="square">Digital Square</option>
+                                <option value="fatsawtooth">Fat Sawtooth</option>
+                                <option value="fatsquare">Fat Square</option>
+                            </select>
+                        </div>
+                        <div class="shader-selector">
+                            <label>
+                                <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/>
+                                </svg>
+                                Bass Synth
+                            </label>
+                            <select id="tonejsBassPreset">
+                                <option value="none">None (Mute)</option>
+                                <option value="sine" selected>Deep Sine</option>
+                                <option value="fatsine">Fat Sine</option>
+                                <option value="triangle">Round Triangle</option>
+                                <option value="fattriangle">Fat Triangle</option>
+                                <option value="sawtooth">Aggressive Saw</option>
+                                <option value="fatsawtooth">Fat Sawtooth</option>
+                                <option value="square">Sub Square</option>
+                                <option value="fatsquare">Fat Square</option>
+                                <option value="pulse">Pulse Wave</option>
+                            </select>
+                        </div>
+                        <div class="shader-selector">
+                            <label>
+                                <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/>
+                                </svg>
+                                Arp Synth
+                            </label>
+                            <select id="tonejsArpPreset">
+                                <option value="none">None (Mute)</option>
+                                <option value="sine" selected>Smooth Sine</option>
+                                <option value="fatsine">Fat Sine</option>
+                                <option value="triangle">Soft Triangle</option>
+                                <option value="fattriangle">Fat Triangle</option>
+                                <option value="sawtooth">Sharp Sawtooth</option>
+                                <option value="fatsawtooth">Fat Sawtooth</option>
+                                <option value="square">Classic Square</option>
+                                <option value="fatsquare">Fat Square</option>
+                                <option value="pulse">Pulse Wave</option>
+                            </select>
+                        </div>
                     </div>
-                    <div class="shader-selector wad-controls" style="display: none;">
-                        <label>
-                            <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/>
-                            </svg>
-                            Lead Sound
-                        </label>
-                        <select id="wadLeadPreset">
-                            <option value="brightLead" selected>Bright Lead</option>
-                            <option value="analogLead">Analog Lead</option>
-                        </select>
+                    <div class="synth-instrument-group wad-controls" style="display: none;">
+                        <div class="shader-selector">
+                            <label>
+                                <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/>
+                                </svg>
+                                Pad Sound
+                            </label>
+                            <select id="wadPadPreset">
+                                <option value="none">None (Mute)</option>
+                                <option value="warmPad" selected>Warm Pad</option>
+                                <option value="spacePad">Space Pad</option>
+                                <option value="dreamPad">Dream Pad</option>
+                                <option value="atmosphericPad">Atmospheric</option>
+                                <option value="drone">Drone</option>
+                            </select>
+                        </div>
+                        <div class="shader-selector">
+                            <label>
+                                <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/>
+                                </svg>
+                                Lead Sound
+                            </label>
+                            <select id="wadLeadPreset">
+                                <option value="none">None (Mute)</option>
+                                <option value="brightLead" selected>Bright Lead</option>
+                                <option value="analogLead">Analog Lead</option>
+                            </select>
+                        </div>
+                        <div class="shader-selector">
+                            <label>
+                                <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/>
+                                </svg>
+                                Bass Sound
+                            </label>
+                            <select id="wadBassPreset">
+                                <option value="none">None (Mute)</option>
+                                <option value="deepBass" selected>Deep Bass</option>
+                                <option value="subBass">Sub Bass</option>
+                                <option value="acidBass">Acid Bass</option>
+                            </select>
+                        </div>
+                        <div class="shader-selector">
+                            <label>
+                                <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/>
+                                </svg>
+                                Arp Sound
+                            </label>
+                            <select id="wadArpPreset">
+                                <option value="none">None (Mute)</option>
+                                <option value="brightLead" selected>Bright Arp</option>
+                                <option value="analogLead">Analog Arp</option>
+                            </select>
+                        </div>
                     </div>
-                    <div class="shader-selector wad-controls" style="display: none;">
-                        <label>
-                            <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/>
-                            </svg>
-                            Bass Sound
-                        </label>
-                        <select id="wadBassPreset">
-                            <option value="deepBass" selected>Deep Bass</option>
-                            <option value="subBass">Sub Bass</option>
-                            <option value="acidBass">Acid Bass</option>
-                        </select>
-                    </div>
-                    <div class="shader-selector dirt-controls" style="display: none;">
-                        <label>
-                            <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/>
-                            </svg>
-                            Pad Samples
-                        </label>
-                        <select id="dirtPadBank">
-                            <optgroup label="Pads & Ambient">
+                    <div class="synth-instrument-group dirt-controls" style="display: none;">
+                        <div class="shader-selector">
+                            <label>
+                                <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/>
+                                </svg>
+                                Pad Samples
+                            </label>
+                            <select id="dirtPadBank">
+                                <option value="none">None (Mute)</option>
+                                <optgroup label="Pads & Ambient">
                                 <option value="breath">Breath</option>
                                 <option value="cosmicg">Cosmicg</option>
                                 <option value="feel">Feel</option>
@@ -735,16 +1115,17 @@
                                 <option value="xmas">Xmas</option>
                             </optgroup>
                         </select>
-                    </div>
-                    <div class="shader-selector dirt-controls" style="display: none;">
-                        <label>
-                            <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/>
-                            </svg>
-                            Lead Samples
-                        </label>
-                        <select id="dirtLeadBank">
-                            <optgroup label="Pads & Ambient">
+                        </div>
+                        <div class="shader-selector">
+                            <label>
+                                <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/>
+                                </svg>
+                                Lead Samples
+                            </label>
+                            <select id="dirtLeadBank">
+                                <option value="none">None (Mute)</option>
+                                <optgroup label="Pads & Ambient">
                                 <option value="breath">Breath</option>
                                 <option value="cosmicg">Cosmicg</option>
                                 <option value="feel">Feel</option>
@@ -968,16 +1349,17 @@
                                 <option value="xmas">Xmas</option>
                             </optgroup>
                         </select>
-                    </div>
-                    <div class="shader-selector dirt-controls" style="display: none;">
-                        <label>
-                            <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/>
-                            </svg>
-                            Bass Samples
-                        </label>
-                        <select id="dirtBassBank">
-                            <optgroup label="Pads & Ambient">
+                        </div>
+                        <div class="shader-selector">
+                            <label>
+                                <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/>
+                                </svg>
+                                Bass Samples
+                            </label>
+                            <select id="dirtBassBank">
+                                <option value="none">None (Mute)</option>
+                                <optgroup label="Pads & Ambient">
                                 <option value="breath">Breath</option>
                                 <option value="cosmicg">Cosmicg</option>
                                 <option value="feel">Feel</option>
@@ -1201,16 +1583,17 @@
                                 <option value="xmas">Xmas</option>
                             </optgroup>
                         </select>
-                    </div>
-                    <div class="shader-selector dirt-controls" style="display: none;">
-                        <label>
-                            <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/>
-                            </svg>
-                            Arp Samples
-                        </label>
-                        <select id="dirtArpBank">
-                            <optgroup label="Pads & Ambient">
+                        </div>
+                        <div class="shader-selector">
+                            <label>
+                                <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/>
+                                </svg>
+                                Arp Samples
+                            </label>
+                            <select id="dirtArpBank">
+                                <option value="none">None (Mute)</option>
+                                <optgroup label="Pads & Ambient">
                                 <option value="breath">Breath</option>
                                 <option value="cosmicg">Cosmicg</option>
                                 <option value="feel">Feel</option>
@@ -1434,6 +1817,7 @@
                                 <option value="xmas">Xmas</option>
                             </optgroup>
                         </select>
+                        </div>
                     </div>
                     <div class="shader-selector">
                         <label>
@@ -1531,18 +1915,13 @@
                             <option value="none">None</option>
                         </select>
                     </div>
-                    <div class="toggle-group">
-                        <label class="toggle">
-                            <input type="checkbox" id="drumsToggle">
-                            <span class="toggle-slider"></span>
-                            <span class="toggle-label">
-                                <svg class="icon" viewBox="0 0 24 24" fill="currentColor" style="width: 16px; height: 16px; margin-right: 5px;">
-                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-5-9h2v2H7zm8 0h2v2h-2zm-4 0h2v2h-2z"/>
-                                </svg>
-                                Drum Machine
-                            </span>
-                        </label>
-                    </div>
+                    <button class="drum-toggle-btn" id="drumsToggle" data-active="false">
+                        <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-5-9h2v2H7zm8 0h2v2h-2zm-4 0h2v2h-2z"/>
+                        </svg>
+                        <span class="label">Drum Machine</span>
+                        <span class="status">OFF</span>
+                    </button>
                     <div class="shader-selector">
                         <label>
                             <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
@@ -1569,39 +1948,6 @@
 
                 <div class="control-group">
                     <h3>Visuals</h3>
-                    <div class="slider-group">
-                        <label>
-                            Main Layer: <span id="mainOpacityValue">100</span>%
-                            <input type="range" id="mainOpacity" min="0" max="100" value="100" step="1">
-                        </label>
-                        <label>
-                            ShaderToy Layer: <span id="toyOpacityValue">80</span>%
-                            <input type="range" id="toyOpacity" min="0" max="100" value="80" step="1">
-                        </label>
-                    </div>
-                    <div class="slider-group">
-                        <label>
-                            <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
-                            </svg>
-                            Color Hue: <span id="colorHueValue">0</span>°
-                        </label>
-                        <input type="range" id="colorHue" min="0" max="360" value="0" step="1">
-                        <label>
-                            <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M20 8.69V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12 20 8.69zm-2 5.79V18h-3.52L12 20.48 9.52 18H6v-3.52L3.52 12 6 9.52V6h3.52L12 3.52 14.48 6H18v3.52L20.48 12 18 14.48z"/>
-                            </svg>
-                            Color Saturation: <span id="colorSaturationValue">100</span>%
-                        </label>
-                        <input type="range" id="colorSaturation" min="0" max="100" value="100" step="1">
-                        <label>
-                            <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M9 2c-1.05 0-2.05.16-3 .46 4.06 1.27 7 5.06 7 9.54 0 4.48-2.94 8.27-7 9.54.95.3 1.95.46 3 .46 5.52 0 10-4.48 10-10S14.52 2 9 2z"/>
-                            </svg>
-                            Color Brightness: <span id="colorBrightnessValue">100</span>%
-                        </label>
-                        <input type="range" id="colorBrightness" min="0" max="200" value="100" step="1">
-                    </div>
                     <div class="shader-selector">
                         <label>Main Shader</label>
                         <select id="mainShaderSelect">
@@ -1613,7 +1959,7 @@
                             <optgroup label="Presets">
                                 <option value="3">Voronoi Cells</option>
                                 <option value="4">Mandelbrot Zoom</option>
-                                <option value="5">Liquid Metal</option>
+                                <option value="5" selected>Liquid Metal</option>
                                 <option value="6">DNA Helix</option>
                                 <option value="7">Grid Waves</option>
                             </optgroup>
@@ -1646,6 +1992,56 @@
                             </optgroup>
                         </select>
                     </div>
+                    <div class="slider-group">
+                        <label>
+                            <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2l-5.5 9h11L12 2zm0 3.84L13.93 9h-3.87L12 5.84zM17.5 13c-2.49 0-4.5 2.01-4.5 4.5s2.01 4.5 4.5 4.5 4.5-2.01 4.5-4.5-2.01-4.5-4.5-4.5zm0 7c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5zM3 21.5h8v-8H3v8zm2-6h4v4H5v-4z"/>
+                            </svg>
+                            Main
+                        </label>
+                        <input type="range" id="mainOpacity" min="0" max="100" value="100" step="1">
+                        <span class="value" id="mainOpacityValue">100%</span>
+                    </div>
+                    <div class="slider-group">
+                        <label>
+                            <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M21 3H3c-1.11 0-2 .89-2 2v12c0 1.1.89 2 2 2h5v2h8v-2h5c1.1 0 2-.9 2-2V5c0-1.11-.9-2-2-2zm0 14H3V5h18v12z"/>
+                            </svg>
+                            ShaderToy
+                        </label>
+                        <input type="range" id="toyOpacity" min="0" max="100" value="80" step="1">
+                        <span class="value" id="toyOpacityValue">80%</span>
+                    </div>
+                    <div class="slider-group">
+                        <label>
+                            <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+                            </svg>
+                            Color Hue
+                        </label>
+                        <input type="range" id="colorHue" min="0" max="360" value="0" step="1">
+                        <span class="value" id="colorHueValue">0°</span>
+                    </div>
+                    <div class="slider-group">
+                        <label>
+                            <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M20 8.69V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12 20 8.69zm-2 5.79V18h-3.52L12 20.48 9.52 18H6v-3.52L3.52 12 6 9.52V6h3.52L12 3.52 14.48 6H18v3.52L20.48 12 18 14.48z"/>
+                            </svg>
+                            Color Saturation
+                        </label>
+                        <input type="range" id="colorSaturation" min="0" max="100" value="100" step="1">
+                        <span class="value" id="colorSaturationValue">100%</span>
+                    </div>
+                    <div class="slider-group">
+                        <label>
+                            <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M9 2c-1.05 0-2.05.16-3 .46 4.06 1.27 7 5.06 7 9.54 0 4.48-2.94 8.27-7 9.54.95.3 1.95.46 3 .46 5.52 0 10-4.48 10-10S14.52 2 9 2z"/>
+                            </svg>
+                            Color Brightness
+                        </label>
+                        <input type="range" id="colorBrightness" min="0" max="200" value="100" step="1">
+                        <span class="value" id="colorBrightnessValue">100%</span>
+                    </div>
                 </div>
 
                 <div class="control-group">
@@ -1662,18 +2058,30 @@
                         </svg>
                         Synth Sequencer
                     </button>
-                    <button id="openHandTracking" class="btn-secondary" style="background: linear-gradient(135deg, #00ff00 0%, #00cc00 100%);">
+                    <button id="openVoiceControl" class="btn-secondary">
+                        <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.30 6-6.72h-1.7z"/>
+                        </svg>
+                        Voice Control
+                    </button>
+                    <button id="openHandTracking" class="btn-secondary">
                         <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M23.5 17l-5 5-3.5-3.5 1.5-1.5 2 2 3.5-3.5 1.5 1.5zM13 17.5h-2v2h2v-2zM13 2C8.03 2 4 6.03 4 11h2c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7h-2v2h2c4.97 0 9-4.03 9-9s-4.03-9-9-9z"/>
                             <path d="M7 11l2 4.5h2L9 11zm0 0l-2-1c-.83-.83-.83-2.17 0-3l1-1c.83-.83 2.17-.83 3 0l1 1 1-1c.83-.83 2.17-.83 3 0l1 1c.83.83.83 2.17 0 3l-2 1"/>
                         </svg>
-                        👋 Hand Tracking
+                        Hand Tracking
                     </button>
                     <button id="openSequencerBtn" class="btn-secondary">
                         <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M3 5v14h18V5H3zm4 12H5v-2h2v2zm0-4H5v-2h2v2zm0-4H5V7h2v2zm4 8H9v-2h2v2zm0-4H9v-2h2v2zm0-4H9V7h2v2zm4 8h-2v-2h2v2zm0-4h-2v-2h2v2zm0-4h-2V7h2v2zm4 8h-2v-2h2v2zm0-4h-2v-2h2v2zm0-4h-2V7h2v2z"/>
                         </svg>
                         Pattern Editor
+                    </button>
+                    <button id="shaderEditorToggleBtn" class="btn-secondary">
+                        <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/>
+                        </svg>
+                        Shader Editor
                     </button>
                     <button id="fullscreenBtn" class="btn-secondary">
                         <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
@@ -1814,30 +2222,49 @@
         <div class="synth-seq-header" id="synthSeqHeader">
             <h3>
                 <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+                    <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4-1.79 4-4V7h4V3h-6z"/>
                 </svg>
                 Synth Sequencer
             </h3>
-            <button id="synthSeqCloseBtn" class="synth-seq-close">×</button>
+            <button id="synthSeqCloseBtn" class="synth-seq-close btn-icon" title="Close">
+                <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                </svg>
+            </button>
         </div>
 
         <div class="synth-seq-content">
             <!-- Track Selector -->
             <div class="synth-seq-tracks">
                 <button class="synth-track-btn active" data-track="pad">
-                    <span class="track-icon">🎹</span>
+                    <svg class="track-icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/>
+                        <rect x="4" y="7" width="2" height="8"/>
+                        <rect x="7" y="7" width="2" height="8"/>
+                        <rect x="10" y="7" width="2" height="8"/>
+                        <rect x="13" y="7" width="2" height="8"/>
+                        <rect x="16" y="7" width="2" height="8"/>
+                        <rect x="19" y="7" width="2" height="8"/>
+                    </svg>
                     Pad
                 </button>
                 <button class="synth-track-btn" data-track="lead">
-                    <span class="track-icon">🎸</span>
+                    <svg class="track-icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2l-5.5 9h3.5v9l5.5-9h-3.5z"/>
+                    </svg>
                     Lead
                 </button>
                 <button class="synth-track-btn" data-track="bass">
-                    <span class="track-icon">🔊</span>
+                    <svg class="track-icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                    </svg>
                     Bass
                 </button>
                 <button class="synth-track-btn" data-track="arp">
-                    <span class="track-icon">✨</span>
+                    <svg class="track-icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5zm0 5.3l5 2.42v4c0 3.88-2.69 7.52-5 8.28V7.3z"/>
+                        <path d="M7 10l3 3 5-5"/>
+                    </svg>
                     Arp
                 </button>
             </div>
@@ -1936,9 +2363,9 @@
                                 <div class="control-item">
                                     <label>Synth Engine</label>
                                     <select id="synthSeqEngine">
-                                        <option value="tonejs" selected>Tone.js</option>
-                                        <option value="wad">WAD (Sound Banks)</option>
-                                        <option value="dirt">Dirt (Samples)</option>
+                                        <option value="tonejs" selected>Celestial</option>
+                                        <option value="wad">Magma</option>
+                                        <option value="dirt">Chaos</option>
                                     </select>
                                 </div>
                                 <div class="control-item">
@@ -2035,8 +2462,30 @@
         }
     </script>
 
-    <!-- Hand Tracking Libraries -->
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.js" crossorigin="anonymous"></script>
+    <!-- Hand Tracking Libraries - Load as ES Module -->
+    <script type="module">
+        console.log('📦 Loading MediaPipe vision tasks...');
+
+        // Load MediaPipe dynamically as ES module
+        try {
+            const visionModule = await import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/+esm');
+            console.log('✅ MediaPipe module loaded:', visionModule);
+
+            // Make it globally available
+            window.mpVision = visionModule;
+            window.MediaPipeVision = visionModule;
+
+            console.log('✅ MediaPipe ready:', {
+                HandLandmarker: typeof visionModule.HandLandmarker,
+                FilesetResolver: typeof visionModule.FilesetResolver
+            });
+
+            // Dispatch event to notify that MediaPipe is ready
+            window.dispatchEvent(new CustomEvent('mediapipe-ready', { detail: visionModule }));
+        } catch (error) {
+            console.error('❌ Failed to load MediaPipe:', error);
+        }
+    </script>
 
     <!-- Custom Modules -->
     <script src="lib/wad.min.js"></script>
@@ -2055,6 +2504,8 @@
     <script src="src/audio/gesture-music-mapper.js"></script>
     <script src="src/input/gesture-recognizer.js"></script>
     <script src="src/input/hand-tracking.js"></script>
+    <script src="src/input/voice-audio-analyzer.js"></script>
+    <script src="src/input/voice-control.js"></script>
     <script src="src/visuals/shader-editor.js"></script>
     <script src="app.js"></script>
 

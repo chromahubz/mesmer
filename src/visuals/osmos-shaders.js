@@ -5,7 +5,7 @@
 
 const OsmosShaders = {
     glowing_orbs: {
-        name: 'Glowing Orbs (OSMOS)',
+        name: 'Glowing Orbs',
         description: 'Luminescent floating orbs like OSMOS',
         format: 'glsl',
         code: `#version 300 es
@@ -71,7 +71,7 @@ void main() {
     },
 
     ambient_motes: {
-        name: 'Ambient Motes (OSMOS)',
+        name: 'Ambient Motes',
         description: 'Tiny floating particles in ambient space',
         format: 'shadertoy',
         code: `float hash21(vec2 p) {
@@ -127,7 +127,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     },
 
     ethereal_flow: {
-        name: 'Ethereal Flow (Ethcapia)',
+        name: 'Ethereal Flow',
         description: 'Flowing ambient energy fields',
         format: 'glsl',
         code: `#version 300 es
@@ -207,7 +207,7 @@ void main() {
     },
 
     aurora_waves: {
-        name: 'Aurora Waves (Ethcapia)',
+        name: 'Aurora Waves',
         description: 'Flowing aurora-like waves',
         format: 'shadertoy',
         code: `void mainImage(out vec4 fragColor, in vec2 fragCoord) {
@@ -242,7 +242,7 @@ void main() {
     },
 
     cosmic_dust: {
-        name: 'Cosmic Dust (OSMOS)',
+        name: 'Cosmic Dust',
         description: 'Swirling cosmic particle field',
         format: 'glsl',
         code: `#version 300 es
@@ -308,7 +308,7 @@ void main() {
     },
 
     dreamy_bokeh: {
-        name: 'Dreamy Bokeh (OSMOS)',
+        name: 'Dreamy Bokeh',
         description: 'Soft out-of-focus light orbs',
         format: 'shadertoy',
         code: `float hash21(vec2 p) {
