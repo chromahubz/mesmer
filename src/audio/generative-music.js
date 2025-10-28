@@ -190,7 +190,7 @@ class GenerativeMusic {
         // It will be called when user clicks Play button
 
         // Create master effects chain
-        this.setupEffects();
+        await this.setupEffects();
 
         // Create instruments
         this.setupInstruments();
@@ -245,7 +245,7 @@ class GenerativeMusic {
         }
     }
 
-    setupEffects() {
+    async setupEffects() {
         // Reverb presets
         this.reverbPresets = {
             hall: { decay: 4, wet: 0.3, preDelay: 0.01, name: 'Hall' },
@@ -323,6 +323,19 @@ class GenerativeMusic {
         // Volume multiplier for WAD and Dirt engines (0-1 range)
         this.synthVolumeMultiplier = 0.5; // Default to 50%
         this.drumVolumeMultiplier = 0.5; // Default to 50%
+
+        // Generate reverb impulses (required for Tone.Reverb to work properly)
+        console.log('🔄 Generating reverb impulses...');
+        try {
+            await Promise.all([
+                this.effects.reverb.generate(),
+                this.effects.synthReverb.generate(),
+                this.effects.drumReverb.generate()
+            ]);
+            console.log('✅ Reverb impulses generated successfully');
+        } catch (error) {
+            console.error('❌ Error generating reverb impulses:', error);
+        }
 
         console.log('✅ Effects chain created with separate synth/drum FX');
         console.log(`Master Reverb: ${reverbConfig.name}, Master Delay: ${delayConfig.name}`);

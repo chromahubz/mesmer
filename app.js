@@ -552,7 +552,7 @@ class Mesmer {
         const colorSaturationValue = document.getElementById('colorSaturationValue');
         colorSaturationSlider.addEventListener('input', (e) => {
             const saturation = e.target.value / 100; // Convert 0-100 to 0.0-1.0
-            colorSaturationValue.textContent = e.target.value;
+            colorSaturationValue.textContent = e.target.value + '%';
             this.mainShader.setColorSaturation(saturation);
             this.toyRenderer.setColorSaturation(saturation);
         });
