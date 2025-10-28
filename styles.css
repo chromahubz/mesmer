@@ -2163,3 +2163,44 @@ body.mpc-assign-mode .mpc-pad.selected {
     background: rgba(139, 92, 246, 0.3) !important;
     color: rgba(255, 255, 255, 0.9) !important;
 }
+
+/* Chaos Mode Button */
+.chaos-btn {
+    width: 100%;
+    background: rgba(0, 0, 0, 0.3) !important;
+    border: 2px solid rgba(255, 107, 107, 0.3) !important;
+    color: rgba(255, 107, 107, 0.6) !important;
+    padding: 12px !important;
+    font-weight: 600 !important;
+    transition: all 0.3s ease !important;
+    cursor: pointer;
+}
+
+.chaos-btn:hover {
+    background: rgba(255, 107, 107, 0.1) !important;
+    border-color: rgba(255, 107, 107, 0.5) !important;
+    color: rgba(255, 107, 107, 0.9) !important;
+    transform: scale(1.02);
+}
+
+.chaos-btn[data-active="true"] {
+    background: linear-gradient(135deg, rgba(255, 107, 107, 0.4), rgba(255, 159, 64, 0.4)) !important;
+    border-color: rgba(255, 107, 107, 0.8) !important;
+    color: #fff !important;
+    box-shadow: 0 0 20px rgba(255, 107, 107, 0.5), inset 0 0 20px rgba(255, 255, 255, 0.1);
+    animation: chaosPulse 2s ease-in-out infinite;
+}
+
+.chaos-btn[data-active="true"] .chaos-status {
+    color: #ffeb3b;
+    text-shadow: 0 0 5px rgba(255, 235, 59, 0.5);
+}
+
+@keyframes chaosPulse {
+    0%, 100% {
+        box-shadow: 0 0 20px rgba(255, 107, 107, 0.5), inset 0 0 20px rgba(255, 255, 255, 0.1);
+    }
+    50% {
+        box-shadow: 0 0 30px rgba(255, 107, 107, 0.8), inset 0 0 25px rgba(255, 255, 255, 0.2);
+    }
+}

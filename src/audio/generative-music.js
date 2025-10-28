@@ -1128,6 +1128,130 @@ class GenerativeMusic {
     }
 
     /**
+     * Enable/Disable Chaos Mode
+     */
+    setChaosMode(enabled) {
+        this.chaosMode = enabled;
+
+        if (enabled) {
+            console.log('🎲 CHAOS MODE ACTIVATED');
+            this.startChaosMode();
+        } else {
+            console.log('🛑 Chaos Mode deactivated');
+            this.stopChaosMode();
+        }
+    }
+
+    /**
+     * Start Chaos Mode - randomly change parameters
+     */
+    startChaosMode() {
+        if (this.chaosInterval) {
+            clearInterval(this.chaosInterval);
+        }
+
+        // Trigger random changes every 8-16 seconds
+        this.chaosInterval = setInterval(() => {
+            if (!this.chaosMode || !this.isPlaying) return;
+
+            const actions = [
+                () => this.randomizeDrumPattern(),
+                () => this.randomizeSynthPreset(),
+                () => this.randomizeBPM(),
+                () => this.randomizeScale(),
+                () => this.randomizeEffects()
+            ];
+
+            // Pick 1-2 random actions to execute
+            const numActions = Math.random() < 0.5 ? 1 : 2;
+            for (let i = 0; i < numActions; i++) {
+                const action = actions[Math.floor(Math.random() * actions.length)];
+                action();
+            }
+        }, 8000 + Math.random() * 8000); // 8-16 seconds
+    }
+
+    /**
+     * Stop Chaos Mode
+     */
+    stopChaosMode() {
+        if (this.chaosInterval) {
+            clearInterval(this.chaosInterval);
+            this.chaosInterval = null;
+        }
+    }
+
+    /**
+     * Randomize drum pattern
+     */
+    randomizeDrumPattern() {
+        if (!this.midiDrumMachines || Object.keys(this.midiDrumMachines).length === 0) return;
+
+        const machines = Object.keys(this.midiDrumMachines);
+        const randomMachine = machines[Math.floor(Math.random() * machines.length)];
+
+        this.loadDrumMachine(randomMachine);
+        console.log('🎲 Chaos: Switched to drum machine:', randomMachine);
+    }
+
+    /**
+     * Randomize synth preset (WAD engine)
+     */
+    randomizeSynthPreset() {
+        if (!this.wadEngine) return;
+
+        const presets = this.wadEngine.getAllPresets();
+        const randomPreset = presets[Math.floor(Math.random() * presets.length)];
+
+        // Change pad synth preset
+        this.wadEngine.changePreset('pad', randomPreset);
+        console.log('🎲 Chaos: Changed synth to:', randomPreset);
+    }
+
+    /**
+     * Randomize BPM with gradual transition
+     */
+    randomizeBPM() {
+        const minBPM = 80;
+        const maxBPM = 160;
+        const newBPM = Math.floor(Math.random() * (maxBPM - minBPM + 1)) + minBPM;
+
+        // Gradual transition over 4 seconds
+        Tone.Transport.bpm.rampTo(newBPM, 4);
+        console.log('🎲 Chaos: BPM changed to:', newBPM);
+    }
+
+    /**
+     * Randomize musical scale
+     */
+    randomizeScale() {
+        const scales = Object.keys(this.scales);
+        const randomScale = scales[Math.floor(Math.random() * scales.length)];
+
+        this.currentScale = this.scales[randomScale];
+        console.log('🎲 Chaos: Scale changed to:', randomScale);
+    }
+
+    /**
+     * Randomize effects (reverb/delay)
+     */
+    randomizeEffects() {
+        // Randomize reverb (0-60%)
+        const reverbWet = Math.random() * 0.6;
+        if (this.effects.reverb) {
+            this.effects.reverb.wet.rampTo(reverbWet, 2);
+        }
+
+        // Randomize delay (0-40%)
+        const delayWet = Math.random() * 0.4;
+        if (this.effects.delay) {
+            this.effects.delay.wet.rampTo(delayWet, 2);
+        }
+
+        console.log('🎲 Chaos: FX updated - Reverb:', Math.round(reverbWet * 100) + '%', 'Delay:', Math.round(delayWet * 100) + '%');
+    }
+
+    /**
      * Set musical scale
      */
     setScale(scaleName) {

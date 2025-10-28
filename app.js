@@ -172,6 +172,19 @@ class Mesmer {
         const playBtn = document.getElementById('playBtn');
         playBtn.addEventListener('click', () => this.togglePlay());
 
+        // Chaos Mode button
+        const chaosModeBtn = document.getElementById('chaosModeBtn');
+        chaosModeBtn.addEventListener('click', () => {
+            const isActive = chaosModeBtn.getAttribute('data-active') === 'true';
+            const newState = !isActive;
+
+            chaosModeBtn.setAttribute('data-active', newState.toString());
+            chaosModeBtn.querySelector('.chaos-status').textContent = newState ? 'ON' : 'OFF';
+
+            this.musicEngine.setChaosMode(newState);
+            this.setChaosMode(newState); // For visual randomization
+        });
+
         // Master Volume slider (controls Tone.Destination.volume)
         const volumeSlider = document.getElementById('volumeSlider');
         volumeSlider.addEventListener('input', (e) => {
@@ -2845,6 +2858,92 @@ class Mesmer {
         const rect = this.waveformCanvas.getBoundingClientRect();
         this.waveformCanvas.width = rect.width;
         this.waveformCanvas.height = rect.height;
+    }
+
+    /**
+     * Enable/Disable Chaos Mode for visuals
+     */
+    setChaosMode(enabled) {
+        this.chaosMode = enabled;
+
+        if (enabled) {
+            console.log('🎲 CHAOS MODE (Visuals) ACTIVATED');
+            this.startVisualChaos();
+        } else {
+            console.log('🛑 Chaos Mode (Visuals) deactivated');
+            this.stopVisualChaos();
+        }
+    }
+
+    /**
+     * Start visual chaos - randomly change shaders
+     */
+    startVisualChaos() {
+        if (this.visualChaosInterval) {
+            clearInterval(this.visualChaosInterval);
+        }
+
+        // Change visuals every 12-20 seconds
+        this.visualChaosInterval = setInterval(() => {
+            if (!this.chaosMode) return;
+
+            const actions = [
+                () => this.randomizeMainShader(),
+                () => this.randomizeToyShader(),
+                () => this.randomizeBothShaders()
+            ];
+
+            const action = actions[Math.floor(Math.random() * actions.length)];
+            action();
+        }, 12000 + Math.random() * 8000); // 12-20 seconds
+    }
+
+    /**
+     * Stop visual chaos
+     */
+    stopVisualChaos() {
+        if (this.visualChaosInterval) {
+            clearInterval(this.visualChaosInterval);
+            this.visualChaosInterval = null;
+        }
+    }
+
+    /**
+     * Randomize main shader
+     */
+    randomizeMainShader() {
+        if (!this.mainShader || !this.mainShader.shaders) return;
+
+        const randomIndex = Math.floor(Math.random() * this.mainShader.shaders.length);
+        this.mainShader.setShader(randomIndex);
+
+        const select = document.getElementById('mainShaderSelect');
+        if (select) select.value = randomIndex;
+
+        console.log('🎲 Chaos: Main shader →', this.mainShader.shaders[randomIndex].name);
+    }
+
+    /**
+     * Randomize toy shader
+     */
+    randomizeToyShader() {
+        if (!this.toyRenderer || !this.toyRenderer.shaders) return;
+
+        const randomIndex = Math.floor(Math.random() * this.toyRenderer.shaders.length);
+        this.toyRenderer.setShader(randomIndex);
+
+        const select = document.getElementById('toyShaderSelect');
+        if (select) select.value = randomIndex;
+
+        console.log('🎲 Chaos: Toy shader →', this.toyRenderer.shaders[randomIndex].name);
+    }
+
+    /**
+     * Randomize both shaders at once
+     */
+    randomizeBothShaders() {
+        this.randomizeMainShader();
+        this.randomizeToyShader();
     }
 
     render() {
