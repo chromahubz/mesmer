@@ -2022,7 +2022,8 @@ body.mpc-assign-mode .mpc-pad.selected {
 }
 
 .collapsible-section.open .collapsible-content {
-    max-height: 1000px;
+    max-height: none;
+    overflow: visible;
 }
 
 .collapsible-inner {
