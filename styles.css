@@ -231,6 +231,15 @@ button {
     background: rgba(255, 255, 255, 0.1);
 }
 
+.btn-secondary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-secondary:disabled:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
 .icon {
     width: 18px;
     height: 18px;
