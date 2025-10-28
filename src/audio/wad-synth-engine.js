@@ -284,16 +284,116 @@ class WadSynthEngine {
                     frequency: 400,
                     q: 1
                 }
+            },
+
+            'ghost': {
+                source: 'square',
+                volume: 0.3,
+                env: {
+                    attack: 0.01,
+                    decay: 0.002,
+                    sustain: 0.5,
+                    hold: 2.5,
+                    release: 0.3
+                },
+                filter: {
+                    type: 'lowpass',
+                    frequency: 600,
+                    q: 7,
+                    env: {
+                        attack: 0.7,
+                        frequency: 1600
+                    }
+                },
+                vibrato: {
+                    attack: 8,
+                    speed: 8,
+                    magnitude: 100
+                }
+            },
+
+            // Percussion Sounds
+            'hiHatClosed': {
+                source: 'noise',
+                volume: 0.5,
+                env: {
+                    attack: 0.001,
+                    decay: 0.008,
+                    sustain: 0.2,
+                    hold: 0.03,
+                    release: 0.01
+                },
+                filter: {
+                    type: 'highpass',
+                    frequency: 400,
+                    q: 1
+                }
+            },
+
+            'hiHatOpen': {
+                source: 'noise',
+                volume: 0.5,
+                env: {
+                    attack: 0.001,
+                    decay: 0.008,
+                    sustain: 0.2,
+                    hold: 0.43,
+                    release: 0.01
+                },
+                filter: {
+                    type: 'highpass',
+                    frequency: 100,
+                    q: 0.2
+                }
+            },
+
+            'snare': {
+                source: 'noise',
+                volume: 0.6,
+                env: {
+                    attack: 0.001,
+                    decay: 0.01,
+                    sustain: 0.2,
+                    hold: 0.03,
+                    release: 0.02
+                },
+                filter: {
+                    type: 'bandpass',
+                    frequency: 300,
+                    q: 0.180
+                }
+            },
+
+            'piano': {
+                source: 'square',
+                volume: 0.7,
+                env: {
+                    attack: 0.01,
+                    decay: 0.005,
+                    sustain: 0.2,
+                    hold: 0.015,
+                    release: 0.3
+                },
+                filter: {
+                    type: 'lowpass',
+                    frequency: 1200,
+                    q: 8.5,
+                    env: {
+                        attack: 0.2,
+                        frequency: 600
+                    }
+                }
             }
         };
 
         // Preset categories for UI
         this.categories = {
-            pads: ['warmPad', 'spacePad', 'dreamPad', 'atmosphericPad', 'drone'],
+            pads: ['warmPad', 'spacePad', 'dreamPad', 'atmosphericPad', 'drone', 'ghost'],
             leads: ['brightLead', 'analogLead'],
             bass: ['deepBass', 'subBass', 'acidBass'],
-            plucks: ['electricPiano', 'pluck'],
-            arps: ['digitalArp', 'classicArp']
+            plucks: ['electricPiano', 'pluck', 'piano'],
+            arps: ['digitalArp', 'classicArp'],
+            percussion: ['hiHatClosed', 'hiHatOpen', 'snare']
         };
     }
 

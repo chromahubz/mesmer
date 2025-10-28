@@ -38,6 +38,11 @@ class Mesmer {
         this.frameCount = 0;
         this.lastFpsUpdate = Date.now();
 
+        // Audio recording
+        this.mediaRecorder = null;
+        this.audioChunks = [];
+        this.recordingDestination = null;
+
         this.init();
     }
 
@@ -183,6 +188,30 @@ class Mesmer {
 
             this.musicEngine.setChaosMode(newState);
             this.setChaosMode(newState); // For visual randomization
+        });
+
+        // Audio Recording buttons
+        const recordBtn = document.getElementById('recordBtn');
+        const stopRecordBtn = document.getElementById('stopRecordBtn');
+        const recordingStatus = document.getElementById('recordingStatus');
+
+        recordBtn.addEventListener('click', () => {
+            this.startRecording();
+            recordBtn.disabled = true;
+            stopRecordBtn.disabled = false;
+            recordingStatus.textContent = '🔴 Recording...';
+            recordingStatus.style.color = '#f06';
+        });
+
+        stopRecordBtn.addEventListener('click', () => {
+            this.stopRecording();
+            recordBtn.disabled = false;
+            stopRecordBtn.disabled = true;
+            recordingStatus.textContent = '💾 Recording saved!';
+            recordingStatus.style.color = '#0f6';
+            setTimeout(() => {
+                recordingStatus.textContent = '';
+            }, 3000);
         });
 
         // Master Volume slider (controls Tone.Destination.volume)
@@ -2944,6 +2973,103 @@ class Mesmer {
     randomizeBothShaders() {
         this.randomizeMainShader();
         this.randomizeToyShader();
+    }
+
+    /**
+     * Start recording audio output
+     */
+    async startRecording() {
+        try {
+            console.log('🎙️ Starting audio recording...');
+
+            // Create a MediaStreamDestination from Tone.Destination
+            this.recordingDestination = Tone.context.createMediaStreamDestination();
+
+            // Connect Tone's main output to the recording destination
+            Tone.getDestination().connect(this.recordingDestination);
+
+            // Create MediaRecorder with the stream
+            const stream = this.recordingDestination.stream;
+            const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/ogg';
+
+            this.mediaRecorder = new MediaRecorder(stream, {
+                mimeType: mimeType,
+                audioBitsPerSecond: 128000
+            });
+
+            // Reset audio chunks
+            this.audioChunks = [];
+
+            // Collect audio data
+            this.mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0) {
+                    this.audioChunks.push(event.data);
+                }
+            };
+
+            // Handle recording stop
+            this.mediaRecorder.onstop = () => {
+                console.log('✅ Recording stopped, processing...');
+            };
+
+            // Start recording
+            this.mediaRecorder.start();
+            console.log('✅ Recording started');
+
+        } catch (error) {
+            console.error('❌ Error starting recording:', error);
+            alert('Failed to start recording: ' + error.message);
+        }
+    }
+
+    /**
+     * Stop recording and download the file
+     */
+    stopRecording() {
+        if (!this.mediaRecorder || this.mediaRecorder.state === 'inactive') {
+            console.warn('⚠️ No active recording to stop');
+            return;
+        }
+
+        console.log('🛑 Stopping recording...');
+
+        // Stop the recorder
+        this.mediaRecorder.stop();
+
+        // Wait for final data and create download
+        this.mediaRecorder.onstop = () => {
+            console.log('📦 Creating audio file...');
+
+            // Create blob from chunks
+            const mimeType = this.mediaRecorder.mimeType;
+            const audioBlob = new Blob(this.audioChunks, { type: mimeType });
+
+            // Create download link
+            const url = URL.createObjectURL(audioBlob);
+            const link = document.createElement('a');
+            link.href = url;
+
+            // Generate filename with timestamp
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+            const extension = mimeType.includes('webm') ? 'webm' : 'ogg';
+            link.download = `mesmer-recording-${timestamp}.${extension}`;
+
+            // Trigger download
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            // Cleanup
+            URL.revokeObjectURL(url);
+
+            // Disconnect recording destination
+            if (this.recordingDestination) {
+                Tone.getDestination().disconnect(this.recordingDestination);
+                this.recordingDestination = null;
+            }
+
+            console.log('💾 Recording saved!');
+        };
     }
 
     render() {
