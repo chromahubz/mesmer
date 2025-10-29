@@ -426,14 +426,18 @@ class Mesmer {
         // Scale selector
         const scaleSelect = document.getElementById('scaleSelect');
         scaleSelect.addEventListener('change', (e) => {
-            this.musicEngine.setScale(e.target.value);
-            // Always update piano roll and key display
-            if (this.synthSeqState) {
-                this.transposeNotesToNewScale();
+            const oldScale = this.musicEngine.currentScaleName;
+            const newScale = e.target.value;
+
+            this.musicEngine.setScale(newScale);
+
+            // Transpose synth sequencer notes if active
+            if (this.synthSeqState && oldScale) {
+                this.transposeNotesToNewScale(oldScale, newScale);
                 this.renderPianoRoll();
                 this.updateKeyDisplay();
             }
-            console.log('🎹 Scale changed, piano roll updated');
+            console.log('🎹 Global scale changed from', oldScale, 'to', newScale);
         });
 
         // Key selector (root note)
@@ -1515,6 +1519,8 @@ class Mesmer {
             chromatic: ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'],
             major: ['C', 'D', 'E', 'F', 'G', 'A', 'B'],
             minor: ['C', 'D', 'Eb', 'F', 'G', 'Ab', 'Bb'],
+            dorian: ['C', 'D', 'Eb', 'F', 'G', 'A', 'Bb'],
+            phrygian: ['C', 'Db', 'Eb', 'F', 'G', 'Ab', 'Bb'],
             pentatonic: ['C', 'D', 'E', 'G', 'A'],
             blues: ['C', 'Eb', 'F', 'Gb', 'G', 'Bb']
         };
@@ -1689,10 +1695,16 @@ class Mesmer {
         });
 
         document.getElementById('synthSeqScale').addEventListener('change', (e) => {
-            this.synthSeqState.scale = e.target.value;
+            const oldScale = this.synthSeqState.scale;
+            const newScale = e.target.value;
+
+            // Transpose notes to new scale
+            this.transposeNotesToNewScale(oldScale, newScale);
+
+            this.synthSeqState.scale = newScale;
             this.updateKeyDisplay();
             this.renderPianoRoll();
-            console.log('🎼 Scale changed to', this.synthSeqState.scale);
+            console.log('🎼 Scale changed from', oldScale, 'to', newScale);
         });
 
         document.getElementById('synthSeqOctave').addEventListener('change', (e) => {
@@ -1721,13 +1733,110 @@ class Mesmer {
     }
 
     /**
-     * Transpose existing notes when scale changes
+     * Transpose existing notes when scale changes (Smart Transposition)
+     * Maps notes based on scale degree position, preserving octave
      */
-    transposeNotesToNewScale() {
-        // For simplicity, we'll keep existing notes as-is since transposing
-        // between different scale types (e.g., Major to Minor) can be complex
-        // The piano roll will just show the new scale notes
-        console.log('🎼 Scale changed - piano roll will show new scale');
+    transposeNotesToNewScale(oldScaleName, newScaleName) {
+        if (!oldScaleName || !newScaleName || oldScaleName === newScaleName) {
+            return;
+        }
+
+        const oldScale = this.scales[oldScaleName];
+        const newScale = this.scales[newScaleName];
+
+        if (!oldScale || !newScale) {
+            console.warn('⚠️ Scale not found:', oldScaleName, newScaleName);
+            return;
+        }
+
+        console.log('🎼 Smart transposition:', oldScaleName, '→', newScaleName);
+        console.log('   Old scale:', oldScale);
+        console.log('   New scale:', newScale);
+
+        // Get root note from music engine
+        const rootNote = this.musicEngine?.rootNote || 'C';
+        const rootNoteClean = rootNote.replace(/[0-9]/g, ''); // Remove octave
+
+        // Helper: Build scale notes for a specific octave
+        const buildScaleNotesForOctave = (scale, octave) => {
+            return scale.map(note => {
+                const semitone = this.getNoteInterval(note);
+                const freq = Tone.Frequency(rootNoteClean + '0').transpose(semitone).transpose(octave * 12);
+                return freq.toNote();
+            });
+        };
+
+        // Transpose all patterns
+        let transposedCount = 0;
+        Object.keys(this.synthSeqState.patterns).forEach(track => {
+            const pattern = this.synthSeqState.patterns[track];
+            pattern.forEach(step => {
+                step.notes = step.notes.map(noteData => {
+                    try {
+                        const originalNote = noteData.note;
+
+                        // Extract note letter and octave (e.g., "C#5" → "C#", 5)
+                        const noteMatch = originalNote.match(/^([A-G][#b]?)(\d+)$/);
+                        if (!noteMatch) {
+                            console.warn('⚠️ Invalid note format:', originalNote);
+                            return noteData;
+                        }
+
+                        const [, noteLetter, octaveStr] = noteMatch;
+                        const octave = parseInt(octaveStr);
+
+                        // Build scale notes for this specific octave
+                        const oldScaleNotes = buildScaleNotesForOctave(oldScale, octave);
+                        const newScaleNotes = buildScaleNotesForOctave(newScale, octave);
+
+                        // Find which scale degree this note is
+                        let scaleDegree = oldScaleNotes.indexOf(originalNote);
+
+                        if (scaleDegree === -1) {
+                            // Note not in old scale - find nearest by semitone distance
+                            const noteMidi = Tone.Frequency(originalNote).toMidi();
+                            const distances = oldScaleNotes.map(scaleNote => {
+                                return Math.abs(Tone.Frequency(scaleNote).toMidi() - noteMidi);
+                            });
+                            scaleDegree = distances.indexOf(Math.min(...distances));
+                            console.log('   ⚠️ Note not in scale:', originalNote, '→ nearest degree:', scaleDegree);
+                        }
+
+                        // Map to same scale degree in new scale (handle different scale lengths)
+                        const newScaleDegree = Math.min(scaleDegree, newScaleNotes.length - 1);
+                        const transposedNote = newScaleNotes[newScaleDegree];
+
+                        if (transposedNote !== originalNote) {
+                            console.log('   ✓', originalNote, '→', transposedNote, `(degree ${scaleDegree} in octave ${octave})`);
+                            transposedCount++;
+                        }
+
+                        return { ...noteData, note: transposedNote };
+                    } catch (error) {
+                        console.error('❌ Error transposing note:', noteData.note, error);
+                        return noteData; // Keep original on error
+                    }
+                });
+            });
+        });
+
+        console.log(`✅ Smart transposition complete: ${transposedCount} notes changed`);
+    }
+
+    /**
+     * Helper: Get semitone interval for a note (relative to C)
+     */
+    getNoteInterval(note) {
+        const intervals = {
+            'C': 0, 'C#': 1, 'Db': 1,
+            'D': 2, 'D#': 3, 'Eb': 3,
+            'E': 4,
+            'F': 5, 'F#': 6, 'Gb': 6,
+            'G': 7, 'G#': 8, 'Ab': 8,
+            'A': 9, 'A#': 10, 'Bb': 10,
+            'B': 11
+        };
+        return intervals[note] || 0;
     }
 
     /**

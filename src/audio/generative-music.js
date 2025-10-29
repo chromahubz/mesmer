@@ -552,6 +552,8 @@ class GenerativeMusic {
         ];
 
         this.currentScale = this.scales.minor;
+        this.currentScaleName = 'minor';
+        this.previousScaleName = null;
         this.rootNote = 'C3';
     }
 
@@ -1277,6 +1279,8 @@ class GenerativeMusic {
      */
     setScale(scaleName) {
         if (this.scales[scaleName]) {
+            this.previousScaleName = this.currentScaleName;
+            this.currentScaleName = scaleName;
             this.currentScale = this.scales[scaleName];
             console.log('Scale changed to:', scaleName);
         }
