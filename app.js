@@ -2508,8 +2508,8 @@ class Mesmer {
         try {
             let saved;
 
-            // Check if it's a built-in default pattern
-            if (key.startsWith('default_')) {
+            // Check if it's a built-in default or game pattern
+            if (key.startsWith('default_') || key.startsWith('game_')) {
                 saved = this.getDefaultPattern(key);
                 if (!saved) {
                     alert('⚠️ Default pattern not found');
