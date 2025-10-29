@@ -1193,6 +1193,13 @@ class GenerativeMusic {
     randomizeDrumPattern() {
         if (!this.midiDrumMachines || Object.keys(this.midiDrumMachines).length === 0) return;
 
+        // Enable drums if not already enabled
+        if (!this.drumsEnabled && this.isPlaying) {
+            this.drumsEnabled = true;
+            this.startDrums();
+            console.log('🎲 Chaos: Enabled drums');
+        }
+
         const machines = Object.keys(this.midiDrumMachines);
         const randomMachine = machines[Math.floor(Math.random() * machines.length)];
 

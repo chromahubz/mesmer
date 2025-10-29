@@ -6,7 +6,7 @@
 const ShaderToyImports = {
     // Seascape-inspired ocean waves
     ocean_waves: {
-        name: '🌊 Ocean Waves',
+        name: 'Ocean Waves',
         description: 'Realistic ocean water simulation (ShaderToy style)',
         format: 'shadertoy',
         code: `// Ocean waves with audio reactivity
@@ -100,7 +100,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     // Plasma ball
     plasma_ball: {
-        name: '⚡ Plasma Ball',
+        name: 'Plasma Ball',
         description: 'Electric plasma sphere effect',
         format: 'shadertoy',
         code: `void mainImage(out vec4 fragColor, in vec2 fragCoord) {
@@ -138,7 +138,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     // Tunnel shader
     tunnel: {
-        name: '🕳️ Infinite Tunnel',
+        name: 'Infinite Tunnel',
         description: 'Hypnotic infinite tunnel effect',
         format: 'shadertoy',
         code: `void mainImage(out vec4 fragColor, in vec2 fragCoord) {
@@ -179,7 +179,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     // Star field
     star_field: {
-        name: '⭐ Star Field',
+        name: 'Star Field',
         description: 'Parallax star field with depth',
         format: 'shadertoy',
         code: `float hash21(vec2 p) {
@@ -241,7 +241,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     // Fractal
     mandelbrot: {
-        name: '🌀 Mandelbrot Explorer',
+        name: 'Mandelbrot Explorer',
         description: 'Interactive Mandelbrot fractal',
         format: 'shadertoy',
         code: `void mainImage(out vec4 fragColor, in vec2 fragCoord) {
@@ -288,7 +288,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     // Warp tunnel
     warp_speed: {
-        name: '🚀 Warp Speed',
+        name: 'Warp Speed',
         description: 'Star Trek-style warp speed effect',
         format: 'shadertoy',
         code: `float hash(vec2 p) {
@@ -334,7 +334,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     // Fractal tunnel (modified from ShaderToy user submission)
     fractal_tunnel: {
-        name: '🎨 Fractal Tunnel',
+        name: 'Fractal Tunnel',
         description: 'Raymarched fractal tunnel with colors',
         format: 'shadertoy',
         code: `const float pi = 3.14159;
@@ -464,7 +464,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     // Synthwave sunset with Mt. Fuji (ENHANCED AUDIO REACTIVE VERSION)
     synthwave_sunset: {
-        name: '🌅 Synthwave Sunset',
+        name: 'Synthwave Sunset',
         description: 'Retro synthwave sunset with mountains - Fully audio reactive',
         format: 'shadertoy',
         code: `float sun(vec2 uv, float battery, float audioPulse) {
@@ -576,7 +576,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     // Simple colorful swirl
     colorful_swirl: {
-        name: '🌈 Colorful Swirl',
+        name: 'Colorful Swirl',
         description: 'Hypnotic colorful swirling effect',
         format: 'shadertoy',
         code: `void mainImage(out vec4 fragColor, in vec2 fragCoord) {
@@ -603,7 +603,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Seascape - by Alexander Alekseev aka TDM - 2014
     // License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.
     seascape: {
-        name: '🌊 Seascape',
+        name: 'Seascape',
         description: 'Realistic ocean water with procedural waves',
         format: 'shadertoy',
         code: `/*
@@ -814,7 +814,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
 
     // Trippy rotating raymarch
     trippy_swirl: {
-        name: '🌀 Trippy Swirl',
+        name: 'Trippy Swirl',
         description: 'Psychedelic rotating pattern',
         format: 'shadertoy',
         code: `void mainImage( out vec4 O, vec2 I )
@@ -837,7 +837,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
 
     // Volumetric fractal with hue shifting
     volumetric_fractal: {
-        name: '🎨 Volumetric Fractal',
+        name: 'Volumetric Fractal',
         description: 'Complex 3D fractal with color shifting',
         format: 'shadertoy',
         code: `#define MAXDIST 50.
@@ -1041,7 +1041,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     // Volumetric cloud raymarching (simplified version to avoid performance issues)
     volumetric_clouds: {
-        name: '☁️ Volumetric Clouds',
+        name: 'Volumetric Clouds',
         description: 'Soft volumetric cloud rendering',
         format: 'shadertoy',
         code: `mat3 m = mat3( 0.00,  0.80,  0.60,
@@ -1152,7 +1152,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
 
     // Mandelbulb 3D fractal
     mandelbulb: {
-        name: '🔮 Mandelbulb',
+        name: 'Mandelbulb',
         description: '3D Mandelbrot set fractal',
         format: 'shadertoy',
         code: `float stime, ctime;

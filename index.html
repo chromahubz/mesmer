@@ -713,6 +713,18 @@
                         <span class="value" id="delayValue">0%</span>
                     </div>
 
+                    <!-- BPM Slider -->
+                    <div class="slider-group">
+                        <label>
+                            <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M9 3v15h3V3H9zm-4 2v11h3V5H5zm8 5v6h3v-6h-3zm4-3v9h3V7h-3z"/>
+                            </svg>
+                            BPM
+                        </label>
+                        <input type="range" id="bpmSlider" min="40" max="180" value="80">
+                        <span class="value" id="bpmValue">80</span>
+                    </div>
+
                     <!-- Synth FX (Collapsible) -->
                     <details class="fx-section">
                         <summary>
@@ -772,16 +784,6 @@
                             <span class="value">0%</span>
                         </div>
                     </details>
-                    <div class="slider-group">
-                        <label>
-                            <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M9 3v15h3V3H9zm-4 2v11h3V5H5zm8 5v6h3v-6h-3zm4-3v9h3V7h-3z"/>
-                            </svg>
-                            BPM
-                        </label>
-                        <input type="range" id="bpmSlider" min="40" max="180" value="80">
-                        <span class="value" id="bpmValue">80</span>
-                    </div>
                     <div class="shader-selector">
                         <label>
                             <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
