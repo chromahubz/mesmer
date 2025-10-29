@@ -1734,9 +1734,9 @@ body.mpc-assign-mode .mpc-pad.selected {
     border: 2px solid rgba(139, 92, 246, 0.3);
     border-radius: 12px;
     overflow: hidden;
-    height: 600px !important;
-    min-height: 600px !important;
-    max-height: 600px !important;
+    height: 400px !important;
+    min-height: 400px !important;
+    max-height: 400px !important;
     margin-bottom: 15px;
     flex-shrink: 0 !important;
 }
@@ -1745,26 +1745,26 @@ body.mpc-assign-mode .mpc-pad.selected {
 .piano-keys {
     display: flex;
     flex-direction: column-reverse;
+    justify-content: flex-start;
     background: rgba(20, 20, 30, 0.9);
     border-right: 2px solid rgba(139, 92, 246, 0.4);
-    overflow-y: auto;
+    overflow-y: hidden;
     width: 80px;
     flex-shrink: 0;
     height: 100%; /* Fill container */
 }
 
 .piano-key {
-    height: 28px; /* Increased from 20px for better visibility */
+    flex: 1;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 13px; /* Increased from 11px */
+    font-size: 11px;
     font-weight: 600;
     color: rgba(255, 255, 255, 0.8);
     border-bottom: 1px solid rgba(139, 92, 246, 0.15);
     user-select: none;
     transition: all 0.2s;
-    flex-shrink: 0; /* Prevent shrinking */
 }
 
 /* White keys (natural notes) */
@@ -1803,6 +1803,7 @@ body.mpc-assign-mode .mpc-pad.selected {
 .note-column {
     display: flex;
     flex-direction: column-reverse;
+    justify-content: flex-start;
     border-right: 1px solid rgba(139, 92, 246, 0.1);
     height: 100%; /* Fill grid */
 }
@@ -1824,12 +1825,11 @@ body.mpc-assign-mode .mpc-pad.selected {
 /* Note cells */
 .note-cell {
     width: 60px;
-    height: 28px; /* Increased from 20px to match piano keys */
+    flex: 1;
     border-bottom: 1px solid rgba(139, 92, 246, 0.08);
     cursor: pointer;
     transition: all 0.15s;
     position: relative;
-    flex-shrink: 0; /* Prevent shrinking */
 }
 
 .note-cell:hover {
