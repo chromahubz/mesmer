@@ -1188,7 +1188,7 @@ class GenerativeMusic {
     }
 
     /**
-     * Randomize drum pattern with smooth crossfade
+     * Randomize drum pattern and machine with smooth crossfade
      */
     randomizeDrumPattern() {
         if (!this.midiDrumMachines || Object.keys(this.midiDrumMachines).length === 0) return;
@@ -1196,32 +1196,53 @@ class GenerativeMusic {
         const machines = Object.keys(this.midiDrumMachines);
         const randomMachine = machines[Math.floor(Math.random() * machines.length)];
 
-        // Fade out current drums gradually (2 seconds)
-        if (this.drums && this.drums.volume) {
-            const currentVolume = this.drums.volume.value;
-            this.drums.volume.rampTo(-60, 2);
+        // Also pick a random drum pattern
+        const allPatterns = this.getDrumPatterns();
+        const randomPattern = allPatterns[Math.floor(Math.random() * allPatterns.length)];
 
-            // After fade out, switch and fade in
+        // Fade out current drums gradually (2 seconds)
+        if (this.drumVolume) {
+            const currentVolume = this.drumVolume.volume.value;
+            this.drumVolume.volume.rampTo(-60, 2);
+
+            // After fade out, switch machine, pattern, and fade in
             setTimeout(() => {
+                // Load new drum machine
                 this.loadDrumMachine(randomMachine);
 
-                // Update UI dropdown
+                // Change drum pattern
+                if (randomPattern) {
+                    this.changeDrumPattern(randomPattern.key);
+                }
+
+                // Update UI dropdowns
                 const drumSelect = document.getElementById('drumMachineSelect');
                 if (drumSelect) drumSelect.value = randomMachine;
 
-                // Fade in new drums
-                if (this.drums && this.drums.volume) {
-                    this.drums.volume.rampTo(currentVolume, 2);
+                const patternSelect = document.getElementById('drumPatternSelect');
+                if (patternSelect && randomPattern) patternSelect.value = randomPattern.key;
+
+                // Fade in new drums (back to original volume)
+                if (this.drumVolume) {
+                    this.drumVolume.volume.rampTo(currentVolume, 2);
                 }
 
-                console.log('🎲 Chaos: Switched to drum machine:', randomMachine);
+                console.log('🎲 Chaos: Switched to drum machine:', randomMachine, '| Pattern:', randomPattern ? randomPattern.name : 'unknown');
             }, 2000);
         } else {
             // Fallback if no volume control
             this.loadDrumMachine(randomMachine);
+            if (randomPattern) {
+                this.changeDrumPattern(randomPattern.key);
+            }
+
             const drumSelect = document.getElementById('drumMachineSelect');
             if (drumSelect) drumSelect.value = randomMachine;
-            console.log('🎲 Chaos: Switched to drum machine:', randomMachine);
+
+            const patternSelect = document.getElementById('drumPatternSelect');
+            if (patternSelect && randomPattern) patternSelect.value = randomPattern.key;
+
+            console.log('🎲 Chaos: Switched to drum machine:', randomMachine, '| Pattern:', randomPattern ? randomPattern.name : 'unknown');
         }
     }
 
