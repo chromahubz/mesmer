@@ -452,18 +452,22 @@ class WadSynthEngine {
             return;
         }
 
-        // Apply volume scaling to match Tone.js sensitivity (WAD is louder)
-        // Scale down by 40% and add minimum threshold to prevent 0 volume bug
-        const scaledVolume = velocity <= 0.01 ? 0 : Math.max(0.01, velocity * 0.4);
+        try {
+            // Apply volume scaling to match Tone.js sensitivity (WAD is louder)
+            // Scale down by 40% and add minimum threshold to prevent 0 volume bug
+            const scaledVolume = velocity <= 0.01 ? 0 : Math.max(0.01, velocity * 0.4);
 
-        this.synths[synthName].play({
-            pitch: note,
-            volume: scaledVolume,
-            wait: 0,
-            env: {
-                hold: duration
-            }
-        });
+            this.synths[synthName].play({
+                pitch: note,
+                volume: scaledVolume,
+                wait: 0,
+                env: {
+                    hold: duration
+                }
+            });
+        } catch (error) {
+            console.warn(`⚠️ Error playing note on ${synthName}:`, error);
+        }
     }
 
     /**
@@ -491,22 +495,17 @@ class WadSynthEngine {
             try {
                 // Stop any playing notes
                 this.synths[synthName].stop();
-
-                // Small delay to ensure cleanup completes
-                setTimeout(() => {
-                    // Create new synth with new preset
-                    this.createSynth(synthName, this.presets[presetName]);
-                    console.log(`✓ ${synthName} preset changed to ${presetName}`);
-                }, 50);
             } catch (error) {
                 console.warn(`⚠️ Error stopping old ${synthName} synth:`, error);
-                // Create new synth anyway
-                this.createSynth(synthName, this.presets[presetName]);
             }
-        } else {
-            // No existing synth, just create new one
-            this.createSynth(synthName, this.presets[presetName]);
+
+            // Clear the old synth reference
+            delete this.synths[synthName];
         }
+
+        // Create new synth with new preset (synchronously)
+        this.createSynth(synthName, this.presets[presetName]);
+        console.log(`✓ ${synthName} preset changed to ${presetName}`);
     }
 
     /**
