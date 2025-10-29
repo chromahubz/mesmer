@@ -485,7 +485,28 @@ class WadSynthEngine {
         }
 
         console.log(`🎛️ Changing ${synthName} to ${presetName} preset`);
-        this.createSynth(synthName, this.presets[presetName]);
+
+        // Stop and cleanup old synth before creating new one
+        if (this.synths[synthName]) {
+            try {
+                // Stop any playing notes
+                this.synths[synthName].stop();
+
+                // Small delay to ensure cleanup completes
+                setTimeout(() => {
+                    // Create new synth with new preset
+                    this.createSynth(synthName, this.presets[presetName]);
+                    console.log(`✓ ${synthName} preset changed to ${presetName}`);
+                }, 50);
+            } catch (error) {
+                console.warn(`⚠️ Error stopping old ${synthName} synth:`, error);
+                // Create new synth anyway
+                this.createSynth(synthName, this.presets[presetName]);
+            }
+        } else {
+            // No existing synth, just create new one
+            this.createSynth(synthName, this.presets[presetName]);
+        }
     }
 
     /**
