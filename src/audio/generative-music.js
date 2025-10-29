@@ -1165,7 +1165,9 @@ class GenerativeMusic {
                 () => this.randomizeEffects(),
                 () => this.randomizeInstrumentVolumes(),
                 () => this.randomizeEffectsChain(),
-                () => this.randomizeNoteDensity()
+                () => this.randomizeNoteDensity(),
+                () => this.randomizeSynthFX(),
+                () => this.randomizeDrumFX()
             ];
 
             // Pick 1-3 random actions to execute
@@ -1515,6 +1517,56 @@ class GenerativeMusic {
         };
 
         animate();
+    }
+
+    /**
+     * Randomize synth FX (reverb and delay)
+     */
+    randomizeSynthFX() {
+        const targetSynthReverb = Math.round(Math.random() * 100);
+        const targetSynthDelay = Math.round(Math.random() * 100);
+
+        // Apply to audio effects
+        if (this.effects && this.effects.synthReverb) {
+            this.effects.synthReverb.wet.rampTo(targetSynthReverb / 100, 2);
+        }
+        if (this.effects && this.effects.synthDelay) {
+            this.effects.synthDelay.wet.rampTo(targetSynthDelay / 100, 2);
+        }
+
+        // Update UI sliders (no animation needed for these)
+        const synthReverbSlider = document.getElementById('synthReverbSlider');
+        const synthDelaySlider = document.getElementById('synthDelaySlider');
+
+        if (synthReverbSlider) synthReverbSlider.value = targetSynthReverb;
+        if (synthDelaySlider) synthDelaySlider.value = targetSynthDelay;
+
+        console.log('🎲 Chaos: Synth FX → Reverb:', targetSynthReverb + '%', 'Delay:', targetSynthDelay + '%');
+    }
+
+    /**
+     * Randomize drum FX (reverb and delay)
+     */
+    randomizeDrumFX() {
+        const targetDrumReverb = Math.round(Math.random() * 60); // 0-60%
+        const targetDrumDelay = Math.round(Math.random() * 50); // 0-50%
+
+        // Apply to audio effects
+        if (this.effects && this.effects.drumReverb) {
+            this.effects.drumReverb.wet.rampTo(targetDrumReverb / 100, 2);
+        }
+        if (this.effects && this.effects.drumDelay) {
+            this.effects.drumDelay.wet.rampTo(targetDrumDelay / 100, 2);
+        }
+
+        // Update UI sliders
+        const drumReverbSlider = document.getElementById('drumReverbSlider');
+        const drumDelaySlider = document.getElementById('drumDelaySlider');
+
+        if (drumReverbSlider) drumReverbSlider.value = targetDrumReverb;
+        if (drumDelaySlider) drumDelaySlider.value = targetDrumDelay;
+
+        console.log('🎲 Chaos: Drum FX → Reverb:', targetDrumReverb + '%', 'Delay:', targetDrumDelay + '%');
     }
 
     /**

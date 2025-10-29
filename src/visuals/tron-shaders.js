@@ -7,7 +7,7 @@ const TronShaders = {
     // ===== MAIN LAYER (GLSL) =====
 
     neon_grid: {
-        name: '🔷 Neon Grid',
+        name: 'Neon Grid',
         description: 'Classic TRON grid floor with perspective',
         format: 'glsl',
         code: `#version 300 es
@@ -276,7 +276,7 @@ void main() {
     // ===== TOY LAYER (ShaderToy format) =====
 
     light_cycles: {
-        name: '🔷 Light Cycles',
+        name: 'Light Cycles',
         description: 'Moving light trails like TRON light cycles',
         format: 'shadertoy',
         code: `void mainImage(out vec4 fragColor, in vec2 fragCoord) {
@@ -311,7 +311,7 @@ void main() {
     },
 
     hex_grid: {
-        name: '🔷 Hexagon Grid',
+        name: 'Hexagon Grid',
         description: 'Honeycomb hexagonal grid with neon edges',
         format: 'shadertoy',
         code: `vec2 hexCoords(vec2 uv) {
