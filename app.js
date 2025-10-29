@@ -3797,19 +3797,63 @@ class Mesmer {
     }
 
     /**
+     * Get quality preset settings
+     */
+    getRecordingQuality() {
+        const qualitySelect = document.getElementById('recordingQuality');
+        const quality = qualitySelect ? qualitySelect.value : 'medium';
+
+        const presets = {
+            low: {
+                fps: 24,
+                videoBitrate: 1000000,      // 1 Mbps
+                audioBitrate: 64000,        // 64 kbps
+                name: 'Low Quality'
+            },
+            medium: {
+                fps: 30,
+                videoBitrate: 2500000,      // 2.5 Mbps
+                audioBitrate: 128000,       // 128 kbps
+                name: 'Medium Quality'
+            },
+            high: {
+                fps: 30,
+                videoBitrate: 5000000,      // 5 Mbps
+                audioBitrate: 192000,       // 192 kbps
+                name: 'High Quality'
+            },
+            ultra: {
+                fps: 60,
+                videoBitrate: 8000000,      // 8 Mbps
+                audioBitrate: 256000,       // 256 kbps
+                name: 'Ultra Quality'
+            },
+            '4k': {
+                fps: 60,
+                videoBitrate: 20000000,     // 20 Mbps
+                audioBitrate: 320000,       // 320 kbps
+                name: '4K Quality'
+            }
+        };
+
+        return presets[quality] || presets.medium;
+    }
+
+    /**
      * Start recording video (canvas + audio)
      */
     async startRecording() {
         try {
-            console.log('🎥 Starting video + audio recording...');
+            const qualitySettings = this.getRecordingQuality();
+            console.log(`🎥 Starting video + audio recording (${qualitySettings.name}, ${qualitySettings.fps} FPS)...`);
 
-            // Get canvas stream (30 FPS)
+            // Get canvas stream with selected FPS
             const canvas = document.getElementById('mainCanvas');
             if (!canvas) {
                 throw new Error('Canvas not found');
             }
 
-            const videoStream = canvas.captureStream(30);
+            const videoStream = canvas.captureStream(qualitySettings.fps);
 
             // Create audio stream from Tone.js
             this.recordingDestination = Tone.context.createMediaStreamDestination();
@@ -3829,8 +3873,8 @@ class Mesmer {
 
             this.mediaRecorder = new MediaRecorder(combinedStream, {
                 mimeType: mimeType,
-                videoBitsPerSecond: 2500000, // 2.5 Mbps
-                audioBitsPerSecond: 128000    // 128 kbps
+                videoBitsPerSecond: qualitySettings.videoBitrate,
+                audioBitsPerSecond: qualitySettings.audioBitrate
             });
 
             // Reset chunks
@@ -3850,7 +3894,13 @@ class Mesmer {
 
             // Start recording
             this.mediaRecorder.start();
-            console.log('✅ Video + Audio recording started (30 FPS)');
+
+            const videoBitrateMbps = (qualitySettings.videoBitrate / 1000000).toFixed(1);
+            const audioBitrateKbps = (qualitySettings.audioBitrate / 1000);
+            console.log(`✅ Recording started: ${qualitySettings.name}`);
+            console.log(`   Video: ${videoBitrateMbps} Mbps @ ${qualitySettings.fps} FPS`);
+            console.log(`   Audio: ${audioBitrateKbps} kbps`);
+            console.log(`   Codec: ${mimeType}`);
 
         } catch (error) {
             console.error('❌ Error starting recording:', error);
