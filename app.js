@@ -2436,6 +2436,26 @@ class Mesmer {
 
         select.appendChild(defaultsGroup);
 
+        // Add game music patterns
+        const gameGroup = document.createElement('optgroup');
+        gameGroup.label = '🎮 Game Music';
+
+        const gamePatterns = [
+            { value: 'game_hero_theme', name: '🗡️ Hero Theme' },
+            { value: 'game_dungeon', name: '🏰 Dungeon' },
+            { value: 'game_overworld', name: '🌍 Overworld' },
+            { value: 'game_boss_battle', name: '👾 Boss Battle' }
+        ];
+
+        gamePatterns.forEach(({ value, name }) => {
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = name;
+            gameGroup.appendChild(option);
+        });
+
+        select.appendChild(gameGroup);
+
         // Get all saved patterns from localStorage
         const patterns = [];
         for (let i = 0; i < localStorage.length; i++) {
@@ -2598,6 +2618,76 @@ class Mesmer {
                     { step: 10, notes: [{ note: 'E5', duration: 1, velocity: 0.7 }] },
                     { step: 11, notes: [{ note: 'G5', duration: 1, velocity: 0.7 }] },
                     { step: 12, notes: [{ note: 'A5', duration: 2, velocity: 0.8 }] }
+                ]
+            },
+            // Game Music Patterns
+            'game_hero_theme': {
+                name: 'Hero Theme',
+                track: 'lead',
+                scale: 'major',
+                octave: 4,
+                length: 16,
+                pattern: [
+                    { step: 0, notes: [{ note: 'E5', duration: 1, velocity: 0.9 }] },
+                    { step: 1, notes: [{ note: 'E5', duration: 1, velocity: 0.7 }] },
+                    { step: 3, notes: [{ note: 'E5', duration: 1, velocity: 0.8 }] },
+                    { step: 4, notes: [{ note: 'C5', duration: 1, velocity: 0.7 }] },
+                    { step: 5, notes: [{ note: 'E5', duration: 2, velocity: 0.9 }] },
+                    { step: 8, notes: [{ note: 'G5', duration: 3, velocity: 0.9 }] },
+                    { step: 12, notes: [{ note: 'G4', duration: 3, velocity: 0.8 }] }
+                ]
+            },
+            'game_dungeon': {
+                name: 'Dungeon',
+                track: 'lead',
+                scale: 'minor',
+                octave: 4,
+                length: 16,
+                pattern: [
+                    { step: 0, notes: [{ note: 'D5', duration: 2, velocity: 0.8 }] },
+                    { step: 3, notes: [{ note: 'D5', duration: 1, velocity: 0.6 }] },
+                    { step: 4, notes: [{ note: 'Eb5', duration: 2, velocity: 0.7 }] },
+                    { step: 7, notes: [{ note: 'D5', duration: 1, velocity: 0.6 }] },
+                    { step: 8, notes: [{ note: 'C5', duration: 2, velocity: 0.8 }] },
+                    { step: 11, notes: [{ note: 'A4', duration: 1, velocity: 0.6 }] },
+                    { step: 12, notes: [{ note: 'C5', duration: 3, velocity: 0.7 }] }
+                ]
+            },
+            'game_overworld': {
+                name: 'Overworld',
+                track: 'lead',
+                scale: 'major',
+                octave: 5,
+                length: 16,
+                pattern: [
+                    { step: 0, notes: [{ note: 'C5', duration: 1, velocity: 0.8 }] },
+                    { step: 2, notes: [{ note: 'E5', duration: 1, velocity: 0.7 }] },
+                    { step: 4, notes: [{ note: 'G5', duration: 1, velocity: 0.9 }] },
+                    { step: 5, notes: [{ note: 'E5', duration: 1, velocity: 0.7 }] },
+                    { step: 6, notes: [{ note: 'C5', duration: 1, velocity: 0.8 }] },
+                    { step: 8, notes: [{ note: 'A5', duration: 2, velocity: 0.9 }] },
+                    { step: 11, notes: [{ note: 'G5', duration: 1, velocity: 0.7 }] },
+                    { step: 12, notes: [{ note: 'F5', duration: 2, velocity: 0.8 }] },
+                    { step: 15, notes: [{ note: 'D5', duration: 1, velocity: 0.7 }] }
+                ]
+            },
+            'game_boss_battle': {
+                name: 'Boss Battle',
+                track: 'lead',
+                scale: 'minor',
+                octave: 4,
+                length: 16,
+                pattern: [
+                    { step: 0, notes: [{ note: 'E5', duration: 1, velocity: 1.0 }] },
+                    { step: 1, notes: [{ note: 'E5', duration: 1, velocity: 0.9 }] },
+                    { step: 2, notes: [{ note: 'E5', duration: 1, velocity: 1.0 }] },
+                    { step: 4, notes: [{ note: 'C5', duration: 1, velocity: 0.9 }] },
+                    { step: 5, notes: [{ note: 'D5', duration: 1, velocity: 0.9 }] },
+                    { step: 6, notes: [{ note: 'E5', duration: 2, velocity: 1.0 }] },
+                    { step: 8, notes: [{ note: 'D5', duration: 1, velocity: 0.9 }] },
+                    { step: 9, notes: [{ note: 'C5', duration: 1, velocity: 0.8 }] },
+                    { step: 10, notes: [{ note: 'B4', duration: 2, velocity: 0.9 }] },
+                    { step: 12, notes: [{ note: 'E5', duration: 3, velocity: 1.0 }] }
                 ]
             }
         };
