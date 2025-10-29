@@ -1631,10 +1631,31 @@ class Mesmer {
             this.toggleSequencerPlayback();
         });
 
-        document.getElementById('synthSeqClear').addEventListener('click', () => {
+        document.getElementById('synthSeqClear').addEventListener('click', async () => {
+            const wasPlaying = this.synthSeqState.isPlaying;
+
+            // Stop playback if currently playing
+            if (wasPlaying) {
+                await this.toggleSequencerPlayback(); // Stop
+            }
+
+            // Clear the pattern
             this.synthSeqState.patterns[this.synthSeqState.currentTrack] = [];
             this.renderPianoRoll();
             console.log('🗑️ Cleared pattern for', this.synthSeqState.currentTrack);
+
+            // Restart playback if it was playing (will be empty now)
+            if (wasPlaying) {
+                // Check if any other tracks have notes
+                const hasNotes = ['pad', 'lead', 'bass', 'arp'].some(track =>
+                    this.synthSeqState.patterns[track].length > 0
+                );
+
+                // Only restart if other tracks still have notes
+                if (hasNotes) {
+                    await this.toggleSequencerPlayback(); // Play
+                }
+            }
         });
 
         document.getElementById('synthSeqRandomize').addEventListener('click', () => {
@@ -1679,6 +1700,10 @@ class Mesmer {
         document.getElementById('synthSeqEngine').addEventListener('change', (e) => {
             this.synthSeqState.engine = e.target.value;
             console.log('🎛️ Sequencer engine changed to', this.synthSeqState.engine);
+
+            // Toggle instrument group visibility
+            this.toggleSequencerInstruments(this.synthSeqState.engine);
+
             // Reset synths when engine changes
             if (this.previewSynths) {
                 Object.values(this.previewSynths).forEach(synth => {
@@ -1729,7 +1754,146 @@ class Mesmer {
             this.exportPatternWav();
         });
 
+        // Instrument preset changes - WAD Engine
+        document.getElementById('seqWadPadPreset').addEventListener('change', (e) => {
+            if (this.musicEngine.wadEngine) {
+                this.musicEngine.wadEngine.changePreset('pad', e.target.value);
+                console.log('🎹 WAD Pad preset changed to:', e.target.value);
+            }
+        });
+
+        document.getElementById('seqWadLeadPreset').addEventListener('change', (e) => {
+            if (this.musicEngine.wadEngine) {
+                this.musicEngine.wadEngine.changePreset('lead', e.target.value);
+                console.log('⚡ WAD Lead preset changed to:', e.target.value);
+            }
+        });
+
+        document.getElementById('seqWadBassPreset').addEventListener('change', (e) => {
+            if (this.musicEngine.wadEngine) {
+                this.musicEngine.wadEngine.changePreset('bass', e.target.value);
+                console.log('🔊 WAD Bass preset changed to:', e.target.value);
+            }
+        });
+
+        document.getElementById('seqWadArpPreset').addEventListener('change', (e) => {
+            if (this.musicEngine.wadEngine) {
+                this.musicEngine.wadEngine.changePreset('arp', e.target.value);
+                console.log('🎵 WAD Arp preset changed to:', e.target.value);
+            }
+        });
+
+        // Instrument preset changes - Tone.js Engine
+        // Note: Tone.js synths are created dynamically during playback
+        // These settings will be used when creating synths
+        document.getElementById('seqTonejsPadPreset').addEventListener('change', (e) => {
+            this.synthSeqState.tonejsPresets = this.synthSeqState.tonejsPresets || {};
+            this.synthSeqState.tonejsPresets.pad = e.target.value;
+            console.log('🎹 Tone.js Pad waveform changed to:', e.target.value);
+            // Reset synths to apply new settings
+            if (this.previewSynths && this.synthSeqState.engine === 'tonejs') {
+                if (this.previewSynths.pad) this.previewSynths.pad.dispose();
+                this.previewSynths.pad = null;
+            }
+        });
+
+        document.getElementById('seqTonejsLeadPreset').addEventListener('change', (e) => {
+            this.synthSeqState.tonejsPresets = this.synthSeqState.tonejsPresets || {};
+            this.synthSeqState.tonejsPresets.lead = e.target.value;
+            console.log('⚡ Tone.js Lead waveform changed to:', e.target.value);
+            if (this.previewSynths && this.synthSeqState.engine === 'tonejs') {
+                if (this.previewSynths.lead) this.previewSynths.lead.dispose();
+                this.previewSynths.lead = null;
+            }
+        });
+
+        document.getElementById('seqTonejsBassPreset').addEventListener('change', (e) => {
+            this.synthSeqState.tonejsPresets = this.synthSeqState.tonejsPresets || {};
+            this.synthSeqState.tonejsPresets.bass = e.target.value;
+            console.log('🔊 Tone.js Bass waveform changed to:', e.target.value);
+            if (this.previewSynths && this.synthSeqState.engine === 'tonejs') {
+                if (this.previewSynths.bass) this.previewSynths.bass.dispose();
+                this.previewSynths.bass = null;
+            }
+        });
+
+        document.getElementById('seqTonejsArpPreset').addEventListener('change', (e) => {
+            this.synthSeqState.tonejsPresets = this.synthSeqState.tonejsPresets || {};
+            this.synthSeqState.tonejsPresets.arp = e.target.value;
+            console.log('🎵 Tone.js Arp waveform changed to:', e.target.value);
+            if (this.previewSynths && this.synthSeqState.engine === 'tonejs') {
+                if (this.previewSynths.arp) this.previewSynths.arp.dispose();
+                this.previewSynths.arp = null;
+            }
+        });
+
+        // Instrument preset changes - Dirt Engine
+        document.getElementById('seqDirtPadBank').addEventListener('change', (e) => {
+            this.synthSeqState.dirtBanks = this.synthSeqState.dirtBanks || {};
+            this.synthSeqState.dirtBanks.pad = e.target.value;
+            console.log('🎹 Dirt Pad sample bank changed to:', e.target.value);
+        });
+
+        document.getElementById('seqDirtLeadBank').addEventListener('change', (e) => {
+            this.synthSeqState.dirtBanks = this.synthSeqState.dirtBanks || {};
+            this.synthSeqState.dirtBanks.lead = e.target.value;
+            console.log('⚡ Dirt Lead sample bank changed to:', e.target.value);
+        });
+
+        document.getElementById('seqDirtBassBank').addEventListener('change', (e) => {
+            this.synthSeqState.dirtBanks = this.synthSeqState.dirtBanks || {};
+            this.synthSeqState.dirtBanks.bass = e.target.value;
+            console.log('🔊 Dirt Bass sample bank changed to:', e.target.value);
+        });
+
+        document.getElementById('seqDirtArpBank').addEventListener('change', (e) => {
+            this.synthSeqState.dirtBanks = this.synthSeqState.dirtBanks || {};
+            this.synthSeqState.dirtBanks.arp = e.target.value;
+            console.log('🎵 Dirt Arp sample bank changed to:', e.target.value);
+        });
+
+        // Set initial instrument visibility
+        this.toggleSequencerInstruments(this.synthSeqState.engine);
+
         console.log('✅ Synth Sequencer initialized');
+    }
+
+    /**
+     * Toggle synth sequencer instrument group visibility based on engine
+     */
+    toggleSequencerInstruments(engine) {
+        const tonejsControls = document.querySelector('.tonejs-seq-controls');
+        const wadControls = document.querySelector('.wad-seq-controls');
+        const dirtControls = document.querySelector('.dirt-seq-controls');
+
+        if (!tonejsControls || !wadControls || !dirtControls) {
+            console.warn('⚠️ Sequencer instrument controls not found');
+            return;
+        }
+
+        // Hide all
+        tonejsControls.style.display = 'none';
+        wadControls.style.display = 'none';
+        dirtControls.style.display = 'none';
+
+        // Show the selected engine's controls
+        switch (engine) {
+            case 'tonejs':
+                tonejsControls.style.display = 'block';
+                console.log('🎹 Showing Tone.js (Celestial) instruments');
+                break;
+            case 'wad':
+                wadControls.style.display = 'block';
+                console.log('🔥 Showing WAD (Magma) instruments');
+                break;
+            case 'dirt':
+                dirtControls.style.display = 'block';
+                console.log('💥 Showing Dirt (Chaos) instruments');
+                break;
+            default:
+                tonejsControls.style.display = 'block';
+                console.warn('⚠️ Unknown engine:', engine, '- defaulting to Tone.js');
+        }
     }
 
     /**
@@ -2228,6 +2392,26 @@ class Mesmer {
         // Clear current options except first
         select.innerHTML = '<option value="">-- Select Pattern --</option>';
 
+        // Add built-in default patterns
+        const defaultsGroup = document.createElement('optgroup');
+        defaultsGroup.label = '📦 Built-in Examples';
+
+        const defaults = [
+            { value: 'default_pad_simple', name: '🎹 Simple Pad Chords' },
+            { value: 'default_lead_melody', name: '⚡ Lead Melody' },
+            { value: 'default_bass_groove', name: '🔊 Bass Groove' },
+            { value: 'default_arp_pattern', name: '🎵 Arp Pattern' }
+        ];
+
+        defaults.forEach(({ value, name }) => {
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = name;
+            defaultsGroup.appendChild(option);
+        });
+
+        select.appendChild(defaultsGroup);
+
         // Get all saved patterns from localStorage
         const patterns = [];
         for (let i = 0; i < localStorage.length; i++) {
@@ -2260,7 +2444,7 @@ class Mesmer {
         ['pad', 'lead', 'bass', 'arp'].forEach(track => {
             if (grouped[track].length > 0) {
                 const optgroup = document.createElement('optgroup');
-                optgroup.label = track.charAt(0).toUpperCase() + track.slice(1);
+                optgroup.label = '💾 ' + track.charAt(0).toUpperCase() + track.slice(1) + ' (Saved)';
 
                 grouped[track].forEach(({ key, name }) => {
                     const option = document.createElement('option');
@@ -2273,15 +2457,27 @@ class Mesmer {
             }
         });
 
-        console.log('📋 Populated', patterns.length, 'pattern presets');
+        console.log('📋 Populated', defaults.length, 'default +', patterns.length, 'saved pattern presets');
     }
 
     loadPattern(key) {
         try {
-            const saved = JSON.parse(localStorage.getItem(key));
-            if (!saved) {
-                alert('⚠️ Pattern not found');
-                return;
+            let saved;
+
+            // Check if it's a built-in default pattern
+            if (key.startsWith('default_')) {
+                saved = this.getDefaultPattern(key);
+                if (!saved) {
+                    alert('⚠️ Default pattern not found');
+                    return;
+                }
+            } else {
+                // Load from localStorage
+                saved = JSON.parse(localStorage.getItem(key));
+                if (!saved) {
+                    alert('⚠️ Pattern not found');
+                    return;
+                }
             }
 
             // Load pattern data
@@ -2312,6 +2508,77 @@ class Mesmer {
             console.error('Failed to load pattern:', e);
             alert('❌ Failed to load pattern');
         }
+    }
+
+    getDefaultPattern(key) {
+        const defaults = {
+            'default_pad_simple': {
+                name: 'Simple Pad Chords',
+                track: 'pad',
+                scale: 'major',
+                octave: 3,
+                length: 16,
+                pattern: [
+                    { step: 0, notes: [{ note: 'C4', duration: 4, velocity: 0.7 }] },
+                    { step: 4, notes: [{ note: 'F4', duration: 4, velocity: 0.7 }] },
+                    { step: 8, notes: [{ note: 'G4', duration: 4, velocity: 0.7 }] },
+                    { step: 12, notes: [{ note: 'E4', duration: 4, velocity: 0.7 }] }
+                ]
+            },
+            'default_lead_melody': {
+                name: 'Lead Melody',
+                track: 'lead',
+                scale: 'minor',
+                octave: 4,
+                length: 16,
+                pattern: [
+                    { step: 0, notes: [{ note: 'C5', duration: 1, velocity: 0.8 }] },
+                    { step: 2, notes: [{ note: 'D5', duration: 1, velocity: 0.8 }] },
+                    { step: 4, notes: [{ note: 'Eb5', duration: 2, velocity: 0.9 }] },
+                    { step: 7, notes: [{ note: 'D5', duration: 1, velocity: 0.7 }] },
+                    { step: 8, notes: [{ note: 'C5', duration: 2, velocity: 0.8 }] },
+                    { step: 12, notes: [{ note: 'G4', duration: 3, velocity: 0.8 }] }
+                ]
+            },
+            'default_bass_groove': {
+                name: 'Bass Groove',
+                track: 'bass',
+                scale: 'minor',
+                octave: 2,
+                length: 16,
+                pattern: [
+                    { step: 0, notes: [{ note: 'C3', duration: 1, velocity: 0.9 }] },
+                    { step: 4, notes: [{ note: 'C3', duration: 1, velocity: 0.8 }] },
+                    { step: 6, notes: [{ note: 'G2', duration: 1, velocity: 0.7 }] },
+                    { step: 8, notes: [{ note: 'C3', duration: 1, velocity: 0.9 }] },
+                    { step: 12, notes: [{ note: 'Ab2', duration: 2, velocity: 0.8 }] }
+                ]
+            },
+            'default_arp_pattern': {
+                name: 'Arp Pattern',
+                track: 'arp',
+                scale: 'pentatonic',
+                octave: 4,
+                length: 16,
+                pattern: [
+                    { step: 0, notes: [{ note: 'C5', duration: 1, velocity: 0.7 }] },
+                    { step: 1, notes: [{ note: 'D5', duration: 1, velocity: 0.7 }] },
+                    { step: 2, notes: [{ note: 'E5', duration: 1, velocity: 0.7 }] },
+                    { step: 3, notes: [{ note: 'G5', duration: 1, velocity: 0.7 }] },
+                    { step: 4, notes: [{ note: 'A5', duration: 1, velocity: 0.8 }] },
+                    { step: 5, notes: [{ note: 'G5', duration: 1, velocity: 0.7 }] },
+                    { step: 6, notes: [{ note: 'E5', duration: 1, velocity: 0.7 }] },
+                    { step: 7, notes: [{ note: 'D5', duration: 1, velocity: 0.7 }] },
+                    { step: 8, notes: [{ note: 'C5', duration: 1, velocity: 0.7 }] },
+                    { step: 9, notes: [{ note: 'D5', duration: 1, velocity: 0.7 }] },
+                    { step: 10, notes: [{ note: 'E5', duration: 1, velocity: 0.7 }] },
+                    { step: 11, notes: [{ note: 'G5', duration: 1, velocity: 0.7 }] },
+                    { step: 12, notes: [{ note: 'A5', duration: 2, velocity: 0.8 }] }
+                ]
+            }
+        };
+
+        return defaults[key] || null;
     }
 
     deletePattern(key) {

@@ -2398,6 +2398,142 @@
                 </button>
             </div>
 
+            <!-- Instrument Selection - Changes based on Synth Engine -->
+            <div class="instrument-presets">
+                <!-- Tone.js Instruments (Celestial) -->
+                <div class="synth-sequencer-instruments tonejs-seq-controls">
+                    <div class="control-row" style="margin-bottom: 16px;">
+                        <div class="control-item">
+                            <label>🎹 Pad Synth</label>
+                            <select id="seqTonejsPadPreset">
+                                <option value="sine" selected>Smooth Sine</option>
+                                <option value="triangle">Warm Triangle</option>
+                                <option value="sawtooth">Rich Sawtooth</option>
+                                <option value="square">Hollow Square</option>
+                                <option value="fatsine">Fat Sine</option>
+                                <option value="fatsawtooth">Fat Sawtooth</option>
+                            </select>
+                        </div>
+                        <div class="control-item">
+                            <label>⚡ Lead Synth</label>
+                            <select id="seqTonejsLeadPreset">
+                                <option value="sine" selected>Pure Sine</option>
+                                <option value="triangle">Soft Triangle</option>
+                                <option value="sawtooth">Bright Sawtooth</option>
+                                <option value="square">Digital Square</option>
+                                <option value="fatsawtooth">Fat Sawtooth</option>
+                            </select>
+                        </div>
+                        <div class="control-item">
+                            <label>🔊 Bass Synth</label>
+                            <select id="seqTonejsBassPreset">
+                                <option value="sine" selected>Deep Sine</option>
+                                <option value="fatsine">Fat Sine</option>
+                                <option value="triangle">Round Triangle</option>
+                                <option value="sawtooth">Aggressive Saw</option>
+                                <option value="square">Sub Square</option>
+                            </select>
+                        </div>
+                        <div class="control-item">
+                            <label>🎵 Arp Synth</label>
+                            <select id="seqTonejsArpPreset">
+                                <option value="sine" selected>Smooth Sine</option>
+                                <option value="triangle">Soft Triangle</option>
+                                <option value="sawtooth">Sharp Sawtooth</option>
+                                <option value="square">Classic Square</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- WAD Instruments (Magma) -->
+                <div class="synth-sequencer-instruments wad-seq-controls" style="display: none;">
+                    <div class="control-row" style="margin-bottom: 16px;">
+                        <div class="control-item">
+                            <label>🎹 Pad Sound</label>
+                            <select id="seqWadPadPreset">
+                                <option value="warmPad" selected>Warm Pad</option>
+                                <option value="spacePad">Space Pad</option>
+                                <option value="dreamPad">Dream Pad</option>
+                                <option value="atmosphericPad">Atmospheric</option>
+                                <option value="drone">Drone</option>
+                                <option value="ghost">Ghost</option>
+                            </select>
+                        </div>
+                        <div class="control-item">
+                            <label>⚡ Lead Sound</label>
+                            <select id="seqWadLeadPreset">
+                                <option value="brightLead" selected>Bright Lead</option>
+                                <option value="analogLead">Analog Lead</option>
+                            </select>
+                        </div>
+                        <div class="control-item">
+                            <label>🔊 Bass Sound</label>
+                            <select id="seqWadBassPreset">
+                                <option value="deepBass" selected>Deep Bass</option>
+                                <option value="subBass">Sub Bass</option>
+                                <option value="acidBass">Acid Bass</option>
+                            </select>
+                        </div>
+                        <div class="control-item">
+                            <label>🎵 Arp Sound</label>
+                            <select id="seqWadArpPreset">
+                                <option value="digitalArp" selected>Digital Arp</option>
+                                <option value="classicArp">Classic Arp</option>
+                                <option value="electricPiano">Electric Piano</option>
+                                <option value="pluck">Pluck</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dirt Samples (Chaos) -->
+                <div class="synth-sequencer-instruments dirt-seq-controls" style="display: none;">
+                    <div class="control-row" style="margin-bottom: 16px;">
+                        <div class="control-item">
+                            <label>🎹 Pad Samples</label>
+                            <select id="seqDirtPadBank">
+                                <option value="pad" selected>Pad</option>
+                                <option value="breath">Breath</option>
+                                <option value="cosmicg">Cosmicg</option>
+                                <option value="feel">Feel</option>
+                                <option value="moog">Moog</option>
+                                <option value="space">Space</option>
+                                <option value="wind">Wind</option>
+                            </select>
+                        </div>
+                        <div class="control-item">
+                            <label>⚡ Lead Samples</label>
+                            <select id="seqDirtLeadBank">
+                                <option value="arpy" selected>Arpy</option>
+                                <option value="bleep">Bleep</option>
+                                <option value="hoover">Hoover</option>
+                                <option value="sax">Sax</option>
+                                <option value="trump">Trumpet</option>
+                            </select>
+                        </div>
+                        <div class="control-item">
+                            <label>🔊 Bass Samples</label>
+                            <select id="seqDirtBassBank">
+                                <option value="bass" selected>Bass</option>
+                                <option value="bass3">Bass 3</option>
+                                <option value="jungbass">Jungle Bass</option>
+                                <option value="wobble">Wobble</option>
+                            </select>
+                        </div>
+                        <div class="control-item">
+                            <label>🎵 Arp Samples</label>
+                            <select id="seqDirtArpBank">
+                                <option value="arp" selected>Arp</option>
+                                <option value="blip">Blip</option>
+                                <option value="click">Click</option>
+                                <option value="glitch">Glitch</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Piano Roll Container -->
             <div class="piano-roll-container">
                 <!-- Piano Keys (Note labels) -->

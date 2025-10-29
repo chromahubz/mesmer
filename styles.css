@@ -1879,9 +1879,10 @@ body.mpc-assign-mode .mpc-pad.selected {
 
 .control-row {
     display: flex;
-    gap: 12px;
+    gap: 20px;
     align-items: center;
     flex-wrap: wrap;
+    margin-bottom: 12px;
 }
 
 .control-row button {
