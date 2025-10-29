@@ -1745,7 +1745,20 @@ class Mesmer {
             velocityValue.textContent = `${e.target.value}%`;
         });
 
-        // Export buttons
+        // Import/Export buttons
+        document.getElementById('synthSeqImportMidi').addEventListener('click', () => {
+            document.getElementById('synthSeqMidiFileInput').click();
+        });
+
+        document.getElementById('synthSeqMidiFileInput').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                this.importMidiFile(file);
+                // Reset input so same file can be selected again
+                e.target.value = '';
+            }
+        });
+
         document.getElementById('synthSeqExportMidi').addEventListener('click', () => {
             this.exportPatternMidi();
         });
@@ -3018,6 +3031,384 @@ class Mesmer {
         }
     }
 
+    /**
+     * Import MIDI file and intelligently distribute notes to 4 tracks
+     */
+    async importMidiFile(file) {
+        try {
+            console.log('📂 Importing MIDI file:', file.name);
+
+            const arrayBuffer = await file.arrayBuffer();
+            const dataView = new DataView(arrayBuffer);
+
+            // Parse MIDI file
+            const midiData = this.parseMidiFile(dataView);
+
+            if (!midiData || midiData.tracks.length === 0) {
+                alert('❌ Failed to parse MIDI file or no tracks found!');
+                return;
+            }
+
+            console.log(`🎵 Parsed MIDI: ${midiData.tracks.length} tracks, ${midiData.allNotes.length} total notes`);
+
+            // Intelligently distribute notes to our 4 tracks
+            const distributedTracks = this.distributeNotesToTracks(midiData);
+
+            // Show distribution summary
+            const summary = Object.entries(distributedTracks).map(([track, notes]) =>
+                `${track}: ${notes.length} notes`
+            ).join('\n');
+
+            const proceed = confirm(
+                `📊 MIDI Distribution Analysis:\n\n${summary}\n\n` +
+                `Total: ${midiData.allNotes.length} notes\n\n` +
+                `This will replace current patterns. Continue?`
+            );
+
+            if (!proceed) {
+                console.log('❌ Import cancelled by user');
+                return;
+            }
+
+            // Apply to sequencer
+            this.applyImportedTracks(distributedTracks);
+
+            alert(`✅ MIDI imported successfully!\n\n${summary}`);
+            console.log('✅ MIDI import complete');
+
+        } catch (error) {
+            console.error('❌ MIDI import error:', error);
+            alert('❌ Error importing MIDI file: ' + error.message);
+        }
+    }
+
+    /**
+     * Parse MIDI file binary data
+     */
+    parseMidiFile(dataView) {
+        let offset = 0;
+
+        // Read header chunk
+        const headerChunk = this.readString(dataView, offset, 4);
+        if (headerChunk !== 'MThd') {
+            throw new Error('Invalid MIDI file: Missing MThd header');
+        }
+        offset += 4;
+
+        const headerLength = dataView.getUint32(offset);
+        offset += 4;
+
+        const format = dataView.getUint16(offset);
+        offset += 2;
+
+        const trackCount = dataView.getUint16(offset);
+        offset += 2;
+
+        const division = dataView.getUint16(offset);
+        offset += 2;
+
+        console.log(`📊 MIDI Format: ${format}, Tracks: ${trackCount}, Division: ${division}`);
+
+        // Parse all tracks
+        const tracks = [];
+        const allNotes = [];
+
+        for (let i = 0; i < trackCount; i++) {
+            const trackData = this.parseMidiTrack(dataView, offset);
+            offset = trackData.offset;
+
+            if (trackData.notes.length > 0) {
+                tracks.push(trackData.notes);
+                allNotes.push(...trackData.notes);
+            }
+        }
+
+        return {
+            format,
+            trackCount,
+            division,
+            tracks,
+            allNotes
+        };
+    }
+
+    /**
+     * Parse a single MIDI track
+     */
+    parseMidiTrack(dataView, offset) {
+        const trackHeader = this.readString(dataView, offset, 4);
+        offset += 4;
+
+        if (trackHeader !== 'MTrk') {
+            throw new Error('Invalid track header');
+        }
+
+        const trackLength = dataView.getUint32(offset);
+        offset += 4;
+
+        const trackEnd = offset + trackLength;
+        const notes = [];
+        let time = 0;
+        let runningStatus = 0;
+        const activeNotes = {}; // Track note-on events
+
+        while (offset < trackEnd) {
+            // Read delta time
+            const deltaResult = this.readVariableLength(dataView, offset);
+            time += deltaResult.value;
+            offset = deltaResult.offset;
+
+            if (offset >= trackEnd) break;
+
+            // Read event
+            let status = dataView.getUint8(offset);
+
+            if (status < 0x80) {
+                // Running status
+                status = runningStatus;
+            } else {
+                offset++;
+                runningStatus = status;
+            }
+
+            const eventType = status & 0xF0;
+            const channel = status & 0x0F;
+
+            if (eventType === 0x90 || eventType === 0x80) {
+                // Note On / Note Off
+                const noteNumber = dataView.getUint8(offset++);
+                const velocity = dataView.getUint8(offset++);
+
+                if (eventType === 0x90 && velocity > 0) {
+                    // Note On
+                    activeNotes[noteNumber] = { time, velocity };
+                } else {
+                    // Note Off
+                    if (activeNotes[noteNumber]) {
+                        const noteOn = activeNotes[noteNumber];
+                        const duration = time - noteOn.time;
+
+                        notes.push({
+                            note: this.midiNumberToNote(noteNumber),
+                            midiNumber: noteNumber,
+                            time: noteOn.time,
+                            duration: duration,
+                            velocity: noteOn.velocity / 127
+                        });
+
+                        delete activeNotes[noteNumber];
+                    }
+                }
+            } else if (eventType === 0xB0 || eventType === 0xE0) {
+                // Control Change / Pitch Bend - 2 data bytes
+                offset += 2;
+            } else if (eventType === 0xC0 || eventType === 0xD0) {
+                // Program Change / Channel Pressure - 1 data byte
+                offset += 1;
+            } else if (status === 0xFF) {
+                // Meta event
+                const metaType = dataView.getUint8(offset++);
+                const lengthResult = this.readVariableLength(dataView, offset);
+                offset = lengthResult.offset + lengthResult.value;
+            } else if (status === 0xF0 || status === 0xF7) {
+                // SysEx event
+                const lengthResult = this.readVariableLength(dataView, offset);
+                offset = lengthResult.offset + lengthResult.value;
+            }
+        }
+
+        return { notes, offset };
+    }
+
+    /**
+     * Intelligently distribute MIDI notes to 4 tracks (pad, lead, bass, arp)
+     */
+    distributeNotesToTracks(midiData) {
+        const distributed = {
+            pad: [],
+            lead: [],
+            bass: [],
+            arp: []
+        };
+
+        const allNotes = midiData.allNotes;
+
+        if (allNotes.length === 0) {
+            return distributed;
+        }
+
+        // Sort notes by time
+        allNotes.sort((a, b) => a.time - b.time);
+
+        // Analyze note ranges
+        const midiNumbers = allNotes.map(n => n.midiNumber);
+        const minNote = Math.min(...midiNumbers);
+        const maxNote = Math.max(...midiNumbers);
+        const range = maxNote - minNote;
+
+        console.log(`🎼 Note range: ${this.midiNumberToNote(minNote)} to ${this.midiNumberToNote(maxNote)} (${range} semitones)`);
+
+        // Strategy: Distribute by note range and pattern analysis
+        // Bass: < C3 (MIDI 48)
+        // Pad: C3-C4 (48-60) - sustained chords
+        // Lead: > C4 (60) - melodic lines
+        // Arp: Detected arpeggiated patterns
+
+        // First pass: Detect arpeggios (fast sequential notes)
+        const arpNotes = [];
+        for (let i = 0; i < allNotes.length - 2; i++) {
+            const note1 = allNotes[i];
+            const note2 = allNotes[i + 1];
+            const note3 = allNotes[i + 2];
+
+            const timeDiff1 = note2.time - note1.time;
+            const timeDiff2 = note3.time - note2.time;
+
+            // If notes are < 120 ticks apart and within 1 octave, it's likely an arp
+            if (timeDiff1 < 120 && timeDiff2 < 120 &&
+                Math.abs(note2.midiNumber - note1.midiNumber) <= 12 &&
+                Math.abs(note3.midiNumber - note2.midiNumber) <= 12) {
+                arpNotes.push(note1, note2, note3);
+                i += 2; // Skip next notes
+            }
+        }
+
+        const arpSet = new Set(arpNotes);
+
+        // Second pass: Distribute remaining notes
+        for (const note of allNotes) {
+            if (arpSet.has(note)) {
+                distributed.arp.push(note);
+            } else if (note.midiNumber < 48) {
+                // Bass range
+                distributed.bass.push(note);
+            } else if (note.midiNumber < 60) {
+                // Mid range - check if chord or melody
+                // If multiple notes at same time, it's a chord (pad)
+                const simultaneousNotes = allNotes.filter(n =>
+                    Math.abs(n.time - note.time) < 10 && n !== note
+                );
+
+                if (simultaneousNotes.length >= 2) {
+                    distributed.pad.push(note);
+                } else if (note.duration > 240) {
+                    // Long sustained notes → pad
+                    distributed.pad.push(note);
+                } else {
+                    // Short single notes → lead
+                    distributed.lead.push(note);
+                }
+            } else {
+                // High range - lead melody
+                distributed.lead.push(note);
+            }
+        }
+
+        // Fallback: If a track has no notes, distribute evenly
+        const emptyTracks = Object.entries(distributed).filter(([_, notes]) => notes.length === 0);
+        if (emptyTracks.length > 0 && allNotes.length > 0) {
+            console.log(`⚠️ Some tracks empty, redistributing...`);
+
+            // Split notes evenly across all tracks
+            allNotes.forEach((note, i) => {
+                const trackNames = ['pad', 'lead', 'bass', 'arp'];
+                const trackIndex = i % trackNames.length;
+                distributed[trackNames[trackIndex]].push(note);
+            });
+        }
+
+        return distributed;
+    }
+
+    /**
+     * Apply imported MIDI tracks to sequencer
+     */
+    applyImportedTracks(distributedTracks) {
+        // Find the time range
+        let maxTime = 0;
+        Object.values(distributedTracks).forEach(notes => {
+            notes.forEach(note => {
+                maxTime = Math.max(maxTime, note.time + note.duration);
+            });
+        });
+
+        // Calculate pattern length (round up to nearest multiple of 4 steps)
+        const timePerStep = 120; // Assume 480 PPQ, 16th notes = 120 ticks
+        const requiredSteps = Math.ceil(maxTime / timePerStep);
+        const patternLength = Math.max(16, Math.min(64, Math.ceil(requiredSteps / 4) * 4));
+
+        console.log(`📏 Pattern length: ${patternLength} steps (${maxTime} ticks, ${requiredSteps} required)`);
+
+        // Update pattern length
+        this.synthSeqState.length = patternLength;
+        document.getElementById('synthSeqLength').value = patternLength;
+
+        // Convert and apply to each track
+        ['pad', 'lead', 'bass', 'arp'].forEach(track => {
+            const notes = distributedTracks[track];
+            const pattern = [];
+
+            notes.forEach(note => {
+                const step = Math.floor(note.time / timePerStep);
+                const duration = Math.max(1, Math.round(note.duration / timePerStep));
+
+                // Find or create step
+                let stepData = pattern.find(s => s.step === step);
+                if (!stepData) {
+                    stepData = { step, notes: [] };
+                    pattern.push(stepData);
+                }
+
+                stepData.notes.push({
+                    note: note.note,
+                    duration,
+                    velocity: note.velocity
+                });
+            });
+
+            this.synthSeqState.patterns[track] = pattern;
+        });
+
+        // Refresh display
+        this.renderPianoRoll();
+    }
+
+    /**
+     * Helper: Read variable length value from MIDI
+     */
+    readVariableLength(dataView, offset) {
+        let value = 0;
+        let byte;
+
+        do {
+            byte = dataView.getUint8(offset++);
+            value = (value << 7) | (byte & 0x7F);
+        } while (byte & 0x80);
+
+        return { value, offset };
+    }
+
+    /**
+     * Helper: Read string from DataView
+     */
+    readString(dataView, offset, length) {
+        let str = '';
+        for (let i = 0; i < length; i++) {
+            str += String.fromCharCode(dataView.getUint8(offset + i));
+        }
+        return str;
+    }
+
+    /**
+     * Helper: Convert MIDI number to note name
+     */
+    midiNumberToNote(midiNumber) {
+        const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+        const octave = Math.floor(midiNumber / 12) - 1;
+        const note = noteNames[midiNumber % 12];
+        return note + octave;
+    }
+
     async bufferToWav(audioBuffer) {
         // Convert Tone.js buffer to WAV file
         const numberOfChannels = audioBuffer.numberOfChannels;
@@ -3301,7 +3692,8 @@ class Mesmer {
             const actions = [
                 () => this.randomizeMainShader(),
                 () => this.randomizeToyShader(),
-                () => this.randomizeBothShaders()
+                () => this.randomizeBothShaders(),
+                () => this.randomizeColors()
             ];
 
             const action = actions[Math.floor(Math.random() * actions.length)];
@@ -3358,31 +3750,93 @@ class Mesmer {
     }
 
     /**
-     * Start recording audio output
+     * Randomize colors (hue, saturation, brightness)
+     */
+    randomizeColors() {
+        // Random hue (0-360°)
+        const hue = Math.floor(Math.random() * 360);
+        const hueNormalized = hue / 360;
+
+        // Random saturation (50-100%)
+        const saturation = Math.floor(50 + Math.random() * 50);
+        const saturationNormalized = saturation / 100;
+
+        // Random brightness (80-120%)
+        const brightness = Math.floor(80 + Math.random() * 40);
+        const brightnessNormalized = brightness / 100;
+
+        // Apply to shaders
+        if (this.mainShader) {
+            this.mainShader.setColorHue(hueNormalized);
+            this.mainShader.setColorSaturation(saturationNormalized);
+            this.mainShader.setColorBrightness(brightnessNormalized);
+        }
+
+        if (this.toyRenderer) {
+            this.toyRenderer.setColorHue(hueNormalized);
+            this.toyRenderer.setColorSaturation(saturationNormalized);
+            this.toyRenderer.setColorBrightness(brightnessNormalized);
+        }
+
+        // Update UI sliders
+        const hueSlider = document.getElementById('colorHue');
+        const hueValue = document.getElementById('colorHueValue');
+        const satSlider = document.getElementById('colorSaturation');
+        const satValue = document.getElementById('colorSaturationValue');
+        const brightSlider = document.getElementById('colorBrightness');
+        const brightValue = document.getElementById('colorBrightnessValue');
+
+        if (hueSlider) hueSlider.value = hue;
+        if (hueValue) hueValue.textContent = hue + '°';
+        if (satSlider) satSlider.value = saturation;
+        if (satValue) satValue.textContent = saturation + '%';
+        if (brightSlider) brightSlider.value = brightness;
+        if (brightValue) brightValue.textContent = brightness + '%';
+
+        console.log(`🎲 Chaos: Colors → Hue: ${hue}°, Sat: ${saturation}%, Bright: ${brightness}%`);
+    }
+
+    /**
+     * Start recording video (canvas + audio)
      */
     async startRecording() {
         try {
-            console.log('🎙️ Starting audio recording...');
+            console.log('🎥 Starting video + audio recording...');
 
-            // Create a MediaStreamDestination from Tone.Destination
+            // Get canvas stream (30 FPS)
+            const canvas = document.getElementById('mainCanvas');
+            if (!canvas) {
+                throw new Error('Canvas not found');
+            }
+
+            const videoStream = canvas.captureStream(30);
+
+            // Create audio stream from Tone.js
             this.recordingDestination = Tone.context.createMediaStreamDestination();
-
-            // Connect Tone's main output to the recording destination
             Tone.getDestination().connect(this.recordingDestination);
+            const audioStream = this.recordingDestination.stream;
 
-            // Create MediaRecorder with the stream
-            const stream = this.recordingDestination.stream;
-            const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/ogg';
+            // Combine video and audio tracks
+            const combinedStream = new MediaStream([
+                ...videoStream.getVideoTracks(),
+                ...audioStream.getAudioTracks()
+            ]);
 
-            this.mediaRecorder = new MediaRecorder(stream, {
+            // Create MediaRecorder with combined stream
+            const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+                ? 'video/webm;codecs=vp9'
+                : 'video/webm';
+
+            this.mediaRecorder = new MediaRecorder(combinedStream, {
                 mimeType: mimeType,
-                audioBitsPerSecond: 128000
+                videoBitsPerSecond: 2500000, // 2.5 Mbps
+                audioBitsPerSecond: 128000    // 128 kbps
             });
 
-            // Reset audio chunks
+            // Reset chunks
             this.audioChunks = [];
 
-            // Collect audio data
+            // Collect data
             this.mediaRecorder.ondataavailable = (event) => {
                 if (event.data.size > 0) {
                     this.audioChunks.push(event.data);
@@ -3396,7 +3850,7 @@ class Mesmer {
 
             // Start recording
             this.mediaRecorder.start();
-            console.log('✅ Recording started');
+            console.log('✅ Video + Audio recording started (30 FPS)');
 
         } catch (error) {
             console.error('❌ Error starting recording:', error);
@@ -3420,21 +3874,21 @@ class Mesmer {
 
         // Wait for final data and create download
         this.mediaRecorder.onstop = () => {
-            console.log('📦 Creating audio file...');
+            console.log('📦 Creating video file...');
 
             // Create blob from chunks
             const mimeType = this.mediaRecorder.mimeType;
-            const audioBlob = new Blob(this.audioChunks, { type: mimeType });
+            const videoBlob = new Blob(this.audioChunks, { type: mimeType });
 
             // Create download link
-            const url = URL.createObjectURL(audioBlob);
+            const url = URL.createObjectURL(videoBlob);
             const link = document.createElement('a');
             link.href = url;
 
             // Generate filename with timestamp
             const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-            const extension = mimeType.includes('webm') ? 'webm' : 'ogg';
-            link.download = `mesmer-recording-${timestamp}.${extension}`;
+            const extension = 'webm'; // Always webm for video
+            link.download = `mesmer-video-${timestamp}.${extension}`;
 
             // Trigger download
             document.body.appendChild(link);

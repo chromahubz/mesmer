@@ -1162,11 +1162,13 @@ class GenerativeMusic {
                 () => this.randomizeSynthEngine(),
                 () => this.randomizeBPM(),
                 () => this.randomizeScale(),
-                () => this.randomizeEffects()
+                () => this.randomizeEffects(),
+                () => this.randomizeInstrumentVolumes(),
+                () => this.randomizeEffectsChain()
             ];
 
-            // Pick 1-2 random actions to execute
-            const numActions = Math.random() < 0.5 ? 1 : 2;
+            // Pick 1-3 random actions to execute
+            const numActions = Math.floor(Math.random() * 3) + 1;
             for (let i = 0; i < numActions; i++) {
                 const action = actions[Math.floor(Math.random() * actions.length)];
                 action();
@@ -1194,6 +1196,11 @@ class GenerativeMusic {
         const randomMachine = machines[Math.floor(Math.random() * machines.length)];
 
         this.loadDrumMachine(randomMachine);
+
+        // Update UI dropdown
+        const drumSelect = document.getElementById('drumMachineSelect');
+        if (drumSelect) drumSelect.value = randomMachine;
+
         console.log('🎲 Chaos: Switched to drum machine:', randomMachine);
     }
 
@@ -1230,6 +1237,13 @@ class GenerativeMusic {
 
         // Gradual transition over 4 seconds
         Tone.Transport.bpm.rampTo(newBPM, 4);
+
+        // Update UI slider
+        const bpmSlider = document.getElementById('bpmSlider');
+        const bpmValue = document.getElementById('bpmValue');
+        if (bpmSlider) bpmSlider.value = newBPM;
+        if (bpmValue) bpmValue.textContent = newBPM;
+
         console.log('🎲 Chaos: BPM changed to:', newBPM);
     }
 
@@ -1260,18 +1274,87 @@ class GenerativeMusic {
             this.effects.delay.wet.rampTo(delayWet, 2);
         }
 
-        console.log('🎲 Chaos: FX updated - Reverb:', Math.round(reverbWet * 100) + '%', 'Delay:', Math.round(delayWet * 100) + '%');
+        // Update UI sliders
+        const reverbSlider = document.getElementById('reverbSlider');
+        const reverbValue = document.getElementById('reverbValue');
+        const delaySlider = document.getElementById('delaySlider');
+        const delayValue = document.getElementById('delayValue');
+
+        const reverbPercent = Math.round(reverbWet * 100);
+        const delayPercent = Math.round(delayWet * 100);
+
+        if (reverbSlider) reverbSlider.value = reverbPercent;
+        if (reverbValue) reverbValue.textContent = reverbPercent + '%';
+        if (delaySlider) delaySlider.value = delayPercent;
+        if (delayValue) delayValue.textContent = delayPercent + '%';
+
+        console.log('🎲 Chaos: FX updated - Reverb:', reverbPercent + '%', 'Delay:', delayPercent + '%');
     }
 
     /**
-     * Randomize synth engine (Tone.js vs WAD)
+     * Randomize synth engine (Tone.js vs WAD vs Dirt)
      */
     randomizeSynthEngine() {
-        const engines = ['tonejs', 'wad'];
+        const engines = ['tonejs', 'wad', 'dirt'];
         const randomEngine = engines[Math.floor(Math.random() * engines.length)];
 
         this.changeSynthEngine(randomEngine);
+
+        // Update UI dropdown
+        const engineSelect = document.getElementById('synthEngineSelect');
+        if (engineSelect) engineSelect.value = randomEngine;
+
         console.log('🎲 Chaos: Synth engine changed to:', randomEngine.toUpperCase());
+    }
+
+    /**
+     * Randomize instrument volume balance
+     */
+    randomizeInstrumentVolumes() {
+        const instruments = ['pad', 'lead', 'bass', 'arp'];
+        const volumes = [];
+
+        instruments.forEach(inst => {
+            // Random volume between -12dB and 0dB
+            const volume = Math.random() * 12 - 12;
+            volumes.push(Math.round(volume * 10) / 10);
+
+            // Apply volume to synths
+            if (this.synths && this.synths[inst]) {
+                this.synths[inst].volume.rampTo(volume, 2);
+            }
+        });
+
+        console.log('🎲 Chaos: Instrument volumes →', volumes.join('dB, ') + 'dB');
+    }
+
+    /**
+     * Randomize effects chain order (swap reverb and delay)
+     */
+    randomizeEffectsChain() {
+        if (!this.effects || !this.effects.reverb || !this.effects.delay) return;
+
+        const shouldSwap = Math.random() < 0.5;
+
+        try {
+            // Disconnect everything
+            this.effects.reverb.disconnect();
+            this.effects.delay.disconnect();
+
+            if (shouldSwap) {
+                // Delay → Reverb
+                this.effects.delay.connect(this.effects.reverb);
+                this.effects.reverb.toDestination();
+                console.log('🎲 Chaos: FX chain → Delay → Reverb');
+            } else {
+                // Reverb → Delay (default)
+                this.effects.reverb.connect(this.effects.delay);
+                this.effects.delay.toDestination();
+                console.log('🎲 Chaos: FX chain → Reverb → Delay');
+            }
+        } catch (error) {
+            console.warn('⚠️ Could not swap effects chain:', error);
+        }
     }
 
     /**
