@@ -190,6 +190,30 @@ class Mesmer {
             this.setChaosMode(newState); // For visual randomization
         });
 
+        // Magick Mode Drums Toggle
+        const magickDrumsToggle = document.getElementById('magickDrumsToggle');
+        magickDrumsToggle.addEventListener('change', (e) => {
+            this.musicEngine.drumsMagickEnabled = e.target.checked;
+            console.log('🔥 Magick Mode drums:', e.target.checked ? 'ENABLED' : 'DISABLED (synths only)');
+
+            // If unchecked, immediately disable and stop drums
+            if (!e.target.checked && this.musicEngine.drumsEnabled) {
+                this.musicEngine.drumsEnabled = false;
+                this.musicEngine.stopDrums();
+
+                // Update drums toggle UI
+                const drumsToggle = document.getElementById('drumsToggle');
+                if (drumsToggle) {
+                    drumsToggle.setAttribute('data-active', 'false');
+                    const statusSpan = drumsToggle.querySelector('.status');
+                    if (statusSpan) {
+                        statusSpan.textContent = 'OFF';
+                    }
+                }
+                console.log('🔥 Drums disabled and stopped');
+            }
+        });
+
         // Recording mode toggle
         const recordingModeSelect = document.getElementById('recordingMode');
         const videoQualityContainer = document.getElementById('videoQualityContainer');
@@ -1814,7 +1838,22 @@ class Mesmer {
             this.synthSeqState.tonejsPresets = this.synthSeqState.tonejsPresets || {};
             this.synthSeqState.tonejsPresets.pad = e.target.value;
             console.log('🎹 Tone.js Pad waveform changed to:', e.target.value);
-            // Reset synths to apply new settings
+
+            // Update the actual instrument in the music engine
+            if (this.musicEngine && this.musicEngine.instruments && this.musicEngine.instruments.pad) {
+                const oldInstrument = this.musicEngine.instruments.pad;
+                oldInstrument.dispose();
+
+                // Create new synth with new waveform
+                this.musicEngine.instruments.pad = new Tone.PolySynth(Tone.Synth, {
+                    oscillator: { type: e.target.value },
+                    envelope: { attack: 2, decay: 1, sustain: 0.7, release: 4 }
+                }).connect(this.musicEngine.masterVolume);
+
+                console.log('✅ Pad synth recreated with', e.target.value, 'waveform');
+            }
+
+            // Reset preview synths
             if (this.previewSynths && this.synthSeqState.engine === 'tonejs') {
                 if (this.previewSynths.pad) this.previewSynths.pad.dispose();
                 this.previewSynths.pad = null;
@@ -1825,6 +1864,21 @@ class Mesmer {
             this.synthSeqState.tonejsPresets = this.synthSeqState.tonejsPresets || {};
             this.synthSeqState.tonejsPresets.lead = e.target.value;
             console.log('⚡ Tone.js Lead waveform changed to:', e.target.value);
+
+            // Update the actual instrument in the music engine
+            if (this.musicEngine && this.musicEngine.instruments && this.musicEngine.instruments.lead) {
+                const oldInstrument = this.musicEngine.instruments.lead;
+                oldInstrument.dispose();
+
+                // Create new synth with new waveform
+                this.musicEngine.instruments.lead = new Tone.Synth({
+                    oscillator: { type: e.target.value },
+                    envelope: { attack: 0.05, decay: 0.2, sustain: 0.3, release: 1 }
+                }).connect(this.musicEngine.masterVolume);
+
+                console.log('✅ Lead synth recreated with', e.target.value, 'waveform');
+            }
+
             if (this.previewSynths && this.synthSeqState.engine === 'tonejs') {
                 if (this.previewSynths.lead) this.previewSynths.lead.dispose();
                 this.previewSynths.lead = null;
@@ -1835,6 +1889,29 @@ class Mesmer {
             this.synthSeqState.tonejsPresets = this.synthSeqState.tonejsPresets || {};
             this.synthSeqState.tonejsPresets.bass = e.target.value;
             console.log('🔊 Tone.js Bass waveform changed to:', e.target.value);
+
+            // Update the actual instrument in the music engine
+            if (this.musicEngine && this.musicEngine.instruments && this.musicEngine.instruments.bass) {
+                const oldInstrument = this.musicEngine.instruments.bass;
+                oldInstrument.dispose();
+
+                // Create new synth with new waveform (MonoSynth for bass)
+                this.musicEngine.instruments.bass = new Tone.MonoSynth({
+                    oscillator: { type: e.target.value },
+                    envelope: { attack: 0.1, decay: 0.3, sustain: 0.4, release: 0.8 },
+                    filterEnvelope: {
+                        attack: 0.05,
+                        decay: 0.2,
+                        sustain: 0.5,
+                        release: 0.5,
+                        baseFrequency: 100,
+                        octaves: 2
+                    }
+                }).connect(this.musicEngine.masterVolume);
+
+                console.log('✅ Bass synth recreated with', e.target.value, 'waveform');
+            }
+
             if (this.previewSynths && this.synthSeqState.engine === 'tonejs') {
                 if (this.previewSynths.bass) this.previewSynths.bass.dispose();
                 this.previewSynths.bass = null;
@@ -1845,6 +1922,21 @@ class Mesmer {
             this.synthSeqState.tonejsPresets = this.synthSeqState.tonejsPresets || {};
             this.synthSeqState.tonejsPresets.arp = e.target.value;
             console.log('🎵 Tone.js Arp waveform changed to:', e.target.value);
+
+            // Update the actual instrument in the music engine
+            if (this.musicEngine && this.musicEngine.instruments && this.musicEngine.instruments.arp) {
+                const oldInstrument = this.musicEngine.instruments.arp;
+                oldInstrument.dispose();
+
+                // Create new synth with new waveform
+                this.musicEngine.instruments.arp = new Tone.Synth({
+                    oscillator: { type: e.target.value },
+                    envelope: { attack: 0.01, decay: 0.1, sustain: 0.05, release: 0.2 }
+                }).connect(this.musicEngine.masterVolume);
+
+                console.log('✅ Arp synth recreated with', e.target.value, 'waveform');
+            }
+
             if (this.previewSynths && this.synthSeqState.engine === 'tonejs') {
                 if (this.previewSynths.arp) this.previewSynths.arp.dispose();
                 this.previewSynths.arp = null;

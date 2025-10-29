@@ -1861,5 +1861,132 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     fragColor = vec4(sqrt(max(col, 0.)), 0.95);
 }`
+    },
+
+    cosmic_nebula: {
+        name: 'Cosmic Nebula',
+        description: '3D volumetric nebula with raymarching and audio reactivity',
+        format: 'shadertoy',
+        code: `// 3D Simplex Noise (by Inigo Quilez)
+vec3 hash( vec3 p ) {
+    p = vec3( dot(p,vec3(127.1,311.7, 74.7)),
+              dot(p,vec3(269.5,183.3,246.1)),
+              dot(p,vec3(113.5,271.9,124.6)));
+    return -1.0 + 2.0 * fract(sin(p) * 43758.5453123);
+}
+
+float noise( in vec3 p ) {
+    vec3 i = floor(p);
+    vec3 f = fract(p);
+    float n = dot(i, vec3(1.0, 57.0, 113.0));
+    vec3 u = f*f*(3.0-2.0*f);
+    return mix(
+        mix(
+            mix( dot( hash(i+vec3(0,0,0)), f-vec3(0,0,0) ),
+                  dot( hash(i+vec3(1,0,0)), f-vec3(1,0,0) ), u.x),
+            mix( dot( hash(i+vec3(0,1,0)), f-vec3(0,1,0) ),
+                  dot( hash(i+vec3(1,1,0)), f-vec3(1,1,0) ), u.x), u.y),
+        mix(
+            mix( dot( hash(i+vec3(0,0,1)), f-vec3(0,0,1) ),
+                  dot( hash(i+vec3(1,0,1)), f-vec3(1,0,1) ), u.x),
+            mix( dot( hash(i+vec3(0,1,1)), f-vec3(0,1,1) ),
+                  dot( hash(i+vec3(1,1,1)), f-vec3(1,1,1) ), u.x), u.y), u.z );
+}
+
+float fbm(vec3 p) {
+    float f = 0.0;
+    mat3 m = mat3( 0.00,  0.80,  0.60,
+                  -0.80,  0.36, -0.48,
+                  -0.60, -0.48,  0.64 );
+    float a = 0.5;
+    // Reduced from 6 to 4 octaves for better performance
+    for (int i = 0; i < 4; i++) {
+        f += a * noise(p);
+        p = m * p * 2.0;
+        a *= 0.5;
+    }
+    return f;
+}
+
+float map(vec3 p) {
+    float universe_sdf = length(p) - 4.0;
+    vec3 q = p * 0.8;
+    q.z += iTime * 0.1;
+    q = q + 0.5 * sin(q.yzx * 2.0 + iTime * 0.3);
+    q = q + 0.25 * sin(q.zxy * 4.0 + iTime * 0.5);
+
+    // Audio-reactive density
+    float density = fbm(q) * (1.0 + iAudioMid * 0.3);
+    float density_shape = density - 0.2;
+    return max(universe_sdf, density_shape);
+}
+
+vec3 render(vec3 ro, vec3 rd) {
+    float t = 1.0;
+    vec3 col = vec3(0.0);
+    float alpha = 0.0;
+    // Reduced from 90 to 50 steps for much better performance
+    const int steps = 50;
+    float step_size = 10.0 / float(steps);
+
+    for (int i = 0; i < steps; i++) {
+        vec3 p = ro + rd * t;
+        float density = map(p);
+
+        if (density < 0.0) {
+            float d = abs(density);
+
+            // Audio-reactive colors
+            vec3 color = 0.5 + 0.5 * cos(vec3(0.5, 0.2, 0.8) * 5.0 + d * 8.0 + p.z * 2.0 + iAudioLow);
+            color *= vec3(1.2, 0.8 + iAudioHigh * 0.4, 0.6);
+
+            float a = (0.1 * d) * (1.0 - alpha);
+            col += color * a;
+            alpha += a;
+        }
+
+        t += step_size;
+        // Early exit optimization
+        if (alpha > 0.98 || length(p) > 5.0) break;
+    }
+
+    return col;
+}
+
+void setupCamera(vec2 uv, vec2 mouse, out vec3 ro, out vec3 rd) {
+    float phi = (mouse.x / iResolution.x - 0.5) * -6.28 + iTime * 0.1;
+    float theta = (mouse.y / iResolution.y - 0.5) * 3.14;
+
+    if (iMouse.z < 0.1) {
+        theta = 0.6;
+        phi = iTime * 0.1;
+    }
+
+    float dist = 3.5;
+    ro = vec3(
+        dist * sin(theta) * cos(phi),
+        dist * cos(theta),
+        dist * sin(theta) * sin(phi)
+    );
+
+    vec3 target = vec3(0.0, 0.0, 0.0);
+    vec3 f = normalize(target - ro);
+    vec3 r = normalize(cross(vec3(0.0, 1.0, 0.0), f));
+    vec3 u = cross(f, r);
+    rd = normalize(f + uv.x * r + uv.y * u);
+}
+
+void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
+    vec2 uv = (2.0 * fragCoord.xy - iResolution.xy) / iResolution.y;
+    vec2 mouse = iMouse.xy;
+    vec3 ro, rd;
+    setupCamera(uv, mouse, ro, rd);
+    vec3 col = render(ro, rd);
+
+    // Audio-reactive brightness boost
+    col *= (0.9 + iAudioHigh * 0.4);
+
+    fragColor = vec4(pow(col, vec3(0.4545)), 1.0);
+}`
     }
 };

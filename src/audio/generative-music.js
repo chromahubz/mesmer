@@ -14,8 +14,9 @@ class GenerativeMusic {
         this.masterVolume = null;
         this.currentGenre = 'ambient'; // ambient, techno, jazz, drone
         this.drumsEnabled = false; // Toggle for drum machine
+        this.drumsMagickEnabled = true; // Whether drums are included in Magick Mode (user can toggle)
         this.currentDrumMachine = 'RolandTR808'; // Current drum machine
-        this.currentPattern = 'basic'; // Current drum pattern
+        this.currentPattern = 'techno'; // Default to techno instead of basic rock
         this.drumSamples = null; // Loaded drum samples
         this.drumMachinesAvailable = [
             'AJKPercusyn',
@@ -181,6 +182,18 @@ class GenerativeMusic {
                 tom3: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
             }
         };
+
+        // Pattern groups for musically coherent transitions
+        // This ensures that Magick Mode picks patterns that work well together
+        this.patternGroups = {
+            electronic: ['techno', 'breakbeat', 'jungle'], // High energy electronic
+            groove: ['hiphop', 'breakbeat'],                // Mid-tempo grooves
+            atmospheric: ['ambient', 'techno'],             // Spacious and minimal
+            upbeat: ['techno', 'jungle', 'hiphop']         // Driving rhythms
+        };
+
+        // Track last pattern group to maintain musical flow
+        this.lastPatternGroup = 'electronic';
     }
 
     async init() {
@@ -699,6 +712,12 @@ class GenerativeMusic {
         // Only play drums if enabled
         if (this.drumsEnabled) {
             this.startDrums();
+
+            // If magick mode is already on, randomize drum pattern immediately
+            if (this.chaosMode) {
+                this.randomizeDrumPattern();
+                console.log('🔥 Magick Mode was active - randomizing drums on play!');
+            }
         }
 
         // Evolve the music over time
@@ -1152,12 +1171,43 @@ class GenerativeMusic {
             clearInterval(this.chaosInterval);
         }
 
+        // Immediately enable drums when magick mode starts (only if drumsMagickEnabled is true)
+        if (!this.drumsEnabled && this.drumsMagickEnabled) {
+            this.drumsEnabled = true;
+            console.log('🔥 Magick Mode: Drums enabled!');
+
+            // Update drum indicator UI
+            const drumsToggle = document.getElementById('drumsToggle');
+            if (drumsToggle) {
+                drumsToggle.setAttribute('data-active', 'true');
+                const statusSpan = drumsToggle.querySelector('.status');
+                if (statusSpan) {
+                    statusSpan.textContent = 'ON';
+                }
+            }
+
+            // If already playing, start drums immediately
+            if (this.isPlaying) {
+                this.startDrums();
+                console.log('🔥 Magick Mode: Drums started immediately!');
+            }
+        } else if (!this.drumsMagickEnabled) {
+            console.log('🔥 Magick Mode: Synths only (drums disabled)');
+        }
+
+        // IMMEDIATELY randomize drum pattern (whether playing or not)
+        // This sets a random initial pattern instead of starting with basic/techno
+        if (this.drumsMagickEnabled) {
+            this.randomizeDrumPattern();
+            console.log('🔥 Magick Mode: Set random initial drum pattern!');
+        }
+
         // Trigger random changes every 8-16 seconds
         this.chaosInterval = setInterval(() => {
             if (!this.chaosMode || !this.isPlaying) return;
 
+            // Build actions list - only include drum actions if drums are enabled AND drumsMagickEnabled
             const actions = [
-                () => this.randomizeDrumPattern(),
                 () => this.randomizeSynthPreset(),
                 () => this.randomizeSynthEngine(),
                 () => this.randomizeBPM(),
@@ -1166,9 +1216,20 @@ class GenerativeMusic {
                 () => this.randomizeInstrumentVolumes(),
                 () => this.randomizeEffectsChain(),
                 () => this.randomizeNoteDensity(),
-                () => this.randomizeSynthFX(),
-                () => this.randomizeDrumFX()
+                () => this.randomizeSynthFX()
             ];
+
+            // Add drum-related actions only if drums are enabled AND drumsMagickEnabled is true
+            if (this.drumsEnabled && this.drumsMagickEnabled) {
+                actions.push(() => this.randomizeDrumPattern());
+                actions.push(() => this.randomizeDrumFX());
+            }
+
+            // SONG STRUCTURE: Occasionally toggle drums on/off for build-ups and breakdowns
+            // Only 1% chance to create dynamic song structure (rare but impactful)
+            if (this.drumsMagickEnabled && Math.random() < 0.01) {
+                this.toggleDrumsForStructure();
+            }
 
             // Pick 1-3 random actions to execute
             const numActions = Math.floor(Math.random() * 3) + 1;
@@ -1193,7 +1254,11 @@ class GenerativeMusic {
      * Randomize drum pattern and machine with smooth crossfade
      */
     randomizeDrumPattern() {
-        if (!this.midiDrumMachines || Object.keys(this.midiDrumMachines).length === 0) return;
+        // Check if drums are available
+        if (!this.drumSamples || !this.drumMachinesAvailable || this.drumMachinesAvailable.length === 0) {
+            console.warn('⚠️ Drum samples not loaded yet');
+            return;
+        }
 
         // Enable drums if not already enabled
         if (!this.drumsEnabled && this.isPlaying) {
@@ -1202,12 +1267,32 @@ class GenerativeMusic {
             console.log('🎲 Chaos: Enabled drums');
         }
 
-        const machines = Object.keys(this.midiDrumMachines);
-        const randomMachine = machines[Math.floor(Math.random() * machines.length)];
+        // drumMachinesAvailable is already an array of strings, no need to map
+        const randomMachine = this.drumMachinesAvailable[Math.floor(Math.random() * this.drumMachinesAvailable.length)];
 
-        // Also pick a random drum pattern
-        const allPatterns = this.getDrumPatterns();
-        const randomPattern = allPatterns[Math.floor(Math.random() * allPatterns.length)];
+        // SMART PATTERN SELECTION: Pick from a musically coherent group
+        // 70% chance to stay in same group, 30% chance to switch groups for variety
+        const shouldSwitchGroup = Math.random() > 0.7;
+        let patternGroup;
+
+        if (shouldSwitchGroup || !this.lastPatternGroup) {
+            // Pick a new random group
+            const groups = Object.keys(this.patternGroups);
+            patternGroup = groups[Math.floor(Math.random() * groups.length)];
+            this.lastPatternGroup = patternGroup;
+            console.log('🎲 Magick: Switching to', patternGroup, 'style');
+        } else {
+            // Stay in current group for musical coherence
+            patternGroup = this.lastPatternGroup;
+        }
+
+        // Get patterns from the selected group
+        const groupPatterns = this.patternGroups[patternGroup];
+        const randomPatternKey = groupPatterns[Math.floor(Math.random() * groupPatterns.length)];
+        const randomPattern = {
+            value: randomPatternKey,
+            label: this.drumPatterns[randomPatternKey].name
+        };
 
         // Fade out current drums gradually (2 seconds)
         if (this.drumVolume) {
@@ -1219,9 +1304,9 @@ class GenerativeMusic {
                 // Load new drum machine
                 this.loadDrumMachine(randomMachine);
 
-                // Change drum pattern
+                // Change drum pattern (use .value not .key!)
                 if (randomPattern) {
-                    this.changeDrumPattern(randomPattern.key);
+                    this.changeDrumPattern(randomPattern.value);
                 }
 
                 // Update UI dropdowns
@@ -1229,29 +1314,29 @@ class GenerativeMusic {
                 if (drumSelect) drumSelect.value = randomMachine;
 
                 const patternSelect = document.getElementById('drumPatternSelect');
-                if (patternSelect && randomPattern) patternSelect.value = randomPattern.key;
+                if (patternSelect && randomPattern) patternSelect.value = randomPattern.value;
 
                 // Fade in new drums (back to original volume)
                 if (this.drumVolume) {
                     this.drumVolume.volume.rampTo(currentVolume, 2);
                 }
 
-                console.log('🎲 Chaos: Switched to drum machine:', randomMachine, '| Pattern:', randomPattern ? randomPattern.name : 'unknown');
+                console.log('🎲 Magick: Drum machine:', randomMachine, '| Pattern:', randomPattern ? randomPattern.label : 'unknown');
             }, 2000);
         } else {
             // Fallback if no volume control
             this.loadDrumMachine(randomMachine);
             if (randomPattern) {
-                this.changeDrumPattern(randomPattern.key);
+                this.changeDrumPattern(randomPattern.value);
             }
 
             const drumSelect = document.getElementById('drumMachineSelect');
             if (drumSelect) drumSelect.value = randomMachine;
 
             const patternSelect = document.getElementById('drumPatternSelect');
-            if (patternSelect && randomPattern) patternSelect.value = randomPattern.key;
+            if (patternSelect && randomPattern) patternSelect.value = randomPattern.value;
 
-            console.log('🎲 Chaos: Switched to drum machine:', randomMachine, '| Pattern:', randomPattern ? randomPattern.name : 'unknown');
+            console.log('🎲 Magick: Drum machine:', randomMachine, '| Pattern:', randomPattern ? randomPattern.label : 'unknown');
         }
     }
 
@@ -1523,10 +1608,18 @@ class GenerativeMusic {
      * Randomize synth FX (reverb and delay)
      */
     randomizeSynthFX() {
-        const targetSynthReverb = Math.round(Math.random() * 100);
-        const targetSynthDelay = Math.round(Math.random() * 100);
+        // Get current values
+        const synthReverbSlider = document.getElementById('synthReverbSlider');
+        const synthDelaySlider = document.getElementById('synthDelaySlider');
 
-        // Apply to audio effects
+        const startSynthReverb = synthReverbSlider ? parseInt(synthReverbSlider.value) : 30;
+        const startSynthDelay = synthDelaySlider ? parseInt(synthDelaySlider.value) : 25;
+
+        // Target values (max 60 for synth FX)
+        const targetSynthReverb = Math.round(Math.random() * 60);
+        const targetSynthDelay = Math.round(Math.random() * 60);
+
+        // Apply to audio effects with 2-second ramp
         if (this.effects && this.effects.synthReverb) {
             this.effects.synthReverb.wet.rampTo(targetSynthReverb / 100, 2);
         }
@@ -1534,24 +1627,57 @@ class GenerativeMusic {
             this.effects.synthDelay.wet.rampTo(targetSynthDelay / 100, 2);
         }
 
-        // Update UI sliders (no animation needed for these)
-        const synthReverbSlider = document.getElementById('synthReverbSlider');
-        const synthDelaySlider = document.getElementById('synthDelaySlider');
+        // Animate UI sliders over 2 seconds
+        const duration = 2000;
+        const startTime = Date.now();
 
-        if (synthReverbSlider) synthReverbSlider.value = targetSynthReverb;
-        if (synthDelaySlider) synthDelaySlider.value = targetSynthDelay;
+        const easeInOut = (t) => {
+            return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+        };
 
-        console.log('🎲 Chaos: Synth FX → Reverb:', targetSynthReverb + '%', 'Delay:', targetSynthDelay + '%');
+        const animate = () => {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const easedProgress = easeInOut(progress);
+
+            const currentSynthReverb = Math.round(startSynthReverb + (targetSynthReverb - startSynthReverb) * easedProgress);
+            const currentSynthDelay = Math.round(startSynthDelay + (targetSynthDelay - startSynthDelay) * easedProgress);
+
+            // Update UI
+            const synthReverbValue = document.getElementById('synthReverbValue');
+            const synthDelayValue = document.getElementById('synthDelayValue');
+
+            if (synthReverbSlider) synthReverbSlider.value = currentSynthReverb;
+            if (synthReverbValue) synthReverbValue.textContent = currentSynthReverb + '%';
+            if (synthDelaySlider) synthDelaySlider.value = currentSynthDelay;
+            if (synthDelayValue) synthDelayValue.textContent = currentSynthDelay + '%';
+
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                console.log('🎲 Chaos: Synth FX → Reverb:', targetSynthReverb + '%', 'Delay:', targetSynthDelay + '%');
+            }
+        };
+
+        animate();
     }
 
     /**
      * Randomize drum FX (reverb and delay)
      */
     randomizeDrumFX() {
-        const targetDrumReverb = Math.round(Math.random() * 60); // 0-60%
-        const targetDrumDelay = Math.round(Math.random() * 50); // 0-50%
+        // Get current values
+        const drumReverbSlider = document.getElementById('drumReverbSlider');
+        const drumDelaySlider = document.getElementById('drumDelaySlider');
 
-        // Apply to audio effects
+        const startDrumReverb = drumReverbSlider ? parseInt(drumReverbSlider.value) : 15;
+        const startDrumDelay = drumDelaySlider ? parseInt(drumDelaySlider.value) : 10;
+
+        // Target values (max 40 for drum FX)
+        const targetDrumReverb = Math.round(Math.random() * 40);
+        const targetDrumDelay = Math.round(Math.random() * 40);
+
+        // Apply to audio effects with 2-second ramp
         if (this.effects && this.effects.drumReverb) {
             this.effects.drumReverb.wet.rampTo(targetDrumReverb / 100, 2);
         }
@@ -1559,14 +1685,78 @@ class GenerativeMusic {
             this.effects.drumDelay.wet.rampTo(targetDrumDelay / 100, 2);
         }
 
-        // Update UI sliders
-        const drumReverbSlider = document.getElementById('drumReverbSlider');
-        const drumDelaySlider = document.getElementById('drumDelaySlider');
+        // Animate UI sliders over 2 seconds
+        const duration = 2000;
+        const startTime = Date.now();
 
-        if (drumReverbSlider) drumReverbSlider.value = targetDrumReverb;
-        if (drumDelaySlider) drumDelaySlider.value = targetDrumDelay;
+        const easeInOut = (t) => {
+            return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+        };
 
-        console.log('🎲 Chaos: Drum FX → Reverb:', targetDrumReverb + '%', 'Delay:', targetDrumDelay + '%');
+        const animate = () => {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const easedProgress = easeInOut(progress);
+
+            const currentDrumReverb = Math.round(startDrumReverb + (targetDrumReverb - startDrumReverb) * easedProgress);
+            const currentDrumDelay = Math.round(startDrumDelay + (targetDrumDelay - startDrumDelay) * easedProgress);
+
+            // Update UI
+            const drumReverbValue = document.getElementById('drumReverbValue');
+            const drumDelayValue = document.getElementById('drumDelayValue');
+
+            if (drumReverbSlider) drumReverbSlider.value = currentDrumReverb;
+            if (drumReverbValue) drumReverbValue.textContent = currentDrumReverb + '%';
+            if (drumDelaySlider) drumDelaySlider.value = currentDrumDelay;
+            if (drumDelayValue) drumDelayValue.textContent = currentDrumDelay + '%';
+
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                console.log('🎲 Chaos: Drum FX → Reverb:', targetDrumReverb + '%', 'Delay:', targetDrumDelay + '%');
+            }
+        };
+
+        animate();
+    }
+
+    /**
+     * Toggle drums on/off for song structure (build-ups, breakdowns)
+     * Creates dynamic arrangement changes
+     */
+    toggleDrumsForStructure() {
+        if (!this.drumsMagickEnabled) return;
+
+        const drumsToggle = document.getElementById('drumsToggle');
+
+        if (this.drumsEnabled) {
+            // Turn drums OFF for a breakdown/build-up
+            this.drumsEnabled = false;
+            this.stopDrums();
+
+            if (drumsToggle) {
+                drumsToggle.setAttribute('data-active', 'false');
+                const statusSpan = drumsToggle.querySelector('.status');
+                if (statusSpan) statusSpan.textContent = 'OFF';
+            }
+
+            console.log('🎵 Song Structure: BREAKDOWN (drums off)');
+        } else {
+            // Turn drums ON for a drop/section change
+            this.drumsEnabled = true;
+            this.startDrums();
+
+            if (drumsToggle) {
+                drumsToggle.setAttribute('data-active', 'true');
+                const statusSpan = drumsToggle.querySelector('.status');
+                if (statusSpan) statusSpan.textContent = 'ON';
+            }
+
+            // Randomize pattern for the drop
+            this.randomizeDrumPattern();
+
+            console.log('🎵 Song Structure: DROP (drums on with new pattern)');
+        }
     }
 
     /**
