@@ -1680,9 +1680,12 @@ body.mpc-assign-mode .mpc-pad.selected {
     display: flex !important;
     flex-direction: column !important;
     gap: 16px !important;
-    flex: 1 !important;
-    overflow-y: auto !important;
+    flex: 1 1 auto !important;
+    overflow-y: scroll !important;
+    overflow-x: hidden !important;
     min-height: 0 !important;
+    max-height: calc(92vh - 80px) !important;
+    height: 100% !important;
 }
 
 /* Track Selector Tabs */
