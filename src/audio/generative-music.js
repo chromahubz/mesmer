@@ -1269,23 +1269,48 @@ class GenerativeMusic {
     }
 
     /**
-     * Randomize BPM with gradual transition
+     * Randomize BPM with gradual transition and animated UI
      */
     randomizeBPM() {
         const minBPM = 80;
         const maxBPM = 160;
-        const newBPM = Math.floor(Math.random() * (maxBPM - minBPM + 1)) + minBPM;
+        const targetBPM = Math.floor(Math.random() * (maxBPM - minBPM + 1)) + minBPM;
+
+        // Get current BPM
+        const bpmSlider = document.getElementById('bpmSlider');
+        const startBPM = bpmSlider ? parseInt(bpmSlider.value) : 120;
 
         // Gradual transition over 4 seconds
-        Tone.Transport.bpm.rampTo(newBPM, 4);
+        Tone.Transport.bpm.rampTo(targetBPM, 4);
 
-        // Update UI slider
-        const bpmSlider = document.getElementById('bpmSlider');
-        const bpmValue = document.getElementById('bpmValue');
-        if (bpmSlider) bpmSlider.value = newBPM;
-        if (bpmValue) bpmValue.textContent = newBPM;
+        // Animate UI slider over 4 seconds
+        const duration = 4000;
+        const startTime = Date.now();
 
-        console.log('🎲 Chaos: BPM changed to:', newBPM);
+        const easeInOut = (t) => {
+            return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+        };
+
+        const animate = () => {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const easedProgress = easeInOut(progress);
+
+            const currentBPM = Math.round(startBPM + (targetBPM - startBPM) * easedProgress);
+
+            // Update UI
+            const bpmValue = document.getElementById('bpmValue');
+            if (bpmSlider) bpmSlider.value = currentBPM;
+            if (bpmValue) bpmValue.textContent = currentBPM;
+
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                console.log('🎲 Chaos: BPM changed to:', targetBPM);
+            }
+        };
+
+        animate();
     }
 
     /**
@@ -1300,36 +1325,61 @@ class GenerativeMusic {
     }
 
     /**
-     * Randomize effects (reverb/delay)
+     * Randomize effects (reverb/delay) with smooth UI updates
      */
     randomizeEffects() {
-        // Randomize reverb (0-60%)
-        const reverbWet = Math.random() * 0.6;
-        if (this.effects.reverb) {
-            this.effects.reverb.wet.rampTo(reverbWet, 2);
-        }
-
-        // Randomize delay (0-40%)
-        const delayWet = Math.random() * 0.4;
-        if (this.effects.delay) {
-            this.effects.delay.wet.rampTo(delayWet, 2);
-        }
-
-        // Update UI sliders
+        // Get current values
         const reverbSlider = document.getElementById('reverbSlider');
-        const reverbValue = document.getElementById('reverbValue');
         const delaySlider = document.getElementById('delaySlider');
-        const delayValue = document.getElementById('delayValue');
 
-        const reverbPercent = Math.round(reverbWet * 100);
-        const delayPercent = Math.round(delayWet * 100);
+        const startReverb = reverbSlider ? parseInt(reverbSlider.value) : 30;
+        const startDelay = delaySlider ? parseInt(delaySlider.value) : 20;
 
-        if (reverbSlider) reverbSlider.value = reverbPercent;
-        if (reverbValue) reverbValue.textContent = reverbPercent + '%';
-        if (delaySlider) delaySlider.value = delayPercent;
-        if (delayValue) delayValue.textContent = delayPercent + '%';
+        // Target values
+        const targetReverb = Math.round(Math.random() * 60);
+        const targetDelay = Math.round(Math.random() * 40);
 
-        console.log('🎲 Chaos: FX updated - Reverb:', reverbPercent + '%', 'Delay:', delayPercent + '%');
+        // Apply to audio with 2-second ramp
+        if (this.effects.reverb) {
+            this.effects.reverb.wet.rampTo(targetReverb / 100, 2);
+        }
+        if (this.effects.delay) {
+            this.effects.delay.wet.rampTo(targetDelay / 100, 2);
+        }
+
+        // Animate UI sliders over 2 seconds
+        const duration = 2000;
+        const startTime = Date.now();
+
+        const easeInOut = (t) => {
+            return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+        };
+
+        const animate = () => {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const easedProgress = easeInOut(progress);
+
+            const currentReverb = Math.round(startReverb + (targetReverb - startReverb) * easedProgress);
+            const currentDelay = Math.round(startDelay + (targetDelay - startDelay) * easedProgress);
+
+            // Update UI
+            const reverbValue = document.getElementById('reverbValue');
+            const delayValue = document.getElementById('delayValue');
+
+            if (reverbSlider) reverbSlider.value = currentReverb;
+            if (reverbValue) reverbValue.textContent = currentReverb + '%';
+            if (delaySlider) delaySlider.value = currentDelay;
+            if (delayValue) delayValue.textContent = currentDelay + '%';
+
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                console.log('🎲 Chaos: FX updated - Reverb:', targetReverb + '%', 'Delay:', targetDelay + '%');
+            }
+        };
+
+        animate();
     }
 
     /**
