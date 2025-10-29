@@ -1571,5 +1571,295 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     fragColor = vec4(sqrt(max(col, 0.0)), 0.95);
 }`
+    },
+
+    // Perlin noise field with rotation
+    perlin_field: {
+        name: 'Perlin Field',
+        description: 'Rotating Perlin noise field with audio reactivity',
+        format: 'shadertoy',
+        code: `#define R iResolution
+#define T (iTime/3.+5.)
+
+void mainImage( out vec4 k, vec2 p )
+{
+    #define rot(p,a) vec2 sc=sin(vec2(a,a+1.6)); p*=mat2(sc.y,-sc.x,sc);
+
+    #define A vec3(0,1,157)
+    #define B {vec2 m=fract(p),l=dot(p-m,A.yz)+A.xz,r=mix(fract(57.*sin(l++)),fract(57.*sin(l)),(m*=m*(3.-m-m)).x);k+=mix(r.x,r.y,m.y)/(s+=s);p*=mat2(1,1,1,-1);}
+
+    // Audio-reactive scaling and translation
+    p *= log(T + iAudioLow * 0.5)/R.y;
+    p.x += T + iAudioMid * 0.3;
+
+    // Audio-reactive rotation
+    rot(p, T/22. + iAudioHigh * 0.5);
+
+    float s = 1.; k = vec4(0);
+    B B B B // unrolled perlin noise
+
+    // Audio-reactive color transform
+    k += sin(2.*sin(k*22.+T*2.+iAudioMid*3.)+p.yxyy-p.yyxy*.5)/12.;
+
+    // Brightness modulation
+    k *= (0.85 + iAudioHigh * 0.3);
+}`
+    },
+
+    // Flower mandala animation
+    flower_mandala: {
+        name: 'Flower Mandala',
+        description: 'Animated flower mandalas with audio-reactive colors',
+        format: 'shadertoy',
+        code: `#define C_PI 3.14159265359
+
+vec3 hash13(float p)
+{
+   vec3 p3 = fract(vec3(p) * vec3(.1031, .1030, .0973));
+   p3 += dot(p3, p3.yzx+33.33);
+   return fract((p3.xxy+p3.yzz)*p3.zyx);
+}
+
+vec3 flower(vec2 p, float t, float id){
+    vec3 r = hash13(id+floor(t)*13.);
+
+    float lT = fract(-t);
+    float ilT = 1.-lT;
+
+    lT*=lT;
+
+    float fade = sin(lT*C_PI);
+    fade = smoothstep(0.0,0.1,fade);
+    fade*=fract(t);
+
+    // Audio-reactive position jitter
+    p+=vec2(r.xy-0.5)*pow(lT,.25) + vec2(iAudioHigh * 0.1);
+
+    // Audio-reactive scale
+    p*=lT*(5. + iAudioLow * 2.);
+
+    float l = length(p);
+    float m = smoothstep(.4,0.,l);
+
+    float a = atan(p.y,p.x);
+
+    // Audio-reactive rotation
+    a = sin(a*r.x*1.23  + iTime*0.123 + iAudioMid) *
+        sin(a*r.y*2.321 + iTime*0.456 + iAudioMid) *
+        sin(a*r.z*1.123 + iTime*0.589 + iAudioMid) *
+        sin(a);
+
+    l = mix(l,a*(r.x-0.5)*3.*ilT,r.z*0.5+0.2);
+
+    float s1  = smoothstep(.5,0.,l);
+    float s2  = smoothstep(0.01,0.,l);
+    float s = (s1-s2)*m;
+
+    // Audio-reactive colors
+    vec3 c1 =  vec3(sin(s *vec3(0.987,0.765,0.543)*C_PI*1.4 + iAudioHigh));
+    vec3 c2 =  vec3(sin(s2*vec3(0.13*r.x,0.865*r.y,0.943*r.z)*6.664 + iAudioMid));
+
+    vec3 sOut = (c1*mix(c2,vec3(1.),r.y*0.5+0.5)*c1)*fade;
+
+    return sOut*l;
+}
+
+void mainImage( out vec4 fragColor, in vec2 fragCoord )
+{
+    vec2 uv = (fragCoord*2.-iResolution.xy)/iResolution.y;
+
+    vec3 s = vec3(0.);
+
+    // Audio-reactive layer count
+    const float amount = 20.;
+    float del = 1./amount;
+
+    for(float i = 1.; i <= amount; i++){
+        // Audio-reactive animation speed
+        s+=flower(uv, iTime*0.05 + del*i + iAudioLow * 0.02, i);
+    }
+
+    // Audio-reactive brightness boost
+    fragColor = vec4(pow(s*(3. + iAudioHigh * 1.5), vec3(0.4545)), 0.95);
+}`
+    },
+
+    // Voronoi hexagonal cells with lighting
+    voronoi_hex: {
+        name: 'Voronoi Hex',
+        description: 'Hexagonal Voronoi cells with dual lighting and audio reactivity',
+        format: 'shadertoy',
+        code: `// Base code from shane
+const float _threshold = 0.0;
+const vec3 _cellColor = vec3(0.2,0.6,0.7);
+const float _zoom = 1.0;
+
+float objID;
+vec2 cellID;
+
+mat2 r2(in float a){ float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
+
+float smin2(float a, float b, float r)
+{
+   float f = max(0., 1. - abs(b - a)/r);
+   return min(a, b) - r*.25*f*f;
+}
+
+vec2 hash22H(vec2 p)
+{
+    float n = sin(dot(p, vec2(41, 289)));
+    p = fract(vec2(262144, 32768)*n);
+    return sin( p*6.2831853 + iTime + iAudioMid )*.3660254 + .5;
+}
+
+vec2 pixToHex(vec2 p)
+{
+    return floor(vec2(p.x + .57735*p.y, 1.1547*p.y));
+}
+
+vec2 hexPt(vec2 p)
+{
+    return vec2(p.x - p.y*.5, .866025*p.y) + (hash22H(p) - .5)*.866025/2.;
+}
+
+vec3 Voronoi(vec2 p)
+{
+    vec2 pH = pixToHex(p);
+    const vec2 hp[7] = vec2[7](vec2(-1), vec2(0, -1), vec2(-1, 0), vec2(0), vec2(1), vec2(1, 0), vec2(0, 1));
+    vec2 minCellID = vec2(0);
+    vec2 mo, o;
+    float md = 8., lMd = 8., lMd2 = 8., lnDist, d;
+    for (int i=0; i<7; i++)
+    {
+        vec2 h = hexPt(pH + hp[i]) - p;
+        d = dot(h, h);
+        if( d<md )
+        {
+            md = d;
+            mo = h;
+            minCellID = hp[i];
+        }
+    }
+
+    // Audio-reactive roundness
+    float r = mix(0.0, 0.4, sin(iTime * 0.5 + iAudioLow * 2.0)*0.5+0.5);
+
+    for (int i=0; i<7; i++)
+    {
+        vec2 h = hexPt(pH + hp[i] + minCellID) - p - mo;
+        if(dot(h, h)>.00001){
+            lnDist = dot(mo + h*.5, normalize(h));
+            lMd = smin2(lMd, lnDist, (lnDist*.5 + .5)*r);
+            lMd2 = min(lMd2, lnDist);
+            cellID = vec2(lMd);
+        }
+    }
+
+    float t = iTime * 5.;
+    d = lMd * 25.;
+    mo -= vec2(cos(d + t),sin(d + t)) / d;
+    lMd2 = length(mo);
+
+    return max(vec3(lMd, lMd2, md), 0.);
+}
+
+float bumpFunc(vec2 p)
+{
+    vec3 v = Voronoi(p);
+    float c = v.x;
+    float ew = _threshold;
+    if(c<ew)
+    {
+        objID = 1.;
+        c = abs(c - ew)/ew;
+        c = smoothstep(0., .25, c)/4. + clamp(-cos(c*6.283*1.5) - .5, 0., 1.);
+    }
+    else
+    {
+        objID = 0.;
+        c = mix(v.x,  v.y, .75);
+        c = (c - ew)/(1. - ew);
+        c = clamp(c + cos(c*6.283*24.)*.002, 0., 1.);
+    }
+    return c;
+}
+
+void mainImage( out vec4 fragColor, in vec2 fragCoord )
+{
+    cellID = vec2(0);
+    vec2 uv = (fragCoord - iResolution.xy*.5)/min(iResolution.y, 800.) * _zoom;
+    vec2 aspect = vec2(iResolution.y/iResolution.x, 1);
+    uv *= 1. + dot(uv*aspect, uv*aspect)*.05;
+    vec3 r = normalize(vec3(uv.xy, 1.));
+
+    // Audio-reactive movement
+    vec2 p = uv*3.5 + vec2(0, iTime*.5 + iAudioLow * 0.3);
+
+    float c = bumpFunc(p);
+    float svObjID = objID;
+    vec3 sp = vec3(p, 0.);
+
+    // Audio-reactive light positions
+    vec3 lp = sp + vec3(-1.3*sin(iTime/2. + iAudioMid), .8*cos(iTime/2.), -.5);
+    vec3 lp2 = sp + vec3(1.3*sin(iTime/2. + iAudioMid), -.8*cos(iTime/2.), -.5);
+
+    sp.z -= c*.1;
+    vec2 e = vec2(8./iResolution.y, 0);
+    float bf = .4;
+    if (svObjID>.5) { e.x = 2./iResolution.y; }
+    float fx = (bumpFunc(p - e) - bumpFunc(p + e));
+    float fy = (bumpFunc(p - e.yx) - bumpFunc(p + e.yx));
+    vec3 n = normalize(vec3(fx, fy, -e.x/bf));
+    float edge = abs(c*2. - fx) + abs(c*2. - fy);
+
+    vec3 oCol = vec3(0.5);
+    if(svObjID>.5)
+    {
+        oCol *= 1.-_cellColor;
+    }
+    else
+    {
+        oCol *= _cellColor;
+    }
+
+    // Audio-reactive color modulation
+    oCol.xy *= cellID * (10. + iAudioHigh * 5.);
+
+    float lDist = length(lp - sp);
+    float atten = 1./(1. + lDist*lDist*.5);
+    vec3 l = (lp - sp)/max(lDist, .001);
+    float diff = max(max(dot(l, n), 0.), 0.);
+    float spec = pow(max(dot(reflect(l, n), r), 0.), 64.);
+
+    float lDist2 = length(lp2 - sp);
+    float atten2 = 1./(1. + lDist2*lDist2*.5);
+    vec3 l2 = (lp2 - sp)/max(lDist2, .001);
+    float diff2 = max(max(dot(l2, n), 0.), 0.);
+    float spec2 = pow(max(dot(reflect(l2, n), r), 0.), 64.);
+
+    diff = pow(diff, 4.)*2.;
+    diff2 = pow(diff2, 4.)*2.;
+
+    // Audio-reactive lighting colors
+    vec3 col = oCol*(diff*vec3(.5 + iAudioHigh * 0.3, .7, 1) + .25 + vec3(.25, .5, 1)*spec*32.)*atten*.5;
+    col += oCol*(diff2*vec3(1, .7 + iAudioMid * 0.3, .5) + .25 + vec3(1, .3, .1)*spec2*32.)*atten2*.5;
+
+    if(svObjID>.5)
+    {
+        col *= edge;
+    }
+    else
+    {
+        col /= edge;
+    }
+
+    vec2 u = fragCoord/iResolution.xy;
+    col *= pow(16.*u.x*u.y*(1. - u.x)*(1. - u.y) , .125);
+
+    // Audio-reactive brightness
+    col *= (0.9 + iAudioHigh * 0.3);
+
+    fragColor = vec4(sqrt(max(col, 0.)), 0.95);
+}`
     }
 };

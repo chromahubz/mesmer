@@ -54,7 +54,7 @@ void main() {
     },
 
     wireframe_tunnel: {
-        name: '🔷 Wireframe Tunnel',
+        name: 'Wireframe Tunnel',
         description: 'Rotating wireframe tunnel like early vector graphics',
         format: 'glsl',
         code: `#version 300 es
@@ -104,7 +104,7 @@ void main() {
     },
 
     vector_lines: {
-        name: '🔷 Vector Lines',
+        name: 'Vector Lines',
         description: 'Glowing vector line patterns',
         format: 'glsl',
         code: `#version 300 es
@@ -157,7 +157,7 @@ void main() {
     },
 
     circuit_board: {
-        name: '🔷 Circuit Board',
+        name: 'Circuit Board',
         description: 'Animated PCB traces and components',
         format: 'glsl',
         code: `#version 300 es
@@ -217,7 +217,7 @@ void main() {
     },
 
     scan_lines: {
-        name: '🔷 Scan Lines',
+        name: 'Scan Lines',
         description: 'CRT-style scan lines with digital glitches',
         format: 'glsl',
         code: `#version 300 es
@@ -359,7 +359,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     },
 
     digital_rain: {
-        name: '🔷 Digital Rain',
+        name: 'Digital Rain',
         description: 'Matrix-style falling code/digits',
         format: 'shadertoy',
         code: `float random(vec2 st) {
@@ -407,7 +407,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     },
 
     vector_scope: {
-        name: '🔷 Vector Scope',
+        name: 'Vector Scope',
         description: 'Oscilloscope-style vector display',
         format: 'shadertoy',
         code: `void mainImage(out vec4 fragColor, in vec2 fragCoord) {
@@ -458,7 +458,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     },
 
     retro_blocks: {
-        name: '🔷 Retro Blocks',
+        name: 'Retro Blocks',
         description: 'Early CGI block patterns and transitions',
         format: 'shadertoy',
         code: `float box(vec2 p, vec2 size) {
