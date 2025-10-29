@@ -2149,24 +2149,44 @@
                 <div class="control-group">
                     <h3>System</h3>
 
-                    <!-- Video Recording -->
+                    <!-- Recording -->
                     <div class="shader-selector" style="margin-bottom: 12px;">
                         <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #f06;">
                             <svg class="icon" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle;">
                                 <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/>
                             </svg>
-                            🎥 Video Recording
+                            🎙️ Recording
                         </label>
 
-                        <!-- Quality Preset -->
+                        <!-- Recording Mode Toggle -->
                         <div style="margin-bottom: 8px;">
-                            <label style="font-size: 11px; color: #aaa; display: block; margin-bottom: 4px;">Quality Preset:</label>
+                            <label style="font-size: 11px; color: #aaa; display: block; margin-bottom: 4px;">Mode:</label>
+                            <select id="recordingMode" style="width: 100%; padding: 6px; background: rgba(255,255,255,0.1); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 6px; color: white; font-size: 12px;">
+                                <option value="audio">🎵 Audio Only (WAV)</option>
+                                <option value="video" selected>🎥 Video + Audio (WebM)</option>
+                            </select>
+                        </div>
+
+                        <!-- Quality Preset (Video) -->
+                        <div id="videoQualityContainer" style="margin-bottom: 8px;">
+                            <label style="font-size: 11px; color: #aaa; display: block; margin-bottom: 4px;">Video Quality:</label>
                             <select id="recordingQuality" style="width: 100%; padding: 6px; background: rgba(255,255,255,0.1); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 6px; color: white; font-size: 12px;">
                                 <option value="low">📱 Low (1 Mbps + 64kbps, 24 FPS) - ~8 MB/min</option>
                                 <option value="medium" selected>📺 Medium (2.5 Mbps + 256kbps, 30 FPS) - ~21 MB/min</option>
                                 <option value="high">🎬 High (5 Mbps + 320kbps, 30 FPS) - ~40 MB/min</option>
                                 <option value="ultra">💎 Ultra (8 Mbps + 320kbps, 60 FPS) - ~62 MB/min</option>
                                 <option value="4k">🚀 4K (20 Mbps + 320kbps, 60 FPS) - ~152 MB/min</option>
+                            </select>
+                        </div>
+
+                        <!-- Audio Quality Preset -->
+                        <div id="audioQualityContainer" style="margin-bottom: 8px; display: none;">
+                            <label style="font-size: 11px; color: #aaa; display: block; margin-bottom: 4px;">Audio Quality:</label>
+                            <select id="audioQuality" style="width: 100%; padding: 6px; background: rgba(255,255,255,0.1); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 6px; color: white; font-size: 12px;">
+                                <option value="128">🎵 Standard (128 kbps) - ~1 MB/min</option>
+                                <option value="192" selected>🎼 High (192 kbps) - ~1.4 MB/min</option>
+                                <option value="256">💎 Premium (256 kbps) - ~1.9 MB/min</option>
+                                <option value="320">🚀 Studio (320 kbps) - ~2.4 MB/min</option>
                             </select>
                         </div>
 

@@ -190,6 +190,17 @@ class Mesmer {
             this.setChaosMode(newState); // For visual randomization
         });
 
+        // Recording mode toggle
+        const recordingModeSelect = document.getElementById('recordingMode');
+        const videoQualityContainer = document.getElementById('videoQualityContainer');
+        const audioQualityContainer = document.getElementById('audioQualityContainer');
+
+        recordingModeSelect.addEventListener('change', (e) => {
+            const isVideoMode = e.target.value === 'video';
+            videoQualityContainer.style.display = isVideoMode ? 'block' : 'none';
+            audioQualityContainer.style.display = isVideoMode ? 'none' : 'block';
+        });
+
         // Audio Recording buttons
         const recordBtn = document.getElementById('recordBtn');
         const stopRecordBtn = document.getElementById('stopRecordBtn');
@@ -3870,42 +3881,89 @@ class Mesmer {
     }
 
     /**
-     * Start recording video (canvas + audio)
+     * Start recording (audio-only or video + audio)
      */
     async startRecording() {
         try {
-            const qualitySettings = this.getRecordingQuality();
-            console.log(`🎥 Starting video + audio recording (${qualitySettings.name}, ${qualitySettings.fps} FPS)...`);
-
-            // Get canvas stream with selected FPS
-            const canvas = document.getElementById('mainCanvas');
-            if (!canvas) {
-                throw new Error('Canvas not found');
-            }
-
-            const videoStream = canvas.captureStream(qualitySettings.fps);
+            // Check recording mode
+            const recordingModeSelect = document.getElementById('recordingMode');
+            const isVideoMode = recordingModeSelect.value === 'video';
 
             // Create audio stream from Tone.js
             this.recordingDestination = Tone.context.createMediaStreamDestination();
             Tone.getDestination().connect(this.recordingDestination);
             const audioStream = this.recordingDestination.stream;
 
-            // Combine video and audio tracks
-            const combinedStream = new MediaStream([
-                ...videoStream.getVideoTracks(),
-                ...audioStream.getAudioTracks()
-            ]);
+            let combinedStream;
+            let mimeType;
+            let audioBitrate;
 
-            // Create MediaRecorder with combined stream
-            const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
-                ? 'video/webm;codecs=vp9'
-                : 'video/webm';
+            if (isVideoMode) {
+                // VIDEO MODE: Canvas + Audio
+                const qualitySettings = this.getRecordingQuality();
+                console.log(`🎥 Starting video + audio recording (${qualitySettings.name}, ${qualitySettings.fps} FPS)...`);
 
-            this.mediaRecorder = new MediaRecorder(combinedStream, {
-                mimeType: mimeType,
-                videoBitsPerSecond: qualitySettings.videoBitrate,
-                audioBitsPerSecond: qualitySettings.audioBitrate
-            });
+                // Get canvas stream with selected FPS
+                const canvas = document.getElementById('mainCanvas');
+                if (!canvas) {
+                    throw new Error('Canvas not found');
+                }
+
+                const videoStream = canvas.captureStream(qualitySettings.fps);
+
+                // Combine video and audio tracks
+                combinedStream = new MediaStream([
+                    ...videoStream.getVideoTracks(),
+                    ...audioStream.getAudioTracks()
+                ]);
+
+                // Video codec
+                mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+                    ? 'video/webm;codecs=vp9'
+                    : 'video/webm';
+
+                audioBitrate = qualitySettings.audioBitrate;
+
+                this.mediaRecorder = new MediaRecorder(combinedStream, {
+                    mimeType: mimeType,
+                    videoBitsPerSecond: qualitySettings.videoBitrate,
+                    audioBitsPerSecond: audioBitrate
+                });
+
+                const videoBitrateMbps = (qualitySettings.videoBitrate / 1000000).toFixed(1);
+                console.log(`✅ Recording started: ${qualitySettings.name}`);
+                console.log(`   Video: ${videoBitrateMbps} Mbps @ ${qualitySettings.fps} FPS`);
+                console.log(`   Audio: ${audioBitrate / 1000} kbps`);
+                console.log(`   Codec: ${mimeType}`);
+
+            } else {
+                // AUDIO-ONLY MODE
+                const audioQualitySelect = document.getElementById('audioQuality');
+                audioBitrate = parseInt(audioQualitySelect.value) * 1000; // Convert kbps to bps
+
+                console.log(`🎵 Starting audio-only recording (${audioBitrate / 1000} kbps)...`);
+
+                // Use audio stream directly
+                combinedStream = audioStream;
+
+                // Audio codec - try to use high quality formats
+                if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+                    mimeType = 'audio/webm;codecs=opus';
+                } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+                    mimeType = 'audio/webm';
+                } else {
+                    mimeType = 'audio/ogg;codecs=opus';
+                }
+
+                this.mediaRecorder = new MediaRecorder(combinedStream, {
+                    mimeType: mimeType,
+                    audioBitsPerSecond: audioBitrate
+                });
+
+                console.log(`✅ Audio recording started`);
+                console.log(`   Bitrate: ${audioBitrate / 1000} kbps`);
+                console.log(`   Codec: ${mimeType}`);
+            }
 
             // Reset chunks
             this.audioChunks = [];
@@ -3925,13 +3983,6 @@ class Mesmer {
             // Start recording
             this.mediaRecorder.start();
 
-            const videoBitrateMbps = (qualitySettings.videoBitrate / 1000000).toFixed(1);
-            const audioBitrateKbps = (qualitySettings.audioBitrate / 1000);
-            console.log(`✅ Recording started: ${qualitySettings.name}`);
-            console.log(`   Video: ${videoBitrateMbps} Mbps @ ${qualitySettings.fps} FPS`);
-            console.log(`   Audio: ${audioBitrateKbps} kbps`);
-            console.log(`   Codec: ${mimeType}`);
-
         } catch (error) {
             console.error('❌ Error starting recording:', error);
             alert('Failed to start recording: ' + error.message);
@@ -3949,26 +4000,47 @@ class Mesmer {
 
         console.log('🛑 Stopping recording...');
 
+        // Check recording mode
+        const recordingModeSelect = document.getElementById('recordingMode');
+        const isVideoMode = recordingModeSelect.value === 'video';
+
         // Stop the recorder
         this.mediaRecorder.stop();
 
         // Wait for final data and create download
         this.mediaRecorder.onstop = () => {
-            console.log('📦 Creating video file...');
+            console.log(`📦 Creating ${isVideoMode ? 'video' : 'audio'} file...`);
 
             // Create blob from chunks
             const mimeType = this.mediaRecorder.mimeType;
-            const videoBlob = new Blob(this.audioChunks, { type: mimeType });
+            const blob = new Blob(this.audioChunks, { type: mimeType });
 
             // Create download link
-            const url = URL.createObjectURL(videoBlob);
+            const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
 
-            // Generate filename with timestamp
+            // Generate filename with timestamp and correct extension
             const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-            const extension = 'webm'; // Always webm for video
-            link.download = `mesmer-video-${timestamp}.${extension}`;
+            let extension;
+            let prefix;
+
+            if (isVideoMode) {
+                extension = 'webm';
+                prefix = 'mesmer-video';
+            } else {
+                // Determine audio extension from mime type
+                if (mimeType.includes('webm')) {
+                    extension = 'webm';
+                } else if (mimeType.includes('ogg')) {
+                    extension = 'ogg';
+                } else {
+                    extension = 'webm'; // fallback
+                }
+                prefix = 'mesmer-audio';
+            }
+
+            link.download = `${prefix}-${timestamp}.${extension}`;
 
             // Trigger download
             document.body.appendChild(link);
@@ -3984,7 +4056,8 @@ class Mesmer {
                 this.recordingDestination = null;
             }
 
-            console.log('💾 Recording saved!');
+            const fileSizeMB = (blob.size / 1024 / 1024).toFixed(2);
+            console.log(`💾 Recording saved! (${fileSizeMB} MB)`);
         };
     }
 
