@@ -3813,19 +3813,19 @@ class Mesmer {
             medium: {
                 fps: 30,
                 videoBitrate: 2500000,      // 2.5 Mbps
-                audioBitrate: 128000,       // 128 kbps
+                audioBitrate: 256000,       // 256 kbps
                 name: 'Medium Quality'
             },
             high: {
                 fps: 30,
                 videoBitrate: 5000000,      // 5 Mbps
-                audioBitrate: 192000,       // 192 kbps
+                audioBitrate: 320000,       // 320 kbps
                 name: 'High Quality'
             },
             ultra: {
                 fps: 60,
                 videoBitrate: 8000000,      // 8 Mbps
-                audioBitrate: 256000,       // 256 kbps
+                audioBitrate: 320000,       // 320 kbps
                 name: 'Ultra Quality'
             },
             '4k': {
