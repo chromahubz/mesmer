@@ -3753,47 +3753,77 @@ class Mesmer {
      * Randomize colors (hue, saturation, brightness)
      */
     randomizeColors() {
-        // Random hue (0-360°)
-        const hue = Math.floor(Math.random() * 360);
-        const hueNormalized = hue / 360;
+        // Random target values
+        const targetHue = Math.floor(Math.random() * 360);
+        const targetSaturation = Math.floor(50 + Math.random() * 50);
+        const targetBrightness = Math.floor(80 + Math.random() * 40);
 
-        // Random saturation (50-100%)
-        const saturation = Math.floor(50 + Math.random() * 50);
-        const saturationNormalized = saturation / 100;
-
-        // Random brightness (80-120%)
-        const brightness = Math.floor(80 + Math.random() * 40);
-        const brightnessNormalized = brightness / 100;
-
-        // Apply to shaders
-        if (this.mainShader) {
-            this.mainShader.setColorHue(hueNormalized);
-            this.mainShader.setColorSaturation(saturationNormalized);
-            this.mainShader.setColorBrightness(brightnessNormalized);
-        }
-
-        if (this.toyRenderer) {
-            this.toyRenderer.setColorHue(hueNormalized);
-            this.toyRenderer.setColorSaturation(saturationNormalized);
-            this.toyRenderer.setColorBrightness(brightnessNormalized);
-        }
-
-        // Update UI sliders
+        // Get current values from sliders
         const hueSlider = document.getElementById('colorHue');
-        const hueValue = document.getElementById('colorHueValue');
         const satSlider = document.getElementById('colorSaturation');
-        const satValue = document.getElementById('colorSaturationValue');
         const brightSlider = document.getElementById('colorBrightness');
-        const brightValue = document.getElementById('colorBrightnessValue');
 
-        if (hueSlider) hueSlider.value = hue;
-        if (hueValue) hueValue.textContent = hue + '°';
-        if (satSlider) satSlider.value = saturation;
-        if (satValue) satValue.textContent = saturation + '%';
-        if (brightSlider) brightSlider.value = brightness;
-        if (brightValue) brightValue.textContent = brightness + '%';
+        const startHue = hueSlider ? parseInt(hueSlider.value) : 180;
+        const startSaturation = satSlider ? parseInt(satSlider.value) : 75;
+        const startBrightness = brightSlider ? parseInt(brightSlider.value) : 100;
 
-        console.log(`🎲 Chaos: Colors → Hue: ${hue}°, Sat: ${saturation}%, Bright: ${brightness}%`);
+        // Gradual transition over 3 seconds
+        const duration = 3000;
+        const startTime = Date.now();
+
+        // Ease in-out function for smooth transitions
+        const easeInOut = (t) => {
+            return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+        };
+
+        const animate = () => {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const easedProgress = easeInOut(progress);
+
+            // Calculate current values with easing
+            const currentHue = Math.round(startHue + (targetHue - startHue) * easedProgress);
+            const currentSaturation = Math.round(startSaturation + (targetSaturation - startSaturation) * easedProgress);
+            const currentBrightness = Math.round(startBrightness + (targetBrightness - startBrightness) * easedProgress);
+
+            // Normalize for shaders
+            const hueNormalized = currentHue / 360;
+            const saturationNormalized = currentSaturation / 100;
+            const brightnessNormalized = currentBrightness / 100;
+
+            // Apply to shaders
+            if (this.mainShader) {
+                this.mainShader.setColorHue(hueNormalized);
+                this.mainShader.setColorSaturation(saturationNormalized);
+                this.mainShader.setColorBrightness(brightnessNormalized);
+            }
+
+            if (this.toyRenderer) {
+                this.toyRenderer.setColorHue(hueNormalized);
+                this.toyRenderer.setColorSaturation(saturationNormalized);
+                this.toyRenderer.setColorBrightness(brightnessNormalized);
+            }
+
+            // Update UI sliders
+            const hueValue = document.getElementById('colorHueValue');
+            const satValue = document.getElementById('colorSaturationValue');
+            const brightValue = document.getElementById('colorBrightnessValue');
+
+            if (hueSlider) hueSlider.value = currentHue;
+            if (hueValue) hueValue.textContent = currentHue + '°';
+            if (satSlider) satSlider.value = currentSaturation;
+            if (satValue) satValue.textContent = currentSaturation + '%';
+            if (brightSlider) brightSlider.value = currentBrightness;
+            if (brightValue) brightValue.textContent = currentBrightness + '%';
+
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                console.log(`🎲 Chaos: Colors → Hue: ${targetHue}°, Sat: ${targetSaturation}%, Bright: ${targetBrightness}%`);
+            }
+        };
+
+        animate();
     }
 
     /**

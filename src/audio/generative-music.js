@@ -1164,7 +1164,8 @@ class GenerativeMusic {
                 () => this.randomizeScale(),
                 () => this.randomizeEffects(),
                 () => this.randomizeInstrumentVolumes(),
-                () => this.randomizeEffectsChain()
+                () => this.randomizeEffectsChain(),
+                () => this.randomizeNoteDensity()
             ];
 
             // Pick 1-3 random actions to execute
@@ -1187,7 +1188,7 @@ class GenerativeMusic {
     }
 
     /**
-     * Randomize drum pattern
+     * Randomize drum pattern with smooth crossfade
      */
     randomizeDrumPattern() {
         if (!this.midiDrumMachines || Object.keys(this.midiDrumMachines).length === 0) return;
@@ -1195,36 +1196,76 @@ class GenerativeMusic {
         const machines = Object.keys(this.midiDrumMachines);
         const randomMachine = machines[Math.floor(Math.random() * machines.length)];
 
-        this.loadDrumMachine(randomMachine);
+        // Fade out current drums gradually (2 seconds)
+        if (this.drums && this.drums.volume) {
+            const currentVolume = this.drums.volume.value;
+            this.drums.volume.rampTo(-60, 2);
 
-        // Update UI dropdown
-        const drumSelect = document.getElementById('drumMachineSelect');
-        if (drumSelect) drumSelect.value = randomMachine;
+            // After fade out, switch and fade in
+            setTimeout(() => {
+                this.loadDrumMachine(randomMachine);
 
-        console.log('🎲 Chaos: Switched to drum machine:', randomMachine);
+                // Update UI dropdown
+                const drumSelect = document.getElementById('drumMachineSelect');
+                if (drumSelect) drumSelect.value = randomMachine;
+
+                // Fade in new drums
+                if (this.drums && this.drums.volume) {
+                    this.drums.volume.rampTo(currentVolume, 2);
+                }
+
+                console.log('🎲 Chaos: Switched to drum machine:', randomMachine);
+            }, 2000);
+        } else {
+            // Fallback if no volume control
+            this.loadDrumMachine(randomMachine);
+            const drumSelect = document.getElementById('drumMachineSelect');
+            if (drumSelect) drumSelect.value = randomMachine;
+            console.log('🎲 Chaos: Switched to drum machine:', randomMachine);
+        }
     }
 
     /**
-     * Randomize synth presets for all instruments (WAD engine)
+     * Randomize synth presets for all instruments with smooth transition
      */
     randomizeSynthPreset() {
-        if (!this.wadEngine) return;
+        if (!this.wadEngine && !this.synths) return;
 
         const synthTypes = ['pad', 'lead', 'bass', 'arp'];
-        const categories = this.wadEngine.categories;
 
-        // Randomize each instrument with appropriate presets
-        const padPreset = categories.pads[Math.floor(Math.random() * categories.pads.length)];
-        const leadPreset = categories.leads[Math.floor(Math.random() * categories.leads.length)];
-        const bassPreset = categories.bass[Math.floor(Math.random() * categories.bass.length)];
-        const arpPreset = categories.arps[Math.floor(Math.random() * categories.arps.length)];
+        // Fade out instruments gradually (1.5 seconds)
+        synthTypes.forEach(inst => {
+            if (this.synths && this.synths[inst] && this.synths[inst].volume) {
+                this.synths[inst].volume.rampTo(-60, 1.5);
+            }
+        });
 
-        this.wadEngine.changePreset('pad', padPreset);
-        this.wadEngine.changePreset('lead', leadPreset);
-        this.wadEngine.changePreset('bass', bassPreset);
-        this.wadEngine.changePreset('arp', arpPreset);
+        // After fade out, change presets and fade back in
+        setTimeout(() => {
+            if (this.wadEngine) {
+                const categories = this.wadEngine.categories;
 
-        console.log('🎲 Chaos: Changed instruments → Pad:', padPreset, 'Lead:', leadPreset, 'Bass:', bassPreset, 'Arp:', arpPreset);
+                // Randomize each instrument with appropriate presets
+                const padPreset = categories.pads[Math.floor(Math.random() * categories.pads.length)];
+                const leadPreset = categories.leads[Math.floor(Math.random() * categories.leads.length)];
+                const bassPreset = categories.bass[Math.floor(Math.random() * categories.bass.length)];
+                const arpPreset = categories.arps[Math.floor(Math.random() * categories.arps.length)];
+
+                this.wadEngine.changePreset('pad', padPreset);
+                this.wadEngine.changePreset('lead', leadPreset);
+                this.wadEngine.changePreset('bass', bassPreset);
+                this.wadEngine.changePreset('arp', arpPreset);
+
+                console.log('🎲 Chaos: Changed instruments → Pad:', padPreset, 'Lead:', leadPreset, 'Bass:', bassPreset, 'Arp:', arpPreset);
+            }
+
+            // Fade in instruments (1.5 seconds)
+            synthTypes.forEach(inst => {
+                if (this.synths && this.synths[inst] && this.synths[inst].volume) {
+                    this.synths[inst].volume.rampTo(-6, 1.5);
+                }
+            });
+        }, 1500);
     }
 
     /**
@@ -1355,6 +1396,47 @@ class GenerativeMusic {
         } catch (error) {
             console.warn('⚠️ Could not swap effects chain:', error);
         }
+    }
+
+    /**
+     * Randomize note density with gradual transition
+     */
+    randomizeNoteDensity() {
+        const minDensity = 20;
+        const maxDensity = 90;
+        const targetDensity = Math.floor(Math.random() * (maxDensity - minDensity + 1)) + minDensity;
+
+        // Gradual transition over 4 seconds
+        const startDensity = this.noteDensity;
+        const duration = 4000; // 4 seconds in milliseconds
+        const startTime = Date.now();
+
+        // Ease in-out function for smooth transitions
+        const easeInOut = (t) => {
+            return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+        };
+
+        const animate = () => {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const easedProgress = easeInOut(progress);
+
+            this.noteDensity = Math.round(startDensity + (targetDensity - startDensity) * easedProgress);
+
+            // Update UI slider if it exists
+            const densitySlider = document.getElementById('noteDensitySlider');
+            const densityValue = document.getElementById('noteDensityValue');
+            if (densitySlider) densitySlider.value = this.noteDensity;
+            if (densityValue) densityValue.textContent = this.noteDensity + '%';
+
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                console.log('🎲 Chaos: Note density changed to:', targetDensity + '%');
+            }
+        };
+
+        animate();
     }
 
     /**
