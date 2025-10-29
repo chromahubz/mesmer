@@ -1328,5 +1328,248 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     col*=0.5+0.5*pow(16.0*q.x*q.y*(1.0-q.x)*(1.0-q.y),0.7);
     fragColor = vec4(col.xyz, smoothstep(0.55, .76, 1.-res.x/5.));
 }`
+    },
+
+    // Mondrian-style geometric pattern
+    mondrian_art: {
+        name: 'Mondrian Art',
+        description: 'Dynamic geometric art with audio-reactive colors',
+        format: 'shadertoy',
+        code: `// Mondrian-style pattern with audio reactivity
+#define HOLES
+#define BUMP_MAP
+#define DIST_TYPE 0
+#define TAU 6.28318530718
+
+// Helper functions
+float hash21(vec2 p) {
+    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
+}
+
+float distLineS(vec2 p, vec2 a, vec2 b) {
+    vec2 pa = p - a;
+    vec2 ba = b - a;
+    float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
+    return length(pa - ba * h);
+}
+
+float lineIntersect(vec2 ro, vec2 rd, vec2 p0, vec2 p1) {
+    vec2 v1 = ro - p0;
+    vec2 v2 = p1 - p0;
+    vec2 v3 = vec2(-rd.y, rd.x);
+    float t = dot(v2, v3);
+    if(abs(t) < 0.001) return -1.0;
+    return dot(cross(vec3(v2, 0), vec3(v1, 0)), vec3(0, 0, 1)) / t;
+}
+
+float sdPoly(vec2 p, vec2[16] v, int num) {
+    float d = dot(p - v[0], p - v[0]);
+    float s = 1.0;
+    for(int i = 0, j = num - 1; i < num; j = i, i++) {
+        vec2 e = v[j] - v[i];
+        vec2 w = p - v[i];
+        vec2 b = w - e * clamp(dot(w, e) / dot(e, e), 0.0, 1.0);
+        d = min(d, dot(b, b));
+        bvec3 c = bvec3(p.y >= v[i].y, p.y < v[j].y, e.x * w.y > e.y * w.x);
+        if(all(c) || all(not(c))) s *= -1.0;
+    }
+    return s * sqrt(d);
+}
+
+float sBox(vec2 p, vec2 b) {
+    vec2 d = abs(p) - b;
+    return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0);
+}
+
+// Global scale with audio reactivity
+vec2 gSc = vec2(1.0) / 5.0;
+vec2 cntr;
+float cir;
+int polyID;
+int pID;
+
+mat4x2 vID = mat4x2(vec2(-0.5, -0.5), vec2(-0.5, 0.5), vec2(0.5, 0.5), vec2(0.5, -0.5));
+mat4x2 eID = mat4x2(vec2(-0.5, 0), vec2(0, 0.5), vec2(0.5, 0), vec2(0, -0.5));
+vec2 vP[16];
+
+mat4x2 getEdges(vec2 ip) {
+    const float rF = 0.95;
+    vec2 eR = vec2(0, 0.5 * rF);
+    mat4x2 eM;
+
+    for(int i = 0; i < 4; i++) {
+        vec2 edID = ip + eID[i];
+        float rndI = mod(dot(edID, vec2(41, 53)), 4.0) / 4.0;
+        float rndD = hash21(edID + 0.06) < 0.5 ? -1.0 : 1.0;
+        rndI = sin(TAU * rndI * rndD + iTime * fract(rndD * 77.77 + 0.5)) * 0.5 + 0.5;
+        eM[i] = eID[i] * gSc - rndI * rndD * gSc * rF * eR;
+        eR = eR.yx;
+    }
+
+    return eM;
+}
+
+vec4 distField(vec2 p) {
+    vec2 ip = floor(p / gSc);
+    p -= (ip + 0.5) * gSc;
+    vec2 svIP = ip;
+
+    mat4x2 eM = getEdges(ip);
+    vec2 minE = min(vec2(eM[1].x, eM[0].y), vec2(eM[3].x, eM[2].y));
+    vec2 maxE = max(vec2(eM[1].x, eM[0].y), vec2(eM[3].x, eM[2].y));
+    mat4x2 p4 = mat4x2(minE, vec2(minE.x, maxE.y), maxE, vec2(maxE.x, minE.y));
+
+    vec2 rDim = (vec2(maxE.x - minE.x, maxE.y - minE.y));
+    vec2 rP = mix(minE, maxE, 0.5);
+    vec2 ap = abs(p - rP) - rDim / 2.0;
+    float cPoly = max(ap.x, ap.y);
+
+    float d;
+
+    if(cPoly < 0.0) {
+        d = cPoly;
+        polyID = 4;
+        pID = 4;
+        vP[0] = p4[0]; vP[1] = p4[1]; vP[2] = p4[2]; vP[3] = p4[3];
+        cntr = rP;
+    } else {
+        d = -cPoly;
+        vec4 ln;
+        for(int i = 0; i < 4; i++) {
+            ln[i] = distLineS(p, eM[i], eM[i] - eID[i]);
+        }
+
+        ln = max(ln, -ln.wxyz);
+        for(int i = 0; i < 4; i++) {
+            if(ln[i] < 0.0) {
+                polyID = i;
+                break;
+            }
+        }
+
+        int i = polyID;
+        vec2 ro = eM[i];
+        vec2 rd = -normalize(eID[i]);
+        float t = lineIntersect(ro, rd, eM[(i + 3) % 4], eM[(i + 3) % 4] - eID[(i + 3) % 4] * 8.0);
+        vec2 p0 = ro + rd * t;
+
+        mat4x2 eMD = getEdges(ip + vID[i] * 2.0);
+        int k = (i + 1) % 4;
+        ro = eMD[k];
+        rd = -normalize(eID[k]);
+        t = lineIntersect(ro, rd, eMD[(k + 1) % 4], eMD[(k + 1) % 4] - eID[(k + 1) % 4] * 8.0);
+        vec2 p1 = ro + rd * t + vID[i] * 2.0 * gSc;
+        cntr = mix(p0, p1, 0.5);
+
+        d = max(d, ln[i]);
+        vec2 q = p - p1;
+        vec2 ln2 = q * sign(vID[i]);
+        d = max(d, max(ln2.x, ln2.y));
+
+        #if DIST_TYPE == 0
+        vP[0] = p0;
+        vP[1] = vec2(p0.x, p1.y);
+        vP[2] = p1;
+        vP[3] = vec2(p1.x, p0.y);
+        if(i % 2 == 1) {
+            vec2 tmp = vP[1]; vP[1] = vP[3]; vP[3] = tmp;
+        }
+        #endif
+
+        pID = 4;
+        ip += vID[i];
+    }
+
+    #if DIST_TYPE == 0
+    d = sdPoly(p, vP, pID);
+    #endif
+
+    cir = length(p - cntr);
+
+    #ifdef HOLES
+    if(hash21(ip + 0.23) < 0.4 && gSc.x > 1.0 / 5.0 - 0.001) {
+        d = abs(d + 0.09 * gSc.x) - 0.09 * gSc.x;
+        d = max(d, -abs(d + 0.0125) - 0.01);
+        cir = 1e5;
+    }
+    #endif
+
+    float lN = 80.0;
+    float pat = abs(fract(d * lN + 0.5) - 0.5) / lN;
+    d = mix(d * 1.055, d * 0.9, smoothstep(0.0, 0.02, pat));
+
+    return vec4(d, ip, float(polyID));
+}
+
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+    vec2 uv = (fragCoord - iResolution.xy * 0.5) / iResolution.y;
+
+    // Audio-reactive scale and movement
+    gSc = vec2(1.0) / (5.0 - iAudioLow * 2.0);
+    vec2 p = uv - vec2(0, iTime / 12.0 + iAudioMid * 0.5);
+
+    // Background layer
+    #ifdef HOLES
+    gSc /= 1.5;
+    vec4 d4B = distField(p + 0.5 - vec2(iTime / 12.0, 0));
+    gSc *= 1.5;
+
+    float dB = d4B.x;
+    vec2 idB = d4B.yz;
+    float rndB = hash21(idB + 0.1);
+    vec3 rColB = 0.5 + 0.45 * cos(TAU * rndB / 3.5 + vec3(0, 1, 2) * 1.5 - 0.3 + iAudioHigh);
+    float grB = dot(rColB, vec3(0.299, 0.587, 0.114));
+    vec3 pColB = polyID == 4 ? vec3(grB * 0.5 + 0.5) * vec3(0.97, 1, 1.03) : rColB.zyx * 1.2;
+    #endif
+
+    // Main layer
+    #ifdef BUMP_MAP
+    vec2 ld = normalize(vec2(-2.5, -1));
+    vec4 d4Hi = distField(p - ld * 0.003);
+    #endif
+
+    vec4 d4 = distField(p);
+    float d = d4.x;
+    vec2 id = d4.yz;
+
+    float sf = 1.0 / iResolution.y;
+    float shF = iResolution.y / 450.0;
+    float ew = 0.006;
+
+    vec3 col = vec3(0.25);
+
+    #ifdef HOLES
+    col = mix(col, vec3(0), 1.0 - smoothstep(0.0, sf * shF * 16.0, dB));
+    col = mix(col, vec3(0), 1.0 - smoothstep(0.0, sf, dB));
+    col = mix(col, pColB, 1.0 - smoothstep(0.0, sf, dB + ew * 0.8));
+    #endif
+
+    // Audio-reactive colors
+    float rnd = hash21(id + 0.1);
+    vec3 rCol = 0.5 + 0.45 * cos(TAU * rnd / 3.5 + vec3(0, 1, 2) * 1.5 - 0.3 + iAudioMid * 2.0);
+    float gr = dot(rCol, vec3(0.299, 0.587, 0.114));
+    vec3 pCol = polyID < 4 ? vec3(gr * 0.5 + 0.5) * vec3(0.97, 1, 1.03) : rCol * 1.2;
+
+    #ifdef BUMP_MAP
+    float b = max(0.5 + (d4Hi.x - d) / 0.003, 0.0);
+    float b2 = max(0.5 + (max(d4Hi.x, -0.0125) - max(d, -0.0125)) / 0.003, 0.0);
+    pCol *= 0.5 + b * b * 0.5 + b2 * b2 * 0.5;
+    #else
+    pCol *= 1.1;
+    #endif
+
+    // Audio-reactive brightness pulsing
+    pCol *= (0.9 + iAudioHigh * 0.4);
+
+    col = mix(col, col * 0.4, 1.0 - smoothstep(0.0, sf * shF * 24.0, d));
+    col = mix(col, vec3(0), 1.0 - smoothstep(0.0, sf, d - ew / 2.0));
+    col = mix(col, pCol, 1.0 - smoothstep(0.0, sf, d + ew));
+
+    // Vignette
+    uv = fragCoord / iResolution.xy;
+    col *= pow(16.0 * uv.x * uv.y * (1.0 - uv.x) * (1.0 - uv.y), 1.0 / 16.0);
+
+    fragColor = vec4(sqrt(max(col, 0.0)), 0.95);
+}`
     }
 };
