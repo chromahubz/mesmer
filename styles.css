@@ -1619,6 +1619,9 @@ body.mpc-assign-mode .mpc-pad.selected {
     opacity: 1 !important;
     visibility: visible !important;
     pointer-events: auto !important;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 .synth-seq-header {
@@ -1676,9 +1679,9 @@ body.mpc-assign-mode .mpc-pad.selected {
     display: flex;
     flex-direction: column;
     gap: 16px;
-    max-height: none;
-    height: auto;
+    flex: 1;
     overflow-y: auto;
+    min-height: 0;
 }
 
 /* Track Selector Tabs */
