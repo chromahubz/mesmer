@@ -275,28 +275,38 @@ class HandTracking {
             `;
             this.currentPreset = 'warmPad';
         } else if (this.currentEngine === 'dirt') {
-            // Dirt sample banks
+            // Dirt sample banks (Chaos)
             handPresetSelect.innerHTML = `
-                <optgroup label="🥁 Drum Samples">
-                    <option value="bd" selected>Kick Drum</option>
-                    <option value="sn">Snare</option>
-                    <option value="hh">Hi-Hat</option>
-                    <option value="cp">Clap</option>
-                </optgroup>
-                <optgroup label="🎵 Melodic Samples">
-                    <option value="arpy">Arpeggio</option>
-                    <option value="bass">Bass</option>
-                    <option value="casio">Casio</option>
+                <optgroup label="🎹 Pad Samples">
+                    <option value="pad" selected>Pad</option>
+                    <option value="breath">Breath</option>
+                    <option value="cosmicg">Cosmicg</option>
                     <option value="feel">Feel</option>
-                </optgroup>
-                <optgroup label="🎹 Synth Samples">
-                    <option value="jvbass">JV Bass</option>
-                    <option value="superpiano">Super Piano</option>
-                    <option value="hoover">Hoover</option>
                     <option value="moog">Moog</option>
+                    <option value="space">Space</option>
+                    <option value="wind">Wind</option>
+                </optgroup>
+                <optgroup label="⚡ Lead Samples">
+                    <option value="arpy">Arpy</option>
+                    <option value="bleep">Bleep</option>
+                    <option value="hoover">Hoover</option>
+                    <option value="sax">Sax</option>
+                    <option value="trump">Trumpet</option>
+                </optgroup>
+                <optgroup label="🔊 Bass Samples">
+                    <option value="bass">Bass</option>
+                    <option value="bass3">Bass 3</option>
+                    <option value="jungbass">Jungle Bass</option>
+                    <option value="wobble">Wobble</option>
+                </optgroup>
+                <optgroup label="🎵 Arp Samples">
+                    <option value="arp">Arp</option>
+                    <option value="blip">Blip</option>
+                    <option value="click">Click</option>
+                    <option value="glitch">Glitch</option>
                 </optgroup>
             `;
-            this.currentPreset = 'bd';
+            this.currentPreset = 'pad';
         }
 
         console.log(`✅ Updated presets for ${this.currentEngine} engine`);
