@@ -348,6 +348,11 @@ class GestureMusicMapper {
                         if (oldSynth) {
                             // Immediately silence old synth
                             oldSynth.volume.value = -Infinity;
+
+                            // CRITICAL: Clear reference so getCurrentSynth creates NEW synth
+                            this.handSynth = null;
+                            this.lastPreset = null;
+
                             // Dispose after a tiny delay
                             setTimeout(() => {
                                 try {
@@ -358,8 +363,7 @@ class GestureMusicMapper {
                             }, 50);
                         }
 
-                        // Force recreate synth
-                        this.lastPreset = null;
+                        // Force recreate synth (now will create new one since handSynth is null)
                         synth = this.getCurrentSynth();
 
                         console.log('  🔇 Force stopped and recreated synth');
