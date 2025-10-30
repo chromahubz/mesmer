@@ -340,40 +340,36 @@ class GestureMusicMapper {
                     break;
 
                 case 'legato':
-                    // Pure sustain - immediately cut old chord and start new one
-                    // FORCE IMMEDIATE STOP of all old notes by releasing all voices
-                    if (this.legatoActive && this.activeNotes.length > 0) {
-                        // Dispose of old synth and create a new one for instant cutoff
-                        const oldSynth = this.handSynth;
-                        if (oldSynth) {
-                            // Immediately silence old synth
-                            oldSynth.volume.value = -Infinity;
+                    // Pure sustain - ALWAYS dispose old synth and create new one for instant cutoff
+                    const oldSynth = this.handSynth;
+                    if (oldSynth && this.legatoActive) {
+                        // Immediately silence old synth
+                        oldSynth.volume.value = -Infinity;
 
-                            // CRITICAL: Clear reference so getCurrentSynth creates NEW synth
-                            this.handSynth = null;
-                            this.lastPreset = null;
+                        // Dispose after a tiny delay
+                        setTimeout(() => {
+                            try {
+                                oldSynth.dispose();
+                            } catch (e) {
+                                console.warn('Error disposing old synth:', e);
+                            }
+                        }, 50);
 
-                            // Dispose after a tiny delay
-                            setTimeout(() => {
-                                try {
-                                    oldSynth.dispose();
-                                } catch (e) {
-                                    console.warn('Error disposing old synth:', e);
-                                }
-                            }, 50);
-                        }
-
-                        // Force recreate synth (now will create new one since handSynth is null)
-                        synth = this.getCurrentSynth();
-
-                        console.log('  🔇 Force stopped and recreated synth');
+                        console.log('  🔇 Silenced and disposed old synth');
                     }
+
+                    // CRITICAL: Clear reference so getCurrentSynth creates NEW synth
+                    this.handSynth = null;
+                    this.lastPreset = null;
+
+                    // Force recreate synth (now will create new one since handSynth is null)
+                    synth = this.getCurrentSynth();
 
                     // Immediately trigger new chord with infinite sustain
                     if (synth.triggerAttack) {
                         synth.triggerAttack(frequencies, Tone.now());
                         this.legatoActive = true;
-                        console.log('  🎶 Legato chord sustained (pure sustain)');
+                        console.log('  🎶 Legato chord sustained on fresh synth');
                     }
                     break;
 
@@ -702,7 +698,7 @@ class GestureMusicMapper {
     /**
      * Play chord using Dirt Sample Engine
      */
-    playChordDirt(chordData, settings) {
+    async playChordDirt(chordData, settings) {
         if (!this.dirtEngine) {
             console.warn('⚠️ Dirt engine not available');
             return;
@@ -715,22 +711,30 @@ class GestureMusicMapper {
         }
 
         const notes = chordData.notes;
-        const sample = settings.preset || 'pad';
+        const sampleBank = settings.preset || 'pad';
+
+        // Load the selected sample bank if not already loaded
+        // Use 'pad' synthType as the default hand tracking channel
+        const synthType = 'pad';
+        if (this.dirtEngine.currentBanks[synthType] !== sampleBank) {
+            console.log(`🎵 Loading Dirt sample bank: ${sampleBank}`);
+            await this.dirtEngine.loadBank(synthType, sampleBank);
+        }
 
         try {
             // Play based on mode
             switch(settings.mode) {
                 case 'note':
                     // Play single sample
-                    this.dirtEngine.play(sample, 0, settings.volume, 1.0);
+                    this.dirtEngine.play(synthType, 0, 1.0, settings.volume);
                     break;
 
                 case 'legato':
                 case 'chord':
                     // Play sample with slight variations
                     notes.forEach((note, i) => {
-                        const speed = 1.0 + (i * 0.05); // Slight pitch variation
-                        this.dirtEngine.play(sample, i, settings.volume, speed);
+                        const duration = 1.5;
+                        this.dirtEngine.play(synthType, i % 12, duration, settings.volume);
                     });
                     break;
 
@@ -739,8 +743,7 @@ class GestureMusicMapper {
                     notes.forEach((note, i) => {
                         setTimeout(() => {
                             try {
-                                const speed = 1.0 + (i * 0.1);
-                                this.dirtEngine.play(sample, i, settings.volume, speed);
+                                this.dirtEngine.play(synthType, i % 12, 0.5, settings.volume);
                             } catch (error) {
                                 console.warn('⚠️ Dirt arpeggio play error:', error.message);
                             }
