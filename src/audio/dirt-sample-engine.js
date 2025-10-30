@@ -14,6 +14,7 @@ class DirtSampleEngine {
         };
         this.isInitialized = false;
         this.manifest = null;
+        this.loadingBanks = new Set(); // Track which banks are currently loading
 
         // Musical sample banks - organized by type
         this.musicalBanks = {
@@ -107,11 +108,16 @@ class DirtSampleEngine {
 
         console.log(`📂 Loading ${bankName} bank...`);
 
+        // Mark this bank as loading
+        const loadingKey = `${synthType}:${bankName}`;
+        this.loadingBanks.add(loadingKey);
+
         try {
             const sampleFiles = this.manifest[bankName];
 
             if (sampleFiles.length === 0) {
                 console.warn(`⚠️ No samples found in ${bankName}`);
+                this.loadingBanks.delete(loadingKey);
                 return false;
             }
 
@@ -137,9 +143,13 @@ class DirtSampleEngine {
                 urls: urls,
                 onload: () => {
                     console.log(`✅ Loaded ${bankName} (${maxSamples} samples)` + (this.destination ? ' [routed through effects]' : ''));
+                    // Mark loading as complete
+                    this.loadingBanks.delete(loadingKey);
                 },
                 onerror: (error) => {
                     console.error(`❌ Error loading ${bankName}:`, error);
+                    // Mark loading as complete even on error
+                    this.loadingBanks.delete(loadingKey);
                 }
             });
 
@@ -186,6 +196,15 @@ class DirtSampleEngine {
 
         const sample = player.player(sampleIndex);
 
+        // CRITICAL: Stop sample if already playing to avoid cancelAndHoldAtTime error
+        if (sample.state === 'started') {
+            try {
+                sample.stop();
+            } catch (e) {
+                // Ignore stop errors
+            }
+        }
+
         // Calculate playback rate based on note
         const playbackRate = this.noteToPlaybackRate(note);
 
@@ -216,6 +235,14 @@ class DirtSampleEngine {
         }
 
         await this.loadBank(synthType, bankName);
+    }
+
+    /**
+     * Check if a bank is currently loading
+     */
+    isBankLoading(synthType, bankName) {
+        const loadingKey = `${synthType}:${bankName}`;
+        return this.loadingBanks.has(loadingKey);
     }
 
     /**

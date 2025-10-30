@@ -551,10 +551,8 @@ class HandTracking {
 
         // Draw video frame (if enabled)
         if (this.showVideo && this.video) {
-            this.ctx.save();
-            this.ctx.scale(-1, 1); // Flip horizontally for mirror effect
-            this.ctx.drawImage(this.video, -this.canvas.width, 0, this.canvas.width, this.canvas.height);
-            this.ctx.restore();
+            // Draw video naturally without mirror flip
+            this.ctx.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
         }
 
         // Draw hand landmarks (if enabled)
@@ -624,7 +622,7 @@ class HandTracking {
      */
     landmarkToCanvas(landmark) {
         return {
-            x: this.canvas.width - (landmark.x * this.canvas.width), // Flip for mirror
+            x: landmark.x * this.canvas.width, // Natural coordinates (no flip)
             y: landmark.y * this.canvas.height
         };
     }

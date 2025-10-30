@@ -24,12 +24,15 @@ class GestureMusicMapper {
             right: null
         };
 
+        this.previousTwoHandGesture = null; // Track last two-hand gesture combo
+
         this.activeNotes = [];
         this.currentSynthVoice = 0;
         this.autoFilterEnabled = false;
         this.currentDrumPattern = 0;
         this.generativePaused = false; // Track if generative music is paused by hand control
         this.legatoActive = false; // Track if notes are being held in legato mode
+        this.currentLegatoFrequencies = null; // Track current legato chord frequencies
         this.arpeggioLoop = null; // Track active arpeggio loop
         this.noteLoop = null; // Track active note loop (for hold mode)
 
@@ -102,25 +105,20 @@ class GestureMusicMapper {
 
         // Handle generative music control based on interaction mode
         if (this.audioSettings.interactionMode === 'control') {
-            // Control mode: Pause generative music when hands are detected
-            if ((leftGesture || rightGesture) && this.musicEngine) {
-                if (!this.generativePaused) {
-                    this.musicEngine.pause();
-                    this.generativePaused = true;
-                    console.log('⏸️ Generative music paused (hand control mode)');
-                }
-            } else if (!leftGesture && !rightGesture && this.generativePaused) {
-                // Resume when no hands detected
+            // Control mode: Sway/modulate generative music with hand gestures
+            // Music keeps playing, but hand gestures influence scale/key/style
+            // The actual swaying happens in handleLeftHandGesture via setGenerativeParams()
+            if (this.generativePaused) {
                 this.musicEngine.resume();
                 this.generativePaused = false;
-                console.log('▶️ Generative music resumed (no hands detected)');
+                console.log('▶️ Generative music active (control mode - swaying)');
             }
         } else {
             // Layer mode: Always keep generative music playing
             if (this.generativePaused) {
                 this.musicEngine.resume();
                 this.generativePaused = false;
-                console.log('▶️ Generative music resumed (layer mode)');
+                console.log('▶️ Generative music active (layer mode)');
             }
         }
 
@@ -148,9 +146,16 @@ class GestureMusicMapper {
             this.lastGestureChange.right = now;
         }
 
-        // Check for two-hand gestures
+        // Check for two-hand gestures (with debouncing)
         if (leftGesture && rightGesture) {
-            this.handleTwoHandGesture(leftGesture, rightGesture);
+            const currentCombo = `${leftGesture.type}+${rightGesture.type}`;
+            if (currentCombo !== this.previousTwoHandGesture) {
+                this.handleTwoHandGesture(leftGesture, rightGesture);
+                this.previousTwoHandGesture = currentCombo;
+            }
+        } else {
+            // Reset two-hand gesture tracking when hands released
+            this.previousTwoHandGesture = null;
         }
     }
 
@@ -171,6 +176,25 @@ class GestureMusicMapper {
      */
     handleLeftHandGesture(gesture) {
         console.log(`👈 Left hand: ${gesture.name} (${gesture.type})`);
+
+        // In Control mode, sway the generative music instead of just playing hand notes
+        if (this.audioSettings.interactionMode === 'control') {
+            // Map gestures to scale changes for swaying generative music
+            const gestureToScale = {
+                'THUMBS_UP': 'major',      // I - bright, happy
+                'INDEX': 'dorian',         // II - jazzy, modal
+                'PEACE': 'phrygian',       // III - dark, spanish
+                'THREE': 'lydian',         // IV - dreamy, ethereal
+                'OPEN_PALM': 'mixolydian', // V - dominant, bluesy
+                'SHAKA': 'minor',          // VI - sad, melancholic
+                'HORN': 'phrygian'         // VII - exotic, middle eastern
+            };
+
+            if (gestureToScale[gesture.type] && this.musicEngine && this.musicEngine.setScale) {
+                this.musicEngine.setScale(gestureToScale[gesture.type]);
+                console.log(`  🎵 Swaying generative music to ${gestureToScale[gesture.type]} scale`);
+            }
+        }
 
         // Stop previous notes
         this.stopAllNotes();
@@ -340,36 +364,19 @@ class GestureMusicMapper {
                     break;
 
                 case 'legato':
-                    // Pure sustain - ALWAYS dispose old synth and create new one for instant cutoff
-                    const oldSynth = this.handSynth;
-                    if (oldSynth && this.legatoActive) {
-                        // Immediately silence old synth
-                        oldSynth.volume.value = -Infinity;
-
-                        // Dispose after a tiny delay
-                        setTimeout(() => {
-                            try {
-                                oldSynth.dispose();
-                            } catch (e) {
-                                console.warn('Error disposing old synth:', e);
-                            }
-                        }, 50);
-
-                        console.log('  🔇 Silenced and disposed old synth');
+                    // REBUILT: Simple sustained chord that plays while gesture is held
+                    // Stop any currently playing legato notes
+                    if (this.legatoActive && this.currentLegatoFrequencies) {
+                        synth.triggerRelease(this.currentLegatoFrequencies, Tone.now());
+                        console.log('  🔇 Stopped previous legato chord');
                     }
 
-                    // CRITICAL: Clear reference so getCurrentSynth creates NEW synth
-                    this.handSynth = null;
-                    this.lastPreset = null;
-
-                    // Force recreate synth (now will create new one since handSynth is null)
-                    synth = this.getCurrentSynth();
-
-                    // Immediately trigger new chord with infinite sustain
+                    // Play new chord with infinite sustain
                     if (synth.triggerAttack) {
                         synth.triggerAttack(frequencies, Tone.now());
                         this.legatoActive = true;
-                        console.log('  🎶 Legato chord sustained on fresh synth');
+                        this.currentLegatoFrequencies = frequencies;
+                        console.log('  🎶 Playing legato chord:', frequencies.map(f => Tone.Frequency(f).toNote()).join(', '));
                     }
                     break;
 
@@ -447,11 +454,12 @@ class GestureMusicMapper {
                 console.log('  🎹 Arpeggio stopped');
             }
 
-            // For legato mode, we need to manually release the notes
-            if (this.legatoActive && synth.triggerRelease) {
-                // Release all currently playing notes
-                synth.triggerRelease(Tone.now());
+            // For legato mode, we need to manually release the specific notes
+            if (this.legatoActive && this.currentLegatoFrequencies && synth.triggerRelease) {
+                // Release the specific legato chord that's playing
+                synth.triggerRelease(this.currentLegatoFrequencies, Tone.now());
                 this.legatoActive = false;
+                this.currentLegatoFrequencies = null;
                 console.log('  🎵 Legato notes released');
             } else if (synth.releaseAll) {
                 synth.releaseAll();
@@ -713,37 +721,50 @@ class GestureMusicMapper {
         const notes = chordData.notes;
         const sampleBank = settings.preset || 'pad';
 
-        // Load the selected sample bank if not already loaded
         // Use 'pad' synthType as the default hand tracking channel
         const synthType = 'pad';
+
+        // Check if this bank is currently loading
+        if (this.dirtEngine.isBankLoading(synthType, sampleBank)) {
+            // Silently skip playback while loading
+            return;
+        }
+
+        // Load the selected sample bank if not already loaded
         if (this.dirtEngine.currentBanks[synthType] !== sampleBank) {
             console.log(`🎵 Loading Dirt sample bank: ${sampleBank}`);
             await this.dirtEngine.loadBank(synthType, sampleBank);
         }
 
+        // Ensure samples are fully loaded before playing
+        const player = this.dirtEngine.samplePlayers[synthType];
+        if (!player || !player.loaded) {
+            return; // Silently skip if not loaded
+        }
+
         try {
             // Play based on mode
+            // Note: play() signature is (synthType, note, velocity)
             switch(settings.mode) {
                 case 'note':
-                    // Play single sample
-                    this.dirtEngine.play(synthType, 0, 1.0, settings.volume);
+                    // Play single root note sample
+                    this.dirtEngine.play(synthType, notes[0].name, settings.volume);
                     break;
 
                 case 'legato':
                 case 'chord':
-                    // Play sample with slight variations
+                    // Play all notes as samples
                     notes.forEach((note, i) => {
-                        const duration = 1.5;
-                        this.dirtEngine.play(synthType, i % 12, duration, settings.volume);
+                        this.dirtEngine.play(synthType, note.name, settings.volume);
                     });
                     break;
 
                 case 'arpeggio':
-                    // Play arpeggio with timing
+                    // Play arpeggio sequence with timing
                     notes.forEach((note, i) => {
                         setTimeout(() => {
                             try {
-                                this.dirtEngine.play(synthType, i % 12, 0.5, settings.volume);
+                                this.dirtEngine.play(synthType, note.name, settings.volume);
                             } catch (error) {
                                 console.warn('⚠️ Dirt arpeggio play error:', error.message);
                             }
