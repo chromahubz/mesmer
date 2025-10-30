@@ -723,6 +723,126 @@ class VoiceControl {
             'DRUM PREVIOUS': () => {
                 console.log('🎤 Voice: DRUM PREVIOUS (alias)');
                 return this.commands.simple['PREVIOUS PATTERN']();
+            },
+            'MAGIC MODE ON': () => {
+                console.log('🎤 Voice: MAGIC MODE ON');
+                const chaosModeBtn = document.getElementById('chaosModeBtn');
+                if (chaosModeBtn) {
+                    const isActive = chaosModeBtn.getAttribute('data-active') === 'true';
+                    if (!isActive) {
+                        chaosModeBtn.click();
+                    }
+                    this.speak('Magic mode enabled');
+                    this.showFeedback('🔥 Magick Mode ON', 'success');
+                }
+            },
+            'MAGIC MODE OFF': () => {
+                console.log('🎤 Voice: MAGIC MODE OFF');
+                const chaosModeBtn = document.getElementById('chaosModeBtn');
+                if (chaosModeBtn) {
+                    const isActive = chaosModeBtn.getAttribute('data-active') === 'true';
+                    if (isActive) {
+                        chaosModeBtn.click();
+                    }
+                    this.speak('Magic mode disabled');
+                    this.showFeedback('🔥 Magick Mode OFF', 'success');
+                }
+            },
+            'CHAOS MODE ON': () => {
+                console.log('🎤 Voice: CHAOS MODE ON (alias)');
+                return this.commands.simple['MAGIC MODE ON']();
+            },
+            'CHAOS MODE OFF': () => {
+                console.log('🎤 Voice: CHAOS MODE OFF (alias)');
+                return this.commands.simple['MAGIC MODE OFF']();
+            },
+            'MAGICK MODE ON': () => {
+                console.log('🎤 Voice: MAGICK MODE ON (alias)');
+                return this.commands.simple['MAGIC MODE ON']();
+            },
+            'MAGICK MODE OFF': () => {
+                console.log('🎤 Voice: MAGICK MODE OFF (alias)');
+                return this.commands.simple['MAGIC MODE OFF']();
+            },
+            'TOGGLE MAGIC MODE': () => {
+                console.log('🎤 Voice: TOGGLE MAGIC MODE');
+                const chaosModeBtn = document.getElementById('chaosModeBtn');
+                if (chaosModeBtn) {
+                    chaosModeBtn.click();
+                    const isActive = chaosModeBtn.getAttribute('data-active') === 'true';
+                    this.speak('Magic mode ' + (isActive ? 'enabled' : 'disabled'));
+                    this.showFeedback('🔥 Magick Mode ' + (isActive ? 'ON' : 'OFF'), 'success');
+                }
+            },
+            'TOGGLE CHAOS MODE': () => {
+                console.log('🎤 Voice: TOGGLE CHAOS MODE (alias)');
+                return this.commands.simple['TOGGLE MAGIC MODE']();
+            },
+            'MAGIC MODE DRUMS ON': () => {
+                console.log('🎤 Voice: MAGIC MODE DRUMS ON');
+                const magickDrumsToggle = document.getElementById('magickDrumsToggle');
+                if (magickDrumsToggle && !magickDrumsToggle.checked) {
+                    magickDrumsToggle.click();
+                    this.speak('Magic mode drums enabled');
+                    this.showFeedback('🥁 Magick Drums ON', 'success');
+                }
+            },
+            'MAGIC MODE DRUMS OFF': () => {
+                console.log('🎤 Voice: MAGIC MODE DRUMS OFF');
+                const magickDrumsToggle = document.getElementById('magickDrumsToggle');
+                if (magickDrumsToggle && magickDrumsToggle.checked) {
+                    magickDrumsToggle.click();
+                    this.speak('Magic mode drums disabled');
+                    this.showFeedback('🥁 Magick Drums OFF', 'success');
+                }
+            },
+            'PROD MODE': () => {
+                console.log('🎤 Voice: PROD MODE');
+                const prodBtn = document.getElementById('prodModeBtn');
+                if (prodBtn && !prodBtn.classList.contains('active')) {
+                    prodBtn.click();
+                    this.speak('PROD mode');
+                    this.showFeedback('🎚️ PROD Mode Active', 'success');
+                }
+            },
+            'SWITCH TO PROD': () => {
+                console.log('🎤 Voice: SWITCH TO PROD (alias)');
+                return this.commands.simple['PROD MODE']();
+            },
+            'DAW MODE': () => {
+                console.log('🎤 Voice: DAW MODE (alias)');
+                return this.commands.simple['PROD MODE']();
+            },
+            'PRODUCTION MODE': () => {
+                console.log('🎤 Voice: PRODUCTION MODE (alias)');
+                return this.commands.simple['PROD MODE']();
+            },
+            'GENERATIVE MODE': () => {
+                console.log('🎤 Voice: GENERATIVE MODE');
+                const generativeBtn = document.getElementById('generativeModeBtn');
+                if (generativeBtn && !generativeBtn.classList.contains('active')) {
+                    generativeBtn.click();
+                    this.speak('Generative mode');
+                    this.showFeedback('🎵 Generative Mode Active', 'success');
+                }
+            },
+            'SWITCH TO GENERATIVE': () => {
+                console.log('🎤 Voice: SWITCH TO GENERATIVE (alias)');
+                return this.commands.simple['GENERATIVE MODE']();
+            },
+            'AI MODE': () => {
+                console.log('🎤 Voice: AI MODE (alias)');
+                return this.commands.simple['GENERATIVE MODE']();
+            },
+            'LOAD DEMO PATTERN': () => {
+                console.log('🎤 Voice: LOAD DEMO PATTERN');
+                if (this.app && this.app.loadDemoPattern) {
+                    this.app.loadDemoPattern();
+                    this.speak('Demo pattern loaded');
+                    this.showFeedback('🎵 Demo Pattern Loaded', 'success');
+                } else {
+                    this.showFeedback('⚠️ Demo pattern not available', 'warning');
+                }
             }
         };
     }
@@ -1048,7 +1168,22 @@ class VoiceControl {
 
             // Drum machines - Roland Others
             'ROLAND R EIGHT': () => this.setDrumMachine('RolandR8', 'R-8'),
-            'ROLAND MC THREE OH THREE': () => this.setDrumMachine('RolandMC303', 'MC-303')
+            'ROLAND MC THREE OH THREE': () => this.setDrumMachine('RolandMC303', 'MC-303'),
+
+            // Drum Patterns - Direct Selection
+            'TECHNO PATTERN': () => this.setDrumPattern('techno', 'Techno'),
+            'BREAKBEAT PATTERN': () => this.setDrumPattern('breakbeat', 'Breakbeat'),
+            'JUNGLE PATTERN': () => this.setDrumPattern('jungle', 'Jungle'),
+            'HIP HOP PATTERN': () => this.setDrumPattern('hiphop', 'Hip-Hop'),
+            'AMBIENT PATTERN': () => this.setDrumPattern('ambient', 'Ambient'),
+            'BASIC PATTERN': () => this.setDrumPattern('basic', 'Basic'),
+            'FOUR ON THE FLOOR': () => this.setDrumPattern('four_on_floor', '4 on Floor'),
+            'SYNCOPATED PATTERN': () => this.setDrumPattern('syncopated', 'Syncopated'),
+            'TECHNO DRUMS': () => this.setDrumPattern('techno', 'Techno'),
+            'BREAKBEAT DRUMS': () => this.setDrumPattern('breakbeat', 'Breakbeat'),
+            'JUNGLE DRUMS': () => this.setDrumPattern('jungle', 'Jungle'),
+            'HIP HOP DRUMS': () => this.setDrumPattern('hiphop', 'Hip-Hop'),
+            'AMBIENT DRUMS': () => this.setDrumPattern('ambient', 'Ambient')
         };
     }
 
@@ -1265,7 +1400,69 @@ class VoiceControl {
                     this.speak('Toy layer hidden');
                     this.showFeedback('👁️ Toy Layer OFF', 'success');
                 }
-            }
+            },
+            'NEXT SHADER': () => {
+                console.log('🎤 Voice: NEXT SHADER');
+                const shaderSelect = document.getElementById('mainShaderSelect');
+                if (shaderSelect) {
+                    const currentIndex = shaderSelect.selectedIndex;
+                    const nextIndex = (currentIndex + 1) % shaderSelect.options.length;
+                    shaderSelect.selectedIndex = nextIndex;
+                    shaderSelect.dispatchEvent(new Event('change'));
+                    const shaderName = shaderSelect.options[nextIndex].text;
+                    this.speak('Shader ' + shaderName);
+                    this.showFeedback(`🎨 Shader: ${shaderName}`, 'success');
+                }
+            },
+            'PREVIOUS SHADER': () => {
+                console.log('🎤 Voice: PREVIOUS SHADER');
+                const shaderSelect = document.getElementById('mainShaderSelect');
+                if (shaderSelect) {
+                    const currentIndex = shaderSelect.selectedIndex;
+                    const prevIndex = currentIndex === 0 ? shaderSelect.options.length - 1 : currentIndex - 1;
+                    shaderSelect.selectedIndex = prevIndex;
+                    shaderSelect.dispatchEvent(new Event('change'));
+                    const shaderName = shaderSelect.options[prevIndex].text;
+                    this.speak('Shader ' + shaderName);
+                    this.showFeedback(`🎨 Shader: ${shaderName}`, 'success');
+                }
+            },
+            'AURORA SHADER': () => this.selectShaderByName('Aurora Borealis', 'Aurora'),
+            'AURORA BOREALIS': () => this.selectShaderByName('Aurora Borealis', 'Aurora'),
+            'AURORA': () => this.selectShaderByName('Aurora Borealis', 'Aurora'),
+            'FIRE SHADER': () => this.selectShaderByName('Fire Flames', 'Fire'),
+            'FIRE FLAMES': () => this.selectShaderByName('Fire Flames', 'Fire'),
+            'FIRE': () => this.selectShaderByName('Fire Flames', 'Fire'),
+            'LIGHTNING SHADER': () => this.selectShaderByName('Lightning Storm', 'Lightning'),
+            'LIGHTNING STORM': () => this.selectShaderByName('Lightning Storm', 'Lightning'),
+            'LIGHTNING': () => this.selectShaderByName('Lightning Storm', 'Lightning'),
+            'CRT SHADER': () => this.selectShaderByName('CRT Monitor', 'CRT'),
+            'CRT MONITOR': () => this.selectShaderByName('CRT Monitor', 'CRT'),
+            'CRT': () => this.selectShaderByName('CRT Monitor', 'CRT'),
+            'KALEIDOSCOPE SHADER': () => this.selectShaderByName('Kaleidoscope', 'Kaleidoscope'),
+            'KALEIDOSCOPE': () => this.selectShaderByName('Kaleidoscope', 'Kaleidoscope'),
+            'BLACK HOLE SHADER': () => this.selectShaderByName('Black Hole', 'Black Hole'),
+            'BLACK HOLE': () => this.selectShaderByName('Black Hole', 'Black Hole'),
+            'WORMHOLE SHADER': () => this.selectShaderByName('Wormhole', 'Wormhole'),
+            'WORMHOLE': () => this.selectShaderByName('Wormhole', 'Wormhole'),
+            'LAVA LAMP SHADER': () => this.selectShaderByName('Lava Lamp', 'Lava Lamp'),
+            'LAVA LAMP': () => this.selectShaderByName('Lava Lamp', 'Lava Lamp'),
+            'VORONOI SHADER': () => this.selectShaderByName('Voronoi Cells', 'Voronoi'),
+            'VORONOI': () => this.selectShaderByName('Voronoi Cells', 'Voronoi'),
+            'MANDELBROT SHADER': () => this.selectShaderByName('Mandelbrot Zoom', 'Mandelbrot'),
+            'MANDELBROT': () => this.selectShaderByName('Mandelbrot Zoom', 'Mandelbrot'),
+            'LIQUID METAL SHADER': () => this.selectShaderByName('Liquid Metal', 'Liquid Metal'),
+            'LIQUID METAL': () => this.selectShaderByName('Liquid Metal', 'Liquid Metal'),
+            'DNA HELIX SHADER': () => this.selectShaderByName('DNA Helix', 'DNA'),
+            'DNA HELIX': () => this.selectShaderByName('DNA Helix', 'DNA'),
+            'DNA': () => this.selectShaderByName('DNA Helix', 'DNA'),
+            'GRID WAVES SHADER': () => this.selectShaderByName('Grid Waves', 'Grid Waves'),
+            'GRID WAVES': () => this.selectShaderByName('Grid Waves', 'Grid Waves'),
+            'VECTOR LINES SHADER': () => this.selectShaderByName('Vector Lines', 'Vector'),
+            'VECTOR LINES': () => this.selectShaderByName('Vector Lines', 'Vector'),
+            'SWIRL SHADER': () => this.selectShaderByName('Colorful Swirl', 'Swirl'),
+            'COLORFUL SWIRL': () => this.selectShaderByName('Colorful Swirl', 'Swirl'),
+            'COSMIC NEBULA': () => this.selectShaderByName('Cosmic Nebula', 'Cosmic Nebula')
         };
     }
 
@@ -1461,6 +1658,41 @@ class VoiceControl {
         }
         this.speak(displayName + ' engine');
         this.showFeedback(`🎛️ ${displayName} Engine`, 'success');
+    }
+
+    /**
+     * Helper: Select shader by name
+     */
+    selectShaderByName(shaderName, displayName) {
+        const shaderSelect = document.getElementById('mainShaderSelect');
+        if (shaderSelect) {
+            // Find the option with matching text
+            for (let i = 0; i < shaderSelect.options.length; i++) {
+                if (shaderSelect.options[i].text === shaderName) {
+                    shaderSelect.selectedIndex = i;
+                    shaderSelect.dispatchEvent(new Event('change'));
+                    this.speak(displayName + ' shader');
+                    this.showFeedback(`🎨 ${displayName} Shader`, 'success');
+                    return;
+                }
+            }
+            // If not found, show warning
+            this.showFeedback(`⚠️ ${shaderName} shader not found`, 'warning');
+        }
+    }
+
+    /**
+     * Helper: Set drum pattern
+     */
+    setDrumPattern(pattern, displayName) {
+        this.musicEngine.changeDrumPattern(pattern);
+        // Update UI dropdown if exists
+        const patternSelect = document.getElementById('drumPatternSelect');
+        if (patternSelect) {
+            patternSelect.value = pattern;
+        }
+        this.speak(displayName + ' pattern');
+        this.showFeedback(`🥁 ${displayName} Pattern`, 'success');
     }
 
     /**

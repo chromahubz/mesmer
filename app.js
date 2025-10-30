@@ -251,6 +251,13 @@ class Mesmer {
 
         // Master Volume slider (controls Tone.Destination.volume)
         const volumeSlider = document.getElementById('volumeSlider');
+
+        // Initialize master volume to match slider default (70%)
+        const initValue = parseInt(volumeSlider.value);
+        const initDb = (initValue / 100) * 60 - 60;
+        Tone.Destination.volume.value = initDb;
+        console.log(`🔊 Master volume initialized to ${initValue}% (${initDb.toFixed(1)}dB)`);
+
         volumeSlider.addEventListener('input', (e) => {
             const value = parseInt(e.target.value);
             // Convert 0-100 to dB (-60 to 0)
@@ -1853,10 +1860,15 @@ class Mesmer {
                 console.log('✅ Pad synth recreated with', e.target.value, 'waveform');
             }
 
-            // Reset preview synths
+            // Update preview synth with new waveform
             if (this.previewSynths && this.synthSeqState.engine === 'tonejs') {
                 if (this.previewSynths.pad) this.previewSynths.pad.dispose();
-                this.previewSynths.pad = null;
+                this.previewSynths.pad = new Tone.PolySynth(Tone.Synth, {
+                    oscillator: { type: e.target.value },
+                    envelope: { attack: 0.8, decay: 0.2, sustain: 0.5, release: 1.5 },
+                    volume: -6
+                }).toDestination();
+                console.log('✅ Pad preview synth recreated with', e.target.value, 'waveform');
             }
         });
 
@@ -1879,9 +1891,15 @@ class Mesmer {
                 console.log('✅ Lead synth recreated with', e.target.value, 'waveform');
             }
 
+            // Update preview synth with new waveform
             if (this.previewSynths && this.synthSeqState.engine === 'tonejs') {
                 if (this.previewSynths.lead) this.previewSynths.lead.dispose();
-                this.previewSynths.lead = null;
+                this.previewSynths.lead = new Tone.PolySynth(Tone.Synth, {
+                    oscillator: { type: e.target.value },
+                    envelope: { attack: 0.05, decay: 0.2, sustain: 0.4, release: 0.4 },
+                    volume: -8
+                }).toDestination();
+                console.log('✅ Lead preview synth recreated with', e.target.value, 'waveform');
             }
         });
 
@@ -1912,9 +1930,15 @@ class Mesmer {
                 console.log('✅ Bass synth recreated with', e.target.value, 'waveform');
             }
 
+            // Update preview synth with new waveform
             if (this.previewSynths && this.synthSeqState.engine === 'tonejs') {
                 if (this.previewSynths.bass) this.previewSynths.bass.dispose();
-                this.previewSynths.bass = null;
+                this.previewSynths.bass = new Tone.PolySynth(Tone.Synth, {
+                    oscillator: { type: e.target.value },
+                    envelope: { attack: 0.02, decay: 0.3, sustain: 0.6, release: 0.5 },
+                    volume: -3
+                }).toDestination();
+                console.log('✅ Bass preview synth recreated with', e.target.value, 'waveform');
             }
         });
 
@@ -1937,9 +1961,15 @@ class Mesmer {
                 console.log('✅ Arp synth recreated with', e.target.value, 'waveform');
             }
 
+            // Update preview synth with new waveform
             if (this.previewSynths && this.synthSeqState.engine === 'tonejs') {
                 if (this.previewSynths.arp) this.previewSynths.arp.dispose();
-                this.previewSynths.arp = null;
+                this.previewSynths.arp = new Tone.PolySynth(Tone.Synth, {
+                    oscillator: { type: e.target.value },
+                    envelope: { attack: 0.01, decay: 0.1, sustain: 0.2, release: 0.2 },
+                    volume: -10
+                }).toDestination();
+                console.log('✅ Arp preview synth recreated with', e.target.value, 'waveform');
             }
         });
 
@@ -2934,29 +2964,36 @@ class Mesmer {
                 }
 
                 if (engine === 'tonejs') {
+                    // Get stored presets or use defaults
+                    const presets = this.synthSeqState.tonejsPresets || {};
+                    const padType = presets.pad || 'sine';
+                    const leadType = presets.lead || 'sawtooth';
+                    const bassType = presets.bass || 'triangle';
+                    const arpType = presets.arp || 'square';
+
                     this.previewSynths = {
                         pad: new Tone.PolySynth(Tone.Synth, {
-                            oscillator: { type: 'sine' },
+                            oscillator: { type: padType },
                             envelope: { attack: 0.8, decay: 0.2, sustain: 0.5, release: 1.5 },
                             volume: -6
                         }).toDestination(),
                         lead: new Tone.PolySynth(Tone.Synth, {
-                            oscillator: { type: 'sawtooth' },
+                            oscillator: { type: leadType },
                             envelope: { attack: 0.05, decay: 0.2, sustain: 0.4, release: 0.4 },
                             volume: -8
                         }).toDestination(),
                         bass: new Tone.PolySynth(Tone.Synth, {
-                            oscillator: { type: 'triangle' },
+                            oscillator: { type: bassType },
                             envelope: { attack: 0.02, decay: 0.3, sustain: 0.6, release: 0.5 },
                             volume: -3
                         }).toDestination(),
                         arp: new Tone.PolySynth(Tone.Synth, {
-                            oscillator: { type: 'square' },
+                            oscillator: { type: arpType },
                             envelope: { attack: 0.01, decay: 0.1, sustain: 0.2, release: 0.2 },
                             volume: -10
                         }).toDestination()
                     };
-                    console.log('🎹 Created Tone.js preview synths');
+                    console.log('🎹 Created Tone.js preview synths with presets:', { padType, leadType, bassType, arpType });
                 } else if (engine === 'wad') {
                     // WAD synths - use the already initialized WAD engine
                     this.previewSynths = { pad: 'wad', lead: 'wad', bass: 'wad', arp: 'wad' };
@@ -3671,6 +3708,10 @@ class Mesmer {
             generativeBtn.classList.add('active');
             prodBtn.classList.remove('active');
 
+            // Hide PROD mode status
+            const prodStatus = document.getElementById('prodModeStatus');
+            if (prodStatus) prodStatus.style.display = 'none';
+
             console.log('🎹 Switched to GENERATIVE mode');
 
             // Restart music with generative patterns if playing
@@ -3686,6 +3727,10 @@ class Mesmer {
             prodBtn.classList.add('active');
             generativeBtn.classList.remove('active');
 
+            // Show PROD mode status
+            const prodStatus = document.getElementById('prodModeStatus');
+            if (prodStatus) prodStatus.style.display = 'block';
+
             console.log('🎹 Switched to PROD/DAW mode');
 
             // Load custom patterns from sequencer if playing
@@ -3695,6 +3740,26 @@ class Mesmer {
         });
 
         console.log('✅ Mode Toggle initialized');
+    }
+
+    loadDemoPattern() {
+        if (!this.musicEngine) return;
+
+        // Get demo patterns from music engine
+        const demoPatterns = this.musicEngine.getDefaultProdPatterns();
+
+        // Load them into the sequencer state
+        this.synthSeqState.patterns = demoPatterns;
+
+        // Render the current track
+        this.renderPianoRoll();
+
+        console.log('🎵 Demo pattern loaded!');
+
+        // If playing, reload patterns into engine
+        if (this.isPlaying) {
+            this.loadSequencerPatternsToEngine();
+        }
     }
 
     loadSequencerPatternsToEngine() {
