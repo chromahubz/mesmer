@@ -29,6 +29,7 @@ class HandTracking {
 
         // Hand audio settings
         this.handVolume = 0.7; // 70% default
+        this.currentEngine = 'tonejs'; // tonejs, wad, dirt
         this.currentPreset = 'sine'; // Current sound preset
         this.playbackMode = 'note'; // note, legato, arpeggio, chord
         this.handInteractionMode = 'layer'; // layer (additional) or control (generative)
@@ -60,35 +61,32 @@ class HandTracking {
             });
         }
 
-        // Sound Preset Selector
+        // Synth Engine Selector & Sound Preset Selector
+        const handEngineSelect = document.getElementById('handEngineSelect');
         const handPresetSelect = document.getElementById('handPresetSelect');
         const activePreset = document.getElementById('activePreset');
+
+        if (handEngineSelect && handPresetSelect) {
+            handEngineSelect.addEventListener('change', (e) => {
+                this.currentEngine = e.target.value;
+                console.log('🎛️ Switched engine to:', this.currentEngine);
+
+                // Update preset dropdown based on engine
+                this.updatePresetOptions(handPresetSelect);
+
+                // Update active preset display
+                this.updateActivePresetDisplay();
+            });
+        }
 
         if (handPresetSelect && activePreset) {
             handPresetSelect.addEventListener('change', (e) => {
                 this.currentPreset = e.target.value;
 
                 // Update visual indicator
-                const selectedOption = handPresetSelect.options[handPresetSelect.selectedIndex];
-                const presetName = selectedOption.text;
-                activePreset.querySelector('div:last-child').textContent = presetName;
+                this.updateActivePresetDisplay();
 
-                // Update icon and color based on category
-                const groupLabel = selectedOption.parentElement.label;
-                let icon, color;
-                if (groupLabel.includes('Pad')) {
-                    icon = '🎹'; color = '#8b5cf6';
-                } else if (groupLabel.includes('Lead')) {
-                    icon = '⚡'; color = '#3b82f6';
-                } else if (groupLabel.includes('Bass')) {
-                    icon = '🔊'; color = '#ef4444';
-                } else {
-                    icon = '✨'; color = '#10b981';
-                }
-                activePreset.querySelector('span').textContent = icon;
-                activePreset.style.borderLeftColor = color;
-
-                console.log('🎹 Changed preset to:', presetName, '(' + this.currentPreset + ')');
+                console.log('🎹 Changed preset to:', this.currentPreset);
             });
         }
 
@@ -98,6 +96,7 @@ class HandTracking {
         if (handModeSelect) {
             handModeSelect.addEventListener('change', (e) => {
                 this.playbackMode = e.target.value;
+                this.updateActivePresetDisplay();
                 console.log('🎵 Changed playback mode to:', this.playbackMode);
             });
         }
@@ -152,6 +151,155 @@ class HandTracking {
         } else {
             console.error('❌ Hand mode toggle buttons not found in DOM!');
         }
+    }
+
+    /**
+     * Update Active Preset Display with scale, key, and mode
+     */
+    updateActivePresetDisplay() {
+        const activePresetText = document.getElementById('activePresetText');
+        const activePreset = document.getElementById('activePreset');
+
+        if (!activePresetText || !activePreset) return;
+
+        // Get scale and key from chord engine
+        const scale = this.musicMapper && this.musicMapper.chordEngine
+            ? this.musicMapper.chordEngine.getCurrentScale()
+            : 'phrygian';
+        const key = this.musicMapper && this.musicMapper.chordEngine
+            ? this.musicMapper.chordEngine.getCurrentRoot()
+            : 'C';
+
+        // Capitalize scale name
+        const scaleName = scale.charAt(0).toUpperCase() + scale.slice(1);
+
+        // Get mode display name
+        const modeNames = {
+            'note': 'Note',
+            'legato': 'Legato',
+            'arpeggio': 'Arpeggio',
+            'chord': 'Chord'
+        };
+        const modeName = modeNames[this.playbackMode] || 'Note';
+
+        // Update text: "C Phrygian • Note"
+        activePresetText.textContent = `${key} ${scaleName} • ${modeName}`;
+
+        // Update icon and color based on preset category
+        const handPresetSelect = document.getElementById('handPresetSelect');
+        if (handPresetSelect) {
+            const selectedOption = handPresetSelect.options[handPresetSelect.selectedIndex];
+            const groupLabel = selectedOption.parentElement.label;
+
+            let icon, color;
+            if (groupLabel.includes('Pad')) {
+                icon = '🎹'; color = '#8b5cf6';
+            } else if (groupLabel.includes('Lead')) {
+                icon = '⚡'; color = '#3b82f6';
+            } else if (groupLabel.includes('Bass')) {
+                icon = '🔊'; color = '#ef4444';
+            } else {
+                icon = '✨'; color = '#10b981';
+            }
+
+            activePreset.querySelector('span').textContent = icon;
+            activePreset.style.borderLeftColor = color;
+        }
+    }
+
+    /**
+     * Update preset dropdown options based on selected engine
+     */
+    updatePresetOptions(handPresetSelect) {
+        if (!handPresetSelect) return;
+
+        // Clear existing options
+        handPresetSelect.innerHTML = '';
+
+        if (this.currentEngine === 'tonejs') {
+            // Tone.js oscillator presets
+            handPresetSelect.innerHTML = `
+                <optgroup label="🎹 Pad Sounds">
+                    <option value="sine" selected>Smooth Sine</option>
+                    <option value="triangle">Warm Triangle</option>
+                    <option value="fatsine">Fat Sine</option>
+                    <option value="fattriangle">Fat Triangle</option>
+                </optgroup>
+                <optgroup label="⚡ Lead Sounds">
+                    <option value="sawtooth">Bright Sawtooth</option>
+                    <option value="square">Digital Square</option>
+                    <option value="fatsawtooth">Fat Sawtooth</option>
+                    <option value="fatsquare">Fat Square</option>
+                </optgroup>
+                <optgroup label="🔊 Bass Sounds">
+                    <option value="deepsine">Deep Sine</option>
+                    <option value="subsine">Sub Sine</option>
+                    <option value="fatbass">Fat Bass</option>
+                    <option value="pulse">Pulse Wave</option>
+                </optgroup>
+                <optgroup label="✨ Pluck/Arp Sounds">
+                    <option value="pluck">Sharp Pluck</option>
+                    <option value="bell">Bell Tone</option>
+                    <option value="marimba">Marimba</option>
+                    <option value="metallic">Metallic</option>
+                </optgroup>
+            `;
+            this.currentPreset = 'sine';
+        } else if (this.currentEngine === 'wad') {
+            // WAD synth presets
+            handPresetSelect.innerHTML = `
+                <optgroup label="🎹 Pad Sounds">
+                    <option value="warmPad" selected>Warm Pad</option>
+                    <option value="spacePad">Space Pad</option>
+                    <option value="dreamPad">Dream Pad</option>
+                    <option value="atmosphericPad">Atmospheric Pad</option>
+                    <option value="drone">Drone</option>
+                    <option value="ghost">Ghost</option>
+                </optgroup>
+                <optgroup label="⚡ Lead Sounds">
+                    <option value="brightLead">Bright Lead</option>
+                    <option value="analogLead">Analog Lead</option>
+                </optgroup>
+                <optgroup label="🔊 Bass Sounds">
+                    <option value="deepBass">Deep Bass</option>
+                    <option value="subBass">Sub Bass</option>
+                    <option value="acidBass">Acid Bass</option>
+                </optgroup>
+                <optgroup label="✨ Pluck/Arp Sounds">
+                    <option value="electricPiano">Electric Piano</option>
+                    <option value="pluck">Pluck</option>
+                    <option value="piano">Piano</option>
+                    <option value="digitalArp">Digital Arp</option>
+                    <option value="classicArp">Classic Arp</option>
+                </optgroup>
+            `;
+            this.currentPreset = 'warmPad';
+        } else if (this.currentEngine === 'dirt') {
+            // Dirt sample banks
+            handPresetSelect.innerHTML = `
+                <optgroup label="🥁 Drum Samples">
+                    <option value="bd" selected>Kick Drum</option>
+                    <option value="sn">Snare</option>
+                    <option value="hh">Hi-Hat</option>
+                    <option value="cp">Clap</option>
+                </optgroup>
+                <optgroup label="🎵 Melodic Samples">
+                    <option value="arpy">Arpeggio</option>
+                    <option value="bass">Bass</option>
+                    <option value="casio">Casio</option>
+                    <option value="feel">Feel</option>
+                </optgroup>
+                <optgroup label="🎹 Synth Samples">
+                    <option value="jvbass">JV Bass</option>
+                    <option value="superpiano">Super Piano</option>
+                    <option value="hoover">Hoover</option>
+                    <option value="moog">Moog</option>
+                </optgroup>
+            `;
+            this.currentPreset = 'bd';
+        }
+
+        console.log(`✅ Updated presets for ${this.currentEngine} engine`);
     }
 
     /**
@@ -368,6 +516,7 @@ class HandTracking {
         // Send to music mapper with volume, preset, playback mode, and interaction mode settings
         this.musicMapper.processGestures(leftGesture, rightGesture, velocities, {
             volume: this.handVolume,
+            engine: this.currentEngine,
             preset: this.currentPreset,
             mode: this.playbackMode,
             interactionMode: this.handInteractionMode

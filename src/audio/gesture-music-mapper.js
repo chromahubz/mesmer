@@ -8,6 +8,11 @@ class GestureMusicMapper {
         this.musicEngine = musicEngine;
         this.chordEngine = chordEngine;
 
+        // Initialize WAD and Dirt engines for hand tracking
+        this.wadEngine = null;
+        this.dirtEngine = null;
+        this.initializeEngines();
+
         // State tracking
         this.currentGestures = {
             left: null,
@@ -54,11 +59,34 @@ class GestureMusicMapper {
     }
 
     /**
+     * Initialize WAD and Dirt engines
+     */
+    initializeEngines() {
+        // Initialize WAD Synth Engine
+        if (typeof WadSynthEngine !== 'undefined') {
+            this.wadEngine = new WadSynthEngine();
+            this.wadEngine.init();
+            console.log('✅ WAD Synth Engine initialized for hand tracking');
+        } else {
+            console.warn('⚠️ WadSynthEngine not available');
+        }
+
+        // Initialize Dirt Sample Engine
+        if (typeof DirtSampleEngine !== 'undefined') {
+            this.dirtEngine = new DirtSampleEngine();
+            this.dirtEngine.init();
+            console.log('✅ Dirt Sample Engine initialized for hand tracking');
+        } else {
+            console.warn('⚠️ DirtSampleEngine not available');
+        }
+    }
+
+    /**
      * Process gestures and trigger musical actions
      * @param {Object} leftGesture - Gesture from left hand
      * @param {Object} rightGesture - Gesture from right hand
      * @param {Object} velocities - Hand velocities
-     * @param {Object} audioSettings - Audio settings (volume, preset, mode)
+     * @param {Object} audioSettings - Audio settings (volume, preset, mode, engine)
      */
     processGestures(leftGesture, rightGesture, velocities, audioSettings = {}) {
         const now = Date.now();
@@ -66,6 +94,7 @@ class GestureMusicMapper {
         // Store audio settings
         this.audioSettings = {
             volume: audioSettings.volume || 0.7,
+            engine: audioSettings.engine || 'tonejs',
             preset: audioSettings.preset || 'sine',
             mode: audioSettings.mode || 'note',
             interactionMode: audioSettings.interactionMode || 'layer'
@@ -255,12 +284,21 @@ class GestureMusicMapper {
         if (!romanNumeral || !this.musicEngine) return;
 
         const chordData = this.chordEngine.getChordForPlayback(romanNumeral);
-        const settings = this.audioSettings || { mode: 'chord' };
+        const settings = this.audioSettings || { mode: 'chord', engine: 'tonejs' };
 
-        console.log(`  🎹 Playing ${romanNumeral} chord (${chordData.mode}) - Mode: ${settings.mode}:`,
+        console.log(`  🎹 Playing ${romanNumeral} chord (${chordData.mode}) - Engine: ${settings.engine} - Mode: ${settings.mode}:`,
                     chordData.notes.map(n => n.name).join(', '));
 
-        // Use Tone.js to play the notes
+        // Route to appropriate engine
+        if (settings.engine === 'wad' && this.wadEngine) {
+            this.playChordWAD(chordData, settings);
+            return;
+        } else if (settings.engine === 'dirt' && this.dirtEngine) {
+            this.playChordDirt(chordData, settings);
+            return;
+        }
+
+        // Default: Use Tone.js to play the notes
         if (window.Tone && this.musicEngine.instruments) {
             const synth = this.getCurrentSynth();
             const frequencies = chordData.notes.map(n => n.frequency);
@@ -302,12 +340,18 @@ class GestureMusicMapper {
                     break;
 
                 case 'legato':
-                    // Pure sustain like the original default
-                    // Release old notes if any - must release ALL previous frequencies
-                    if (this.legatoActive && synth.triggerRelease && this.activeNotes.length > 0) {
-                        const oldFrequencies = this.activeNotes.map(n => n.frequency);
-                        synth.triggerRelease(oldFrequencies, Tone.now());
-                        console.log('  🔇 Released', oldFrequencies.length, 'old notes');
+                    // Pure sustain - immediately cut old chord and start new one
+                    // FORCE IMMEDIATE STOP of all old notes by releasing all voices
+                    if (this.legatoActive && this.activeNotes.length > 0) {
+                        // Use releaseAll() for immediate stop, then manually release old frequencies
+                        if (synth.releaseAll) {
+                            synth.releaseAll(Tone.now());
+                        }
+                        if (synth.triggerRelease) {
+                            const oldFrequencies = this.activeNotes.map(n => n.frequency);
+                            synth.triggerRelease(oldFrequencies, Tone.now());
+                        }
+                        console.log('  🔇 Force stopped', this.activeNotes.length, 'old notes');
                     }
 
                     // Immediately trigger new chord with infinite sustain
@@ -422,12 +466,12 @@ class GestureMusicMapper {
             if (window.Tone) {
                 const oscillatorType = this.getOscillatorType(settings.preset);
 
-                // AGGRESSIVE envelope for ZERO decay, pure sustain
+                // AGGRESSIVE envelope for ZERO decay, pure sustain, instant release
                 const envelope = {
                     attack: 0.001,    // Instant attack
                     decay: 0.001,     // Minimal decay
                     sustain: 1.0,     // FULL sustain
-                    release: 0.3      // Quick release
+                    release: 0.01     // INSTANT release (10ms) for legato mode
                 };
 
                 this.handSynth = new Tone.PolySynth(Tone.Synth, {
@@ -595,6 +639,85 @@ class GestureMusicMapper {
             this.arpeggioLoop.dispose();
             this.arpeggioLoop = null;
             console.log('🔁 Arpeggio loop stopped');
+        }
+    }
+
+    /**
+     * Play chord using WAD Synth Engine
+     */
+    playChordWAD(chordData, settings) {
+        if (!this.wadEngine) return;
+
+        const notes = chordData.notes;
+        const preset = settings.preset || 'warmPad';
+
+        // Change WAD preset for hand synth
+        if (!this.wadHandSynth || this.lastWadPreset !== preset) {
+            this.wadEngine.changePreset('hand', preset);
+            this.wadHandSynth = true;
+            this.lastWadPreset = preset;
+        }
+
+        // Play based on mode
+        switch(settings.mode) {
+            case 'note':
+                // Play single root note
+                this.wadEngine.play('hand', notes[0].name, 0.5, settings.volume);
+                break;
+
+            case 'legato':
+            case 'chord':
+                // Play all notes
+                notes.forEach(note => {
+                    this.wadEngine.play('hand', note.name, 1.5, settings.volume);
+                });
+                break;
+
+            case 'arpeggio':
+                // Play arpeggio sequence
+                notes.forEach((note, i) => {
+                    setTimeout(() => {
+                        this.wadEngine.play('hand', note.name, 0.3, settings.volume);
+                    }, i * 150);
+                });
+                break;
+        }
+    }
+
+    /**
+     * Play chord using Dirt Sample Engine
+     */
+    playChordDirt(chordData, settings) {
+        if (!this.dirtEngine) return;
+
+        const notes = chordData.notes;
+        const sample = settings.preset || 'bd';
+
+        // Play based on mode
+        switch(settings.mode) {
+            case 'note':
+                // Play single sample
+                this.dirtEngine.play(sample, 0, settings.volume, 1.0);
+                break;
+
+            case 'legato':
+            case 'chord':
+                // Play sample with slight variations
+                notes.forEach((note, i) => {
+                    const speed = 1.0 + (i * 0.05); // Slight pitch variation
+                    this.dirtEngine.play(sample, i, settings.volume, speed);
+                });
+                break;
+
+            case 'arpeggio':
+                // Play arpeggio with timing
+                notes.forEach((note, i) => {
+                    setTimeout(() => {
+                        const speed = 1.0 + (i * 0.1);
+                        this.dirtEngine.play(sample, i, settings.volume, speed);
+                    }, i * 150);
+                });
+                break;
         }
     }
 
