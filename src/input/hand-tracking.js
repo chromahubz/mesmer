@@ -154,56 +154,60 @@ class HandTracking {
     }
 
     /**
-     * Update Active Preset Display with scale, key, and mode
+     * Update Active Preset Display with sound preset name
      */
     updateActivePresetDisplay() {
         const activePresetText = document.getElementById('activePresetText');
         const activePreset = document.getElementById('activePreset');
+        const handScaleOverlay = document.getElementById('handScaleOverlay');
 
-        if (!activePresetText || !activePreset) return;
+        // Update scale/key/mode overlay on video
+        if (handScaleOverlay) {
+            const scale = this.musicMapper && this.musicMapper.chordEngine
+                ? this.musicMapper.chordEngine.getCurrentScale()
+                : 'phrygian';
+            const key = this.musicMapper && this.musicMapper.chordEngine
+                ? this.musicMapper.chordEngine.getCurrentRoot()
+                : 'C';
 
-        // Get scale and key from chord engine
-        const scale = this.musicMapper && this.musicMapper.chordEngine
-            ? this.musicMapper.chordEngine.getCurrentScale()
-            : 'phrygian';
-        const key = this.musicMapper && this.musicMapper.chordEngine
-            ? this.musicMapper.chordEngine.getCurrentRoot()
-            : 'C';
+            const scaleName = scale.charAt(0).toUpperCase() + scale.slice(1);
+            const modeNames = {
+                'note': 'Note',
+                'legato': 'Legato',
+                'arpeggio': 'Arpeggio',
+                'chord': 'Chord'
+            };
+            const modeName = modeNames[this.playbackMode] || 'Note';
 
-        // Capitalize scale name
-        const scaleName = scale.charAt(0).toUpperCase() + scale.slice(1);
+            handScaleOverlay.textContent = `${key} ${scaleName} • ${modeName}`;
+        }
 
-        // Get mode display name
-        const modeNames = {
-            'note': 'Note',
-            'legato': 'Legato',
-            'arpeggio': 'Arpeggio',
-            'chord': 'Chord'
-        };
-        const modeName = modeNames[this.playbackMode] || 'Note';
+        // Update active preset with sound preset name
+        if (activePresetText && activePreset) {
+            const handPresetSelect = document.getElementById('handPresetSelect');
+            if (handPresetSelect) {
+                const selectedOption = handPresetSelect.options[handPresetSelect.selectedIndex];
+                const presetName = selectedOption.text;
+                const groupLabel = selectedOption.parentElement.label;
 
-        // Update text: "C Phrygian • Note"
-        activePresetText.textContent = `${key} ${scaleName} • ${modeName}`;
+                // Update preset name
+                activePresetText.textContent = presetName;
 
-        // Update icon and color based on preset category
-        const handPresetSelect = document.getElementById('handPresetSelect');
-        if (handPresetSelect) {
-            const selectedOption = handPresetSelect.options[handPresetSelect.selectedIndex];
-            const groupLabel = selectedOption.parentElement.label;
+                // Update icon and color based on category
+                let icon, color;
+                if (groupLabel.includes('Pad')) {
+                    icon = '🎹'; color = '#8b5cf6';
+                } else if (groupLabel.includes('Lead')) {
+                    icon = '⚡'; color = '#3b82f6';
+                } else if (groupLabel.includes('Bass')) {
+                    icon = '🔊'; color = '#ef4444';
+                } else {
+                    icon = '✨'; color = '#10b981';
+                }
 
-            let icon, color;
-            if (groupLabel.includes('Pad')) {
-                icon = '🎹'; color = '#8b5cf6';
-            } else if (groupLabel.includes('Lead')) {
-                icon = '⚡'; color = '#3b82f6';
-            } else if (groupLabel.includes('Bass')) {
-                icon = '🔊'; color = '#ef4444';
-            } else {
-                icon = '✨'; color = '#10b981';
+                activePreset.querySelector('span').textContent = icon;
+                activePreset.style.borderLeftColor = color;
             }
-
-            activePreset.querySelector('span').textContent = icon;
-            activePreset.style.borderLeftColor = color;
         }
     }
 

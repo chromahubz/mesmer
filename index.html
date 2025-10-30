@@ -35,6 +35,10 @@
                 <div style="position: relative; width: 100%; aspect-ratio: 16/9; background: rgba(0, 0, 0, 0.8); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 8px; overflow: hidden; margin-bottom: 10px;">
                     <video id="handTrackingVideo" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none;"></video>
                     <canvas id="handTrackingCanvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></canvas>
+                    <!-- Scale/Key/Mode Overlay -->
+                    <div id="handScaleOverlay" style="position: absolute; top: 10px; right: 10px; background: rgba(0, 0, 0, 0.7); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(139, 92, 246, 0.5); font-family: monospace; font-size: 12px; color: #fff; font-weight: 600; pointer-events: none;">
+                        C Phrygian • Note
+                    </div>
                 </div>
 
                 <!-- Status display -->
@@ -51,7 +55,7 @@
                         <span style="font-size: 20px;">🎹</span>
                         <div style="flex: 1;">
                             <div style="font-size: 10px; color: rgba(255, 255, 255, 0.6); text-transform: uppercase;">Active Preset</div>
-                            <div id="activePresetText" style="font-size: 13px; color: #fff; font-weight: 600;">C Phrygian • Note</div>
+                            <div id="activePresetText" style="font-size: 13px; color: #fff; font-weight: 600;">Smooth Sine</div>
                         </div>
                     </div>
 
