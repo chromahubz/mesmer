@@ -20,7 +20,7 @@
         </div>
 
         <!-- Hand Tracking Panel -->
-        <div id="handTrackingPanel" style="position: fixed; top: 20px; right: 20px; width: 600px; background: rgba(10, 10, 15, 0.98); border: 2px solid rgba(139, 92, 246, 0.5); border-radius: 12px; padding: 0; z-index: 1000; display: none; box-shadow: 0 0 40px rgba(139, 92, 246, 0.4); backdrop-filter: blur(12px); resize: both; overflow: auto; min-width: 400px; min-height: 300px;">
+        <div id="handTrackingPanel" style="position: fixed; top: 20px; right: 20px; width: 570px; background: rgba(10, 10, 15, 0.98); border: 2px solid rgba(139, 92, 246, 0.5); border-radius: 12px; padding: 0; z-index: 1000; display: none; box-shadow: 0 0 40px rgba(139, 92, 246, 0.4); backdrop-filter: blur(12px); resize: both; overflow: auto; min-width: 380px; min-height: 285px;">
             <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(99, 102, 241, 0.2)); border-bottom: 1px solid rgba(139, 92, 246, 0.3); border-radius: 10px 10px 0 0;">
                 <h3 style="margin: 0; color: rgba(167, 139, 250, 1); font-family: monospace; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Hand Tracking</h3>
                 <button id="closeHandTracking" class="btn-icon" title="Close">
@@ -53,6 +53,16 @@
                             <div style="font-size: 10px; color: rgba(255, 255, 255, 0.6); text-transform: uppercase;">Active Preset</div>
                             <div style="font-size: 13px; color: #fff; font-weight: 600;">Smooth Sine</div>
                         </div>
+                    </div>
+
+                    <!-- Synth Engine Selector -->
+                    <div style="margin-bottom: 10px;">
+                        <label style="display: block; color: rgba(255, 255, 255, 0.8); font-size: 11px; margin-bottom: 5px; font-weight: 600;">Synth Engine:</label>
+                        <select id="handEngineSelect" style="width: 100%; background: rgba(0, 0, 0, 0.4); color: #fff; border: 1px solid rgba(139, 92, 246, 0.4); border-radius: 6px; padding: 8px; font-size: 12px; cursor: pointer;">
+                            <option value="tonejs" selected>🎛️ Tone.js (Synths)</option>
+                            <option value="wad">🎹 WAD (Rich Sounds)</option>
+                            <option value="dirt">🎵 Dirt (Samples)</option>
+                        </select>
                     </div>
 
                     <!-- Sound Preset Selector -->

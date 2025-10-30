@@ -303,9 +303,11 @@ class GestureMusicMapper {
 
                 case 'legato':
                     // Pure sustain like the original default
-                    // Release old notes if any
-                    if (this.legatoActive && synth.triggerRelease) {
-                        synth.triggerRelease(Tone.now());
+                    // Release old notes if any - must release ALL previous frequencies
+                    if (this.legatoActive && synth.triggerRelease && this.activeNotes.length > 0) {
+                        const oldFrequencies = this.activeNotes.map(n => n.frequency);
+                        synth.triggerRelease(oldFrequencies, Tone.now());
+                        console.log('  🔇 Released', oldFrequencies.length, 'old notes');
                     }
 
                     // Immediately trigger new chord with infinite sustain
