@@ -300,7 +300,7 @@ class GestureMusicMapper {
 
         // Default: Use Tone.js to play the notes
         if (window.Tone && this.musicEngine.instruments) {
-            const synth = this.getCurrentSynth();
+            let synth = this.getCurrentSynth();
             const frequencies = chordData.notes.map(n => n.frequency);
 
             switch(settings.mode) {
