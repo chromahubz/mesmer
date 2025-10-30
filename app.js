@@ -1125,6 +1125,11 @@ class Mesmer {
                 stopHandTrackingBtn.style.display = 'block';
                 statusElement.innerHTML = '<div style="color: #00ff00;">✅ Hand tracking active!</div>';
 
+                // Update active preset display
+                if (this.handTracking && this.handTracking.updateActivePresetDisplay) {
+                    this.handTracking.updateActivePresetDisplay();
+                }
+
                 console.log('✅ Hand tracking started');
             } catch (error) {
                 console.error('❌ Failed to start hand tracking:', error);
