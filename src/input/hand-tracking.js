@@ -221,60 +221,63 @@ class HandTracking {
         handPresetSelect.innerHTML = '';
 
         if (this.currentEngine === 'tonejs') {
-            // Tone.js oscillator presets
+            // Tone.js oscillator presets (Celestial)
             handPresetSelect.innerHTML = `
-                <optgroup label="🎹 Pad Sounds">
+                <optgroup label="🎹 Pad Synth">
                     <option value="sine" selected>Smooth Sine</option>
                     <option value="triangle">Warm Triangle</option>
+                    <option value="sawtooth">Rich Sawtooth</option>
+                    <option value="square">Hollow Square</option>
                     <option value="fatsine">Fat Sine</option>
-                    <option value="fattriangle">Fat Triangle</option>
+                    <option value="fatsawtooth">Fat Sawtooth</option>
                 </optgroup>
-                <optgroup label="⚡ Lead Sounds">
+                <optgroup label="⚡ Lead Synth">
+                    <option value="sine">Pure Sine</option>
+                    <option value="triangle">Soft Triangle</option>
                     <option value="sawtooth">Bright Sawtooth</option>
                     <option value="square">Digital Square</option>
                     <option value="fatsawtooth">Fat Sawtooth</option>
-                    <option value="fatsquare">Fat Square</option>
                 </optgroup>
-                <optgroup label="🔊 Bass Sounds">
-                    <option value="deepsine">Deep Sine</option>
-                    <option value="subsine">Sub Sine</option>
-                    <option value="fatbass">Fat Bass</option>
-                    <option value="pulse">Pulse Wave</option>
+                <optgroup label="🔊 Bass Synth">
+                    <option value="sine">Deep Sine</option>
+                    <option value="fatsine">Fat Sine</option>
+                    <option value="triangle">Round Triangle</option>
+                    <option value="sawtooth">Aggressive Saw</option>
+                    <option value="square">Sub Square</option>
                 </optgroup>
-                <optgroup label="✨ Pluck/Arp Sounds">
-                    <option value="pluck">Sharp Pluck</option>
-                    <option value="bell">Bell Tone</option>
-                    <option value="marimba">Marimba</option>
-                    <option value="metallic">Metallic</option>
+                <optgroup label="🎵 Arp Synth">
+                    <option value="sine">Smooth Sine</option>
+                    <option value="triangle">Soft Triangle</option>
+                    <option value="sawtooth">Sharp Sawtooth</option>
+                    <option value="square">Classic Square</option>
                 </optgroup>
             `;
             this.currentPreset = 'sine';
         } else if (this.currentEngine === 'wad') {
-            // WAD synth presets
+            // WAD synth presets (Magma)
             handPresetSelect.innerHTML = `
-                <optgroup label="🎹 Pad Sounds">
+                <optgroup label="🎹 Pad Sound">
                     <option value="warmPad" selected>Warm Pad</option>
                     <option value="spacePad">Space Pad</option>
                     <option value="dreamPad">Dream Pad</option>
-                    <option value="atmosphericPad">Atmospheric Pad</option>
+                    <option value="atmosphericPad">Atmospheric</option>
                     <option value="drone">Drone</option>
                     <option value="ghost">Ghost</option>
                 </optgroup>
-                <optgroup label="⚡ Lead Sounds">
+                <optgroup label="⚡ Lead Sound">
                     <option value="brightLead">Bright Lead</option>
                     <option value="analogLead">Analog Lead</option>
                 </optgroup>
-                <optgroup label="🔊 Bass Sounds">
+                <optgroup label="🔊 Bass Sound">
                     <option value="deepBass">Deep Bass</option>
                     <option value="subBass">Sub Bass</option>
                     <option value="acidBass">Acid Bass</option>
                 </optgroup>
-                <optgroup label="✨ Pluck/Arp Sounds">
-                    <option value="electricPiano">Electric Piano</option>
-                    <option value="pluck">Pluck</option>
-                    <option value="piano">Piano</option>
+                <optgroup label="🎵 Arp Sound">
                     <option value="digitalArp">Digital Arp</option>
                     <option value="classicArp">Classic Arp</option>
+                    <option value="electricPiano">Electric Piano</option>
+                    <option value="pluck">Pluck</option>
                 </optgroup>
             `;
             this.currentPreset = 'warmPad';

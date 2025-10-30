@@ -343,15 +343,26 @@ class GestureMusicMapper {
                     // Pure sustain - immediately cut old chord and start new one
                     // FORCE IMMEDIATE STOP of all old notes by releasing all voices
                     if (this.legatoActive && this.activeNotes.length > 0) {
-                        // Use releaseAll() for immediate stop, then manually release old frequencies
-                        if (synth.releaseAll) {
-                            synth.releaseAll(Tone.now());
+                        // Dispose of old synth and create a new one for instant cutoff
+                        const oldSynth = this.handSynth;
+                        if (oldSynth) {
+                            // Immediately silence old synth
+                            oldSynth.volume.value = -Infinity;
+                            // Dispose after a tiny delay
+                            setTimeout(() => {
+                                try {
+                                    oldSynth.dispose();
+                                } catch (e) {
+                                    console.warn('Error disposing old synth:', e);
+                                }
+                            }, 50);
                         }
-                        if (synth.triggerRelease) {
-                            const oldFrequencies = this.activeNotes.map(n => n.frequency);
-                            synth.triggerRelease(oldFrequencies, Tone.now());
-                        }
-                        console.log('  🔇 Force stopped', this.activeNotes.length, 'old notes');
+
+                        // Force recreate synth
+                        this.lastPreset = null;
+                        synth = this.getCurrentSynth();
+
+                        console.log('  🔇 Force stopped and recreated synth');
                     }
 
                     // Immediately trigger new chord with infinite sustain
@@ -688,36 +699,53 @@ class GestureMusicMapper {
      * Play chord using Dirt Sample Engine
      */
     playChordDirt(chordData, settings) {
-        if (!this.dirtEngine) return;
+        if (!this.dirtEngine) {
+            console.warn('⚠️ Dirt engine not available');
+            return;
+        }
+
+        // Check if engine is initialized
+        if (!this.dirtEngine.isInitialized) {
+            console.warn('⚠️ Dirt engine not initialized');
+            return;
+        }
 
         const notes = chordData.notes;
-        const sample = settings.preset || 'bd';
+        const sample = settings.preset || 'pad';
 
-        // Play based on mode
-        switch(settings.mode) {
-            case 'note':
-                // Play single sample
-                this.dirtEngine.play(sample, 0, settings.volume, 1.0);
-                break;
+        try {
+            // Play based on mode
+            switch(settings.mode) {
+                case 'note':
+                    // Play single sample
+                    this.dirtEngine.play(sample, 0, settings.volume, 1.0);
+                    break;
 
-            case 'legato':
-            case 'chord':
-                // Play sample with slight variations
-                notes.forEach((note, i) => {
-                    const speed = 1.0 + (i * 0.05); // Slight pitch variation
-                    this.dirtEngine.play(sample, i, settings.volume, speed);
-                });
-                break;
-
-            case 'arpeggio':
-                // Play arpeggio with timing
-                notes.forEach((note, i) => {
-                    setTimeout(() => {
-                        const speed = 1.0 + (i * 0.1);
+                case 'legato':
+                case 'chord':
+                    // Play sample with slight variations
+                    notes.forEach((note, i) => {
+                        const speed = 1.0 + (i * 0.05); // Slight pitch variation
                         this.dirtEngine.play(sample, i, settings.volume, speed);
-                    }, i * 150);
-                });
-                break;
+                    });
+                    break;
+
+                case 'arpeggio':
+                    // Play arpeggio with timing
+                    notes.forEach((note, i) => {
+                        setTimeout(() => {
+                            try {
+                                const speed = 1.0 + (i * 0.1);
+                                this.dirtEngine.play(sample, i, settings.volume, speed);
+                            } catch (error) {
+                                console.warn('⚠️ Dirt arpeggio play error:', error.message);
+                            }
+                        }, i * 150);
+                    });
+                    break;
+            }
+        } catch (error) {
+            console.error('❌ Dirt engine playback error:', error);
         }
     }
 
