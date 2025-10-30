@@ -26,6 +26,7 @@ class GestureMusicMapper {
         this.generativePaused = false; // Track if generative music is paused by hand control
         this.legatoActive = false; // Track if notes are being held in legato mode
         this.arpeggioLoop = null; // Track active arpeggio loop
+        this.noteLoop = null; // Track active note loop (for hold mode)
 
         // Available scales to cycle through
         this.scales = ['phrygian', 'dorian', 'lydian', 'mixolydian', 'major', 'minor'];
@@ -266,9 +267,37 @@ class GestureMusicMapper {
 
             switch(settings.mode) {
                 case 'note':
-                    // Play short staccato note (root only, very short)
-                    if (synth.triggerAttackRelease) {
-                        synth.triggerAttackRelease(frequencies[0], '16n'); // Very short staccato
+                    // Check if hold mode is enabled
+                    const holdEnabled = this.chordEngine.getHoldMode();
+
+                    if (holdEnabled) {
+                        // HOLD MODE: Loop the note continuously
+                        // Stop any existing note loop
+                        if (this.noteLoop) {
+                            this.noteLoop.stop();
+                            this.noteLoop.dispose();
+                            this.noteLoop = null;
+                        }
+
+                        // Start Transport if not running
+                        if (Tone.Transport.state !== 'started') {
+                            Tone.Transport.bpm.value = 120;
+                            Tone.Transport.start();
+                        }
+
+                        // Create continuous note loop
+                        this.noteLoop = new Tone.Loop((time) => {
+                            synth.triggerAttackRelease(frequencies[0], '8n', time);
+                        }, '4n'); // Play every quarter note
+
+                        // Start the loop immediately
+                        this.noteLoop.start(0);
+                        console.log('  🔄 Note LOOPING continuously (Hold mode ON)');
+                    } else {
+                        // NORMAL MODE: Play short staccato note (root only, very short)
+                        if (synth.triggerAttackRelease) {
+                            synth.triggerAttackRelease(frequencies[0], '16n'); // Very short staccato
+                        }
                     }
                     break;
 
@@ -288,6 +317,9 @@ class GestureMusicMapper {
                     break;
 
                 case 'arpeggio':
+                    // Check if hold mode is enabled
+                    const holdEnabledArp = this.chordEngine.getHoldMode();
+
                     // Stop any existing arpeggio
                     if (this.arpeggioLoop) {
                         this.arpeggioLoop.stop();
@@ -301,20 +333,33 @@ class GestureMusicMapper {
                         Tone.Transport.start();
                     }
 
-                    // Create continuous arpeggio loop
-                    let noteIndex = 0;
-                    this.arpeggioLoop = new Tone.Loop((time) => {
-                        // Play current note
-                        synth.triggerAttackRelease(frequencies[noteIndex], '8n', time);
+                    if (holdEnabledArp) {
+                        // HOLD MODE: Loop arpeggio continuously
+                        let noteIndex = 0;
+                        this.arpeggioLoop = new Tone.Loop((time) => {
+                            // Play current note
+                            synth.triggerAttackRelease(frequencies[noteIndex], '8n', time);
 
-                        // Move to next note (cycle through)
-                        noteIndex = (noteIndex + 1) % frequencies.length;
-                    }, '8n'); // Play every 8th note
+                            // Move to next note (cycle through)
+                            noteIndex = (noteIndex + 1) % frequencies.length;
+                        }, '8n'); // Play every 8th note
 
-                    // Start the loop immediately
-                    this.arpeggioLoop.start(0);
-
-                    console.log('  🎹 Arpeggio LOOPING continuously', frequencies.length, 'notes');
+                        // Start the loop immediately
+                        this.arpeggioLoop.start(0);
+                        console.log('  🔄 Arpeggio LOOPING continuously (Hold mode ON)', frequencies.length, 'notes');
+                    } else {
+                        // NORMAL MODE: Play arpeggio once through
+                        let noteIndex = 0;
+                        const playOnce = () => {
+                            if (noteIndex < frequencies.length) {
+                                synth.triggerAttackRelease(frequencies[noteIndex], '8n');
+                                noteIndex++;
+                                setTimeout(playOnce, 125); // 8th note at 120 BPM = 125ms
+                            }
+                        };
+                        playOnce();
+                        console.log('  🎹 Arpeggio playing once (Hold mode OFF)', frequencies.length, 'notes');
+                    }
                     break;
 
                 case 'chord':
@@ -531,10 +576,32 @@ class GestureMusicMapper {
     }
 
     /**
+     * Stop all active loops (note loop and arpeggio loop)
+     */
+    stopAllLoops() {
+        // Stop note loop
+        if (this.noteLoop) {
+            this.noteLoop.stop();
+            this.noteLoop.dispose();
+            this.noteLoop = null;
+            console.log('🔁 Note loop stopped');
+        }
+
+        // Stop arpeggio loop
+        if (this.arpeggioLoop) {
+            this.arpeggioLoop.stop();
+            this.arpeggioLoop.dispose();
+            this.arpeggioLoop = null;
+            console.log('🔁 Arpeggio loop stopped');
+        }
+    }
+
+    /**
      * Reset mapper state
      */
     reset() {
         this.stopAllNotes();
+        this.stopAllLoops();
         this.currentGestures = { left: null, right: null };
         this.previousGestures = { left: null, right: null };
         this.activeNotes = [];

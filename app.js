@@ -1162,6 +1162,56 @@ class Mesmer {
             console.log(`✋ Skeleton ${status.drawLandmarks ? 'shown' : 'hidden'}`);
         });
 
+        // Gesture Guide Panel controls
+        const toggleGestureGuideBtn = document.getElementById('toggleGestureGuide');
+        const gestureGuidePanel = document.getElementById('gestureGuidePanel');
+        const closeGestureGuideBtn = document.getElementById('closeGestureGuide');
+
+        // Toggle gesture guide panel
+        toggleGestureGuideBtn.addEventListener('click', () => {
+            const isVisible = gestureGuidePanel.style.display === 'block';
+            gestureGuidePanel.style.display = isVisible ? 'none' : 'block';
+            console.log(`📖 Gesture guide ${isVisible ? 'closed' : 'opened'}`);
+        });
+
+        // Close gesture guide panel
+        closeGestureGuideBtn.addEventListener('click', () => {
+            gestureGuidePanel.style.display = 'none';
+            console.log('📖 Gesture guide closed');
+        });
+
+        // Hold Toggle for looping notes/arpeggios
+        const holdToggle = document.getElementById('holdToggle');
+        const holdIcon = document.getElementById('holdIcon');
+        const holdLabel = document.getElementById('holdLabel');
+        let holdEnabled = false;
+
+        holdToggle.addEventListener('click', () => {
+            holdEnabled = !holdEnabled;
+
+            if (holdEnabled) {
+                holdToggle.style.background = 'rgba(139, 92, 246, 0.8)';
+                holdIcon.textContent = '🔄';
+                holdLabel.textContent = 'Hold: ON (Notes loop)';
+                console.log('🔄 Hold mode enabled - notes/arpeggios will loop');
+            } else {
+                holdToggle.style.background = 'rgba(139, 92, 246, 0.3)';
+                holdIcon.textContent = '🔁';
+                holdLabel.textContent = 'Hold: OFF (Notes play once)';
+                console.log('🔁 Hold mode disabled - notes/arpeggios play once');
+            }
+
+            // Update the chord engine if it exists
+            if (this.chordEngine) {
+                this.chordEngine.setHoldMode(holdEnabled);
+            }
+
+            // Stop all active loops when disabling hold mode
+            if (!holdEnabled && this.gestureMusicMapper) {
+                this.gestureMusicMapper.stopAllLoops();
+            }
+        });
+
         // Make hand tracking panel draggable
         const handPanelHeader = handTrackingPanel.querySelector('div'); // First div is the header
         let handPanelDragging = false;

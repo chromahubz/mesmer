@@ -39,6 +39,29 @@ class ChordEngine {
         };
 
         this.playbackMode = 'sustain'; // 'sustain', 'arpeggio', or 'bass'
+        this.holdMode = false; // When true, notes/arpeggios will loop
+        this.holdInterval = null; // Store interval for looping
+    }
+
+    /**
+     * Set hold mode for looping notes/arpeggios
+     */
+    setHoldMode(enabled) {
+        this.holdMode = enabled;
+        console.log(`🔄 Hold mode: ${enabled ? 'ON (looping)' : 'OFF (single play)'}`);
+
+        // If disabling hold mode, stop any active loops
+        if (!enabled && this.holdInterval) {
+            clearInterval(this.holdInterval);
+            this.holdInterval = null;
+        }
+    }
+
+    /**
+     * Get hold mode status
+     */
+    getHoldMode() {
+        return this.holdMode;
     }
 
     /**

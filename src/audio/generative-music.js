@@ -2367,13 +2367,20 @@ class GenerativeMusic {
         this.customPatterns = patterns;
         this.isProdMode = true;
 
-        // Stop current sequences
-        Object.values(this.sequences).forEach(seq => {
-            if (seq && seq !== this.kick && seq !== this.snare && seq !== this.hihat && seq !== this.openhat) {
-                seq.stop();
-                seq.dispose();
+        // IMPORTANT: Stop ALL generative sequences including drums
+        Object.keys(this.sequences).forEach(key => {
+            if (this.sequences[key]) {
+                try {
+                    this.sequences[key].stop();
+                    this.sequences[key].dispose();
+                } catch(e) {
+                    console.warn(`Could not stop sequence ${key}:`, e);
+                }
+                delete this.sequences[key];
             }
         });
+
+        console.log('🎚️ All generative sequences stopped - PROD mode active');
 
         // Create new sequences from custom patterns
         // Convert sequencer pattern format to playable sequences
@@ -2381,7 +2388,9 @@ class GenerativeMusic {
             const pattern = patterns[track] || [];
 
             if (pattern.length === 0) {
-                console.log(`⚠️ No pattern for ${track}, skipping`);
+                console.log(`⚠️ No pattern for ${track}, staying silent (DAW mode)`);
+                // In DAW mode, empty tracks = silence (not skipped)
+                // This is correct behavior for a real DAW
                 return;
             }
 
@@ -2423,7 +2432,67 @@ class GenerativeMusic {
             }, steps, '16n').start(0);
         });
 
-        console.log('✅ PROD mode activated with sequencer patterns');
+        // Check if all patterns are empty - if so, show helpful message
+        const hasAnyPattern = ['pad', 'lead', 'bass', 'arp'].some(track => patterns[track] && patterns[track].length > 0);
+
+        if (!hasAnyPattern) {
+            console.warn('📝 PROD Mode: No patterns programmed. Open Synth Sequencer to create patterns!');
+            console.warn('💡 Tip: Click the piano keys icon to open the sequencer');
+        } else {
+            console.log('✅ PROD mode activated with sequencer patterns');
+        }
+    }
+
+    /**
+     * Get default starter patterns for PROD mode
+     * Returns a simple demo pattern to help users understand the feature
+     */
+    getDefaultProdPatterns() {
+        const scale = this.currentScale || this.scales.major;
+        const rootNote = this.rootNote || 'C';
+        const octave = 3;
+
+        // Helper to get note from scale
+        const getNote = (scaleIndex, oct = octave) => {
+            const noteIndex = scaleIndex % scale.length;
+            const octaveOffset = Math.floor(scaleIndex / scale.length);
+            const pitch = scale[noteIndex];
+            return `${rootNote}${oct + octaveOffset}`;
+        };
+
+        return {
+            // Simple bass line (root notes on beats)
+            bass: [
+                { step: 0, notes: [{ note: getNote(0, 2), velocity: 0.8, duration: 4 }] },
+                { step: 4, notes: [{ note: getNote(0, 2), velocity: 0.7, duration: 4 }] },
+                { step: 8, notes: [{ note: getNote(2, 2), velocity: 0.8, duration: 4 }] },
+                { step: 12, notes: [{ note: getNote(4, 2), velocity: 0.7, duration: 4 }] }
+            ],
+            // Simple pad chords
+            pad: [
+                { step: 0, notes: [
+                    { note: getNote(0, 3), velocity: 0.5, duration: 16 },
+                    { note: getNote(2, 3), velocity: 0.5, duration: 16 },
+                    { note: getNote(4, 3), velocity: 0.5, duration: 16 }
+                ]}
+            ],
+            // Simple arpeggio
+            arp: [
+                { step: 0, notes: [{ note: getNote(0, 4), velocity: 0.6, duration: 1 }] },
+                { step: 2, notes: [{ note: getNote(2, 4), velocity: 0.5, duration: 1 }] },
+                { step: 4, notes: [{ note: getNote(4, 4), velocity: 0.6, duration: 1 }] },
+                { step: 6, notes: [{ note: getNote(2, 4), velocity: 0.5, duration: 1 }] },
+                { step: 8, notes: [{ note: getNote(0, 4), velocity: 0.6, duration: 1 }] },
+                { step: 10, notes: [{ note: getNote(2, 4), velocity: 0.5, duration: 1 }] },
+                { step: 12, notes: [{ note: getNote(4, 4), velocity: 0.6, duration: 1 }] },
+                { step: 14, notes: [{ note: getNote(6, 4), velocity: 0.5, duration: 1 }] }
+            ],
+            // Lead melody
+            lead: [
+                { step: 0, notes: [{ note: getNote(4, 4), velocity: 0.7, duration: 4 }] },
+                { step: 8, notes: [{ note: getNote(5, 4), velocity: 0.7, duration: 4 }] }
+            ]
+        };
     }
 
     /**

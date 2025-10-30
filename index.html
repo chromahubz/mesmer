@@ -38,13 +38,13 @@
                 </div>
 
                 <!-- Status display -->
-                <div id="handTrackingStatus" style="font-family: monospace; font-size: 11px; color: rgba(167, 139, 250, 0.9); margin-bottom: 10px; min-height: 60px;">
+                <div id="handTrackingStatus" style="font-family: monospace; font-size: 11px; color: rgba(167, 139, 250, 0.9); margin-bottom: 0px; padding-bottom: 8px;">
                     <div id="gestureStatus">Waiting for initialization...</div>
                 </div>
 
                 <!-- Hand Tracking Audio Controls -->
-                <div style="background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 8px; padding: 12px; margin-bottom: 12px;">
-                    <div style="color: rgba(167, 139, 250, 1); font-weight: 600; font-size: 11px; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px;">🎹 Hand Audio Settings</div>
+                <div style="background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 8px; padding: 12px; margin-bottom: 12px; margin-top: 0px; padding-top: 8px;">
+                    <div style="color: rgba(167, 139, 250, 1); font-weight: 600; font-size: 11px; margin-bottom: 10px; margin-top: 0px; text-transform: uppercase; letter-spacing: 0.5px;">🎹 Hand Audio Settings</div>
 
                     <!-- Active Preset Display -->
                     <div id="activePreset" style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; padding: 8px; background: rgba(0, 0, 0, 0.3); border-radius: 6px; border-left: 3px solid #8b5cf6;">
@@ -97,6 +97,14 @@
                         </select>
                     </div>
 
+                    <!-- Hold Toggle -->
+                    <div style="margin-bottom: 10px;">
+                        <button id="holdToggle" style="width: 100%; background: rgba(139, 92, 246, 0.3); color: #fff; border: 1px solid rgba(139, 92, 246, 0.4); border-radius: 6px; padding: 10px; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                            <span id="holdIcon">🔁</span>
+                            <span id="holdLabel">Hold: OFF (Notes play once)</span>
+                        </button>
+                    </div>
+
                     <!-- Hand Mode Toggle -->
                     <div style="margin-bottom: 10px;">
                         <label style="display: block; color: rgba(255, 255, 255, 0.8); font-size: 11px; margin-bottom: 5px; font-weight: 600;">Hand Mode:</label>
@@ -128,38 +136,8 @@
                     <button id="toggleSkeleton" style="flex: 1; background: rgba(109, 40, 217, 0.6); color: #fff; border: none; border-radius: 6px; padding: 8px; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.2s;">✋ Skeleton</button>
                 </div>
 
-                <!-- Gesture Guide -->
-                <details style="margin-top: 10px;">
-                    <summary style="color: rgba(167, 139, 250, 1); cursor: pointer; font-family: monospace; font-size: 11px; padding: 5px; font-weight: 600;">📖 Gesture Guide</summary>
-                <div style="margin-top: 10px; font-family: monospace; font-size: 11px; color: #fff; line-height: 1.6; max-height: 300px; overflow-y: auto;">
-                    <div style="color: #00ff00; font-weight: bold; margin-bottom: 5px;">LEFT HAND (Chords):</div>
-                    <div>👍 Thumbs-Up → I chord</div>
-                    <div>☝️ Index → II chord</div>
-                    <div>✌️ Peace → III chord</div>
-                    <div>🤟 Three Fingers → IV chord</div>
-                    <div>🖐️ Open Palm → V chord</div>
-                    <div>🤙 Shaka → VI chord</div>
-                    <div>🤘 Horn → VII chord</div>
-                    <div>🤏 Pinch → Change synth</div>
-                    <div>✊ Fist → Cycle scales</div>
-                    <div>👌 OK Sign → Toggle mode</div>
-
-                    <div style="color: #ff00ff; font-weight: bold; margin-top: 10px; margin-bottom: 5px;">RIGHT HAND (Rhythm):</div>
-                    <div>👍 Thumbs-Up → Basic beat</div>
-                    <div>✌️ Peace → Techno beat</div>
-                    <div>✊ Fist → Breakbeat</div>
-                    <div>🤙 Shaka → Toggle filter</div>
-                    <div>🤏 Pinch → Hi-hat</div>
-                    <div>🖐️ Open + Move → Drums</div>
-                    <div>🤘 Horn → Cowbell</div>
-
-                    <div style="color: #ffff00; font-weight: bold; margin-top: 10px; margin-bottom: 5px;">TWO HANDS (OCTAVE CONTROL):</div>
-                    <div>🖐️ Left + 👍 Right → Octave UP ⬆️</div>
-                    <div>🖐️ Left + ✌️ Right → Octave DOWN ⬇️</div>
-                    <div>🖐️ Left + 👌 Right → Reset Octave (4)</div>
-                    <div>🤙 Both → Cycle drum patterns</div>
-                </div>
-            </details>
+                <!-- Gesture Guide Toggle Button -->
+                <button id="toggleGestureGuide" style="margin-top: 10px; width: 100%; background: rgba(139, 92, 246, 0.6); color: #fff; border: none; border-radius: 6px; padding: 8px; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.2s;">📖 Gesture Guide</button>
             </div>
         </div>
 
@@ -422,6 +400,48 @@
             </div>
         </div>
 
+        <!-- Gesture Guide Panel -->
+        <div id="gestureGuidePanel" style="position: fixed; bottom: 20px; left: 20px; width: 320px; max-height: 600px; background: rgba(10, 10, 15, 0.98); border: 2px solid rgba(139, 92, 246, 0.5); border-radius: 12px; padding: 0; z-index: 1002; display: none; box-shadow: 0 0 40px rgba(139, 92, 246, 0.4); backdrop-filter: blur(12px); overflow: hidden;">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(99, 102, 241, 0.2)); border-bottom: 1px solid rgba(139, 92, 246, 0.3); border-radius: 10px 10px 0 0;">
+                <h3 style="margin: 0; color: rgba(167, 139, 250, 1); font-family: monospace; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">📖 Gesture Guide</h3>
+                <button id="closeGestureGuide" class="btn-icon" title="Close">
+                    <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                    </svg>
+                </button>
+            </div>
+            <div style="padding: 16px; overflow-y: auto; max-height: 520px;">
+                <div style="font-family: monospace; font-size: 11px; color: #fff; line-height: 1.7;">
+                    <div style="color: #00ff00; font-weight: bold; margin-bottom: 8px; font-size: 12px;">✋ LEFT HAND (Chords):</div>
+                    <div style="padding-left: 8px; margin-bottom: 6px;">👍 Thumbs-Up → I chord</div>
+                    <div style="padding-left: 8px; margin-bottom: 6px;">☝️ Index → II chord</div>
+                    <div style="padding-left: 8px; margin-bottom: 6px;">✌️ Peace → III chord</div>
+                    <div style="padding-left: 8px; margin-bottom: 6px;">🤟 Three Fingers → IV chord</div>
+                    <div style="padding-left: 8px; margin-bottom: 6px;">🖐️ Open Palm → V chord</div>
+                    <div style="padding-left: 8px; margin-bottom: 6px;">🤙 Shaka → VI chord</div>
+                    <div style="padding-left: 8px; margin-bottom: 6px;">🤘 Horn → VII chord</div>
+                    <div style="padding-left: 8px; margin-bottom: 6px;">🤏 Pinch → Change synth</div>
+                    <div style="padding-left: 8px; margin-bottom: 6px;">✊ Fist → Cycle scales</div>
+                    <div style="padding-left: 8px; margin-bottom: 12px;">👌 OK Sign → Toggle mode</div>
+
+                    <div style="color: #ff00ff; font-weight: bold; margin-bottom: 8px; margin-top: 12px; font-size: 12px;">🤚 RIGHT HAND (Rhythm):</div>
+                    <div style="padding-left: 8px; margin-bottom: 6px;">👍 Thumbs-Up → Basic beat</div>
+                    <div style="padding-left: 8px; margin-bottom: 6px;">✌️ Peace → Techno beat</div>
+                    <div style="padding-left: 8px; margin-bottom: 6px;">✊ Fist → Breakbeat</div>
+                    <div style="padding-left: 8px; margin-bottom: 6px;">🤙 Shaka → Toggle filter</div>
+                    <div style="padding-left: 8px; margin-bottom: 6px;">🤏 Pinch → Hi-hat</div>
+                    <div style="padding-left: 8px; margin-bottom: 6px;">🖐️ Open + Move → Drums</div>
+                    <div style="padding-left: 8px; margin-bottom: 12px;">🤘 Horn → Cowbell</div>
+
+                    <div style="color: #ffff00; font-weight: bold; margin-bottom: 8px; margin-top: 12px; font-size: 12px;">🙌 TWO HANDS (Octave Control):</div>
+                    <div style="padding-left: 8px; margin-bottom: 6px;">🖐️ Left + 👍 Right → Octave UP ⬆️</div>
+                    <div style="padding-left: 8px; margin-bottom: 6px;">🖐️ Left + ✌️ Right → Octave DOWN ⬇️</div>
+                    <div style="padding-left: 8px; margin-bottom: 6px;">🖐️ Left + 👌 Right → Reset Octave (4)</div>
+                    <div style="padding-left: 8px; margin-bottom: 6px;">🤙 Both → Cycle drum patterns</div>
+                </div>
+            </div>
+        </div>
+
         <!-- Shader Editor Panel (Left Side) -->
         <div class="shader-editor-left" id="shaderEditorLeft" style="display: none;">
             <div class="editor-header">
@@ -621,6 +641,10 @@
                                 </svg>
                                 PROD
                             </button>
+                        </div>
+                        <!-- PROD Mode Status Indicator -->
+                        <div id="prodModeStatus" style="display: none; font-size: 9px; color: #4CAF50; margin-top: 4px; text-align: center; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+                            ✓ DAW Mode Active
                         </div>
                     </div>
                     <button id="playBtn" class="btn-primary">
