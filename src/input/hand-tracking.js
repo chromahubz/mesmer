@@ -44,6 +44,60 @@ class HandTracking {
         this.thereminEngine = 'tonejs'; // tonejs, wad, dirt
         this.thereminPreset = 'sine'; // Current theremin preset
 
+        // Piano mode settings
+        this.pianoMode = false; // Piano mode toggle
+        this.pianoEngine = 'tonejs'; // tonejs, wad, dirt
+        this.pianoPreset = 'piano'; // Current piano preset
+        this.pianoOctaveRange = 3; // Number of octaves to spread across screen
+        this.pianoTapSensitivity = 0.015; // Tap detection threshold
+
+        // Drum mode settings
+        this.drumMode = false; // Drum mode toggle
+        this.drumKit = 'acoustic'; // Current drum kit from Dirt library
+        this.drumStrikeSensitivity = 0.02; // Strike detection threshold
+        this.drumZoneLayout = 'standard'; // standard, compact, custom
+
+        // Motion tracking for tap/strike detection
+        this.previousHandPositions = {
+            left: null,
+            right: null
+        };
+        this.handVelocities = {
+            left: { x: 0, y: 0, z: 0 },
+            right: { x: 0, y: 0, z: 0 }
+        };
+        this.lastTapTime = {
+            left: 0,
+            right: 0
+        };
+        this.tapDebounceMs = 100; // Minimum time between taps
+
+        // Visual indicators for played notes/drums
+        this.lastPlayedNotes = {
+            left: null,
+            right: null
+        };
+        this.lastPlayedNotesTime = {
+            left: 0,
+            right: 0
+        };
+        this.lastDrumHits = {
+            left: null,
+            right: null
+        };
+        this.lastDrumHitsTime = {
+            left: 0,
+            right: 0
+        };
+        this.noteDisplayDuration = 1000; // ms to display played notes
+
+        // Fingertip zone tracking for piano mode
+        this.fingertipStates = {
+            left: {}, // Track each finger: { thumb: { inZone: false, lastNote: null, lastTriggerTime: 0 }, ... }
+            right: {}
+        };
+        this.fingerDebounceMs = 150; // Debounce time for each finger
+
         // Performance
         this.frameCount = 0;
         this.fps = 0;
@@ -297,10 +351,80 @@ class HandTracking {
             thereminPresetSelect.addEventListener('change', (e) => {
                 const oldPreset = this.thereminPreset;
                 this.thereminPreset = e.target.value;
-                console.log(`🎨 [HAND-TRACKING] Preset changed: ${oldPreset} → ${this.thereminPreset}`);
+                console.log(`[HAND-TRACKING] Preset changed: ${oldPreset} → ${this.thereminPreset}`);
             });
         } else {
-            console.warn('⚠️ Theremin preset select not found in DOM');
+            console.warn('Theremin preset select not found in DOM');
+        }
+
+        // Piano Mode Controls
+        const pianoToggle = document.getElementById('pianoToggle');
+        const pianoEngineSelect = document.getElementById('pianoEngineSelect');
+        const pianoPresetSelect = document.getElementById('pianoPresetSelect');
+        const pianoOctaveRange = document.getElementById('pianoOctaveRange');
+
+        if (pianoToggle) {
+            pianoToggle.addEventListener('change', (e) => {
+                this.pianoMode = e.target.checked;
+                // Turn off other modes when piano is enabled
+                if (this.pianoMode) {
+                    this.thereminMode = false;
+                    this.drumMode = false;
+                    const thereminToggle = document.getElementById('thereminToggle');
+                    const drumToggle = document.getElementById('drumToggle');
+                    if (thereminToggle) thereminToggle.checked = false;
+                    if (drumToggle) drumToggle.checked = false;
+                }
+                console.log(`[PIANO] Mode ${this.pianoMode ? 'enabled' : 'disabled'}`);
+            });
+        }
+
+        if (pianoEngineSelect) {
+            pianoEngineSelect.addEventListener('change', (e) => {
+                this.pianoEngine = e.target.value;
+                console.log(`[PIANO] Engine changed: ${this.pianoEngine}`);
+            });
+        }
+
+        if (pianoPresetSelect) {
+            pianoPresetSelect.addEventListener('change', (e) => {
+                this.pianoPreset = e.target.value;
+                console.log(`[PIANO] Preset changed: ${this.pianoPreset}`);
+            });
+        }
+
+        if (pianoOctaveRange) {
+            pianoOctaveRange.addEventListener('change', (e) => {
+                this.pianoOctaveRange = parseInt(e.target.value);
+                console.log(`[PIANO] Octave range changed: ${this.pianoOctaveRange}`);
+            });
+        }
+
+        // Drum Mode Controls
+        const drumToggle = document.getElementById('drumToggle');
+        const drumKitSelect = document.getElementById('drumKitSelect');
+
+        if (drumToggle) {
+            drumToggle.addEventListener('change', (e) => {
+                this.drumMode = e.target.checked;
+                // Turn off other modes when drum is enabled
+                if (this.drumMode) {
+                    this.thereminMode = false;
+                    this.pianoMode = false;
+                    const thereminToggle = document.getElementById('thereminToggle');
+                    const pianoToggle = document.getElementById('pianoToggle');
+                    if (thereminToggle) thereminToggle.checked = false;
+                    if (pianoToggle) pianoToggle.checked = false;
+                }
+                console.log(`[DRUM] Mode ${this.drumMode ? 'enabled' : 'disabled'}`);
+            });
+        }
+
+        if (drumKitSelect) {
+            drumKitSelect.addEventListener('change', (e) => {
+                this.drumKit = e.target.value;
+                console.log(`[DRUM] Kit changed: ${this.drumKit}`);
+            });
         }
     }
 
@@ -774,6 +898,9 @@ class HandTracking {
             }
         }
 
+        // Calculate hand velocities for motion detection (for piano/drum modes)
+        this.updateHandVelocities(leftPosition, rightPosition);
+
         // Get hand velocities
         const velocities = {
             left: this.gestureRecognizer.getVelocity('left'),
@@ -792,6 +919,15 @@ class HandTracking {
             this._lastDebugLog = Date.now();
         }
 
+        // Detect taps and strikes for piano/drum modes
+        const leftTap = this.pianoMode ? this.detectTap('left') : false;
+        const rightTap = this.pianoMode ? this.detectTap('right') : false;
+        const leftStrike = this.drumMode ? this.detectStrike('left') : null;
+        const rightStrike = this.drumMode ? this.detectStrike('right') : null;
+
+        // Detect fingertips in piano zone
+        const fingertipTriggers = this.pianoMode ? this.detectFingertipsInPianoZone() : [];
+
         this.musicMapper.processGestures(leftGesture, rightGesture, velocities, {
             volume: this.handVolume,
             engine: this.currentEngine,
@@ -806,8 +942,19 @@ class HandTracking {
             thereminPlaybackMode: this.thereminPlaybackMode,
             thereminEngine: this.thereminEngine,
             thereminPreset: this.thereminPreset,
+            pianoMode: this.pianoMode,
+            pianoEngine: this.pianoEngine,
+            pianoPreset: this.pianoPreset,
+            pianoOctaveRange: this.pianoOctaveRange,
+            drumMode: this.drumMode,
+            drumKit: this.drumKit,
             leftPosition: leftPosition,
-            rightPosition: rightPosition
+            rightPosition: rightPosition,
+            leftTap: leftTap,
+            rightTap: rightTap,
+            leftStrike: leftStrike,
+            rightStrike: rightStrike,
+            fingertipTriggers: fingertipTriggers
         });
     }
 
@@ -849,6 +996,16 @@ class HandTracking {
         // Draw theremin visualization if enabled
         if (this.thereminMode) {
             this.drawThereminOverlay();
+        }
+
+        // Draw piano roll if enabled
+        if (this.pianoMode) {
+            this.drawPianoRollOverlay();
+        }
+
+        // Draw drum grid if enabled
+        if (this.drumMode) {
+            this.drawDrumGridOverlay();
         }
     }
 
@@ -1272,5 +1429,481 @@ class HandTracking {
             showVideo: this.showVideo,
             drawLandmarks: this.drawLandmarks
         };
+    }
+
+    /**
+     * Update hand velocities for motion detection
+     */
+    updateHandVelocities(leftPosition, rightPosition) {
+        const now = performance.now();
+
+        // Update left hand velocity
+        if (leftPosition && this.previousHandPositions.left) {
+            this.handVelocities.left = {
+                x: leftPosition.x - this.previousHandPositions.left.x,
+                y: leftPosition.y - this.previousHandPositions.left.y,
+                z: leftPosition.z - this.previousHandPositions.left.z
+            };
+        } else if (!leftPosition) {
+            // Reset velocity when hand not detected
+            this.handVelocities.left = { x: 0, y: 0, z: 0 };
+        }
+
+        // Update right hand velocity
+        if (rightPosition && this.previousHandPositions.right) {
+            this.handVelocities.right = {
+                x: rightPosition.x - this.previousHandPositions.right.x,
+                y: rightPosition.y - this.previousHandPositions.right.y,
+                z: rightPosition.z - this.previousHandPositions.right.z
+            };
+        } else if (!rightPosition) {
+            // Reset velocity when hand not detected
+            this.handVelocities.right = { x: 0, y: 0, z: 0 };
+        }
+
+        // Store current positions for next frame
+        this.previousHandPositions.left = leftPosition ? { ...leftPosition } : null;
+        this.previousHandPositions.right = rightPosition ? { ...rightPosition } : null;
+    }
+
+    /**
+     * Detect tap motion (for piano mode)
+     * Returns true if a downward tap is detected
+     */
+    detectTap(handedness) {
+        const velocity = this.handVelocities[handedness];
+        if (!velocity) return false;
+
+        const now = performance.now();
+        const timeSinceLastTap = now - this.lastTapTime[handedness];
+
+        // Check if enough time has passed (debounce)
+        if (timeSinceLastTap < this.tapDebounceMs) {
+            return false;
+        }
+
+        // Detect downward motion (Y velocity positive, since Y increases downward)
+        const isDownwardMotion = velocity.y > this.pianoTapSensitivity;
+
+        if (isDownwardMotion) {
+            this.lastTapTime[handedness] = now;
+            // Store which note was played for visual feedback
+            const position = this.previousHandPositions[handedness];
+            if (position) {
+                const note = this.getPianoNote(position);
+                this.lastPlayedNotes[handedness] = note;
+                this.lastPlayedNotesTime[handedness] = now;
+            }
+            console.log(`[TAP DETECTED] ${handedness} hand: Y-velocity = ${velocity.y.toFixed(4)}`);
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Detect strike motion (for drum mode)
+     * Returns true if a strong downward strike is detected
+     */
+    detectStrike(handedness) {
+        const velocity = this.handVelocities[handedness];
+        if (!velocity) return { detected: false, velocity: 0 };
+
+        const now = performance.now();
+        const timeSinceLastTap = now - this.lastTapTime[handedness];
+
+        // Check if enough time has passed (debounce)
+        if (timeSinceLastTap < this.tapDebounceMs) {
+            return { detected: false, velocity: 0 };
+        }
+
+        // Detect strong downward motion (higher threshold than tap)
+        const isStrikeMotion = velocity.y > this.drumStrikeSensitivity;
+
+        if (isStrikeMotion) {
+            this.lastTapTime[handedness] = now;
+            // Calculate velocity magnitude for velocity-sensitive playback
+            const velocityMagnitude = Math.abs(velocity.y);
+            // Store which drum was hit for visual feedback
+            const position = this.previousHandPositions[handedness];
+            if (position) {
+                const zone = this.getDrumZone(position);
+                this.lastDrumHits[handedness] = zone;
+                this.lastDrumHitsTime[handedness] = now;
+            }
+            console.log(`[STRIKE DETECTED] ${handedness} hand: Y-velocity = ${velocity.y.toFixed(4)}, magnitude = ${velocityMagnitude.toFixed(4)}`);
+            return { detected: true, velocity: velocityMagnitude };
+        }
+
+        return { detected: false, velocity: 0 };
+    }
+
+    /**
+     * Detect fingertips in piano zone and trigger notes
+     * Returns array of triggered notes
+     */
+    detectFingertipsInPianoZone() {
+        if (!this.latestHands || !this.pianoMode) {
+            return [];
+        }
+
+        const triggeredNotes = [];
+        const now = performance.now();
+
+        // Calculate piano zone boundaries (same as drawPianoRollOverlay)
+        const keyHeight = 120;
+        const pianoZoneTop = (this.canvas.height - keyHeight) / 2;
+        const pianoZoneBottom = pianoZoneTop + keyHeight;
+
+        const fingerTips = [
+            { name: 'thumb', index: 4 },
+            { name: 'index', index: 8 },
+            { name: 'middle', index: 12 },
+            { name: 'ring', index: 16 },
+            { name: 'pinky', index: 20 }
+        ];
+
+        this.latestHands.forEach((hand) => {
+            const handedness = hand.handedness.toLowerCase();
+
+            // Initialize finger states for this hand if needed
+            if (!this.fingertipStates[handedness]) {
+                this.fingertipStates[handedness] = {};
+            }
+
+            fingerTips.forEach(finger => {
+                const landmark = hand.landmarks[finger.index];
+                if (!landmark) return;
+
+                // Initialize finger state if needed
+                if (!this.fingertipStates[handedness][finger.name]) {
+                    this.fingertipStates[handedness][finger.name] = {
+                        inZone: false,
+                        lastNote: null,
+                        lastTriggerTime: 0
+                    };
+                }
+
+                const state = this.fingertipStates[handedness][finger.name];
+                const y_canvas = landmark.y * this.canvas.height;
+                const x_canvas = landmark.x * this.canvas.width;
+
+                // Check if fingertip is in piano zone
+                const inZone = y_canvas >= pianoZoneTop && y_canvas <= pianoZoneBottom;
+
+                // Detect zone entry (trigger on entering the zone)
+                if (inZone && !state.inZone) {
+                    // Check debounce
+                    if (now - state.lastTriggerTime >= this.fingerDebounceMs) {
+                        // Get note at this X position
+                        const note = this.getPianoNote({ x: landmark.x, y: landmark.y });
+
+                        // Trigger the note
+                        triggeredNotes.push({
+                            handedness,
+                            finger: finger.name,
+                            note,
+                            position: { x: landmark.x, y: landmark.y }
+                        });
+
+                        // Update state
+                        state.lastNote = note;
+                        state.lastTriggerTime = now;
+
+                        // Update visual tracking
+                        this.lastPlayedNotes[handedness] = note;
+                        this.lastPlayedNotesTime[handedness] = now;
+
+                        console.log(`[FINGERTIP ZONE] ${handedness} ${finger.name} entered zone - note: ${note}`);
+                    }
+                }
+
+                // Update zone state
+                state.inZone = inZone;
+            });
+        });
+
+        return triggeredNotes;
+    }
+
+    /**
+     * Get drum zone based on hand position
+     * Returns the drum zone name based on 3x3 grid
+     */
+    getDrumZone(position) {
+        if (!position) return null;
+
+        const x = position.x;
+        const y = position.y;
+
+        // 3x3 grid layout
+        let zone = '';
+
+        // Determine row (Y-axis)
+        if (y < 0.33) {
+            // Top row
+            if (x < 0.33) zone = 'hihat';
+            else if (x < 0.66) zone = 'crash';
+            else zone = 'ride';
+        } else if (y < 0.66) {
+            // Middle row
+            if (x < 0.33) zone = 'tom1';
+            else if (x < 0.66) zone = 'snare';
+            else zone = 'tom2';
+        } else {
+            // Bottom row
+            if (x < 0.33) zone = 'kick';
+            else if (x < 0.66) zone = 'floortom';
+            else zone = 'kick'; // Right kick for double bass
+        }
+
+        return zone;
+    }
+
+    /**
+     * Map X position to piano note
+     * Returns note name based on current scale and octave range
+     */
+    getPianoNote(position) {
+        if (!position) return null;
+
+        const x = position.x;
+
+        // Get current scale from music engine
+        const scale = this.musicMapper?.chordEngine?.getCurrentScale() || 'major';
+        const rootNote = this.musicMapper?.chordEngine?.getCurrentRoot() || 'C';
+
+        // Define scale intervals (semitones from root)
+        const scaleIntervals = {
+            'major': [0, 2, 4, 5, 7, 9, 11],
+            'minor': [0, 2, 3, 5, 7, 8, 10],
+            'dorian': [0, 2, 3, 5, 7, 9, 10],
+            'phrygian': [0, 1, 3, 5, 7, 8, 10],
+            'lydian': [0, 2, 4, 6, 7, 9, 11],
+            'mixolydian': [0, 2, 4, 5, 7, 9, 10],
+            'chromatic': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+        };
+
+        const intervals = scaleIntervals[scale] || scaleIntervals['major'];
+        const notesPerOctave = intervals.length;
+        const totalNotes = notesPerOctave * this.pianoOctaveRange;
+
+        // Map X position to note index
+        const noteIndex = Math.floor(x * totalNotes);
+        const octave = Math.floor(noteIndex / notesPerOctave) + 3; // Start from octave 3
+        const scaleStep = noteIndex % notesPerOctave;
+        const semitone = intervals[scaleStep];
+
+        // Calculate MIDI note number
+        const rootMidi = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'].indexOf(rootNote);
+        const midiNote = 12 + rootMidi + (octave * 12) + semitone;
+
+        // Convert back to note name
+        const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+        const noteName = noteNames[midiNote % 12];
+        const finalOctave = Math.floor(midiNote / 12) - 1;
+
+        return `${noteName}${finalOctave}`;
+    }
+
+    /**
+     * Draw piano roll overlay with note indicators (CENTERED)
+     */
+    drawPianoRollOverlay() {
+        const noteCount = 7 * this.pianoOctaveRange; // 7 notes per octave in scale
+        const keyWidth = this.canvas.width / noteCount;
+        const keyHeight = 120; // Increased height for better visibility
+
+        // CENTER the piano on the canvas
+        const y = (this.canvas.height - keyHeight) / 2;
+
+        // Draw semi-transparent background for piano zone
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        this.ctx.fillRect(0, y, this.canvas.width, keyHeight);
+
+        // Draw piano keys with grid
+        this.ctx.strokeStyle = 'rgba(0, 255, 100, 0.7)';
+        this.ctx.lineWidth = 2;
+
+        for (let i = 0; i < noteCount; i++) {
+            const x = i * keyWidth;
+            // Draw key outline
+            this.ctx.strokeRect(x, y, keyWidth, keyHeight);
+
+            // Draw note number/position indicator
+            this.ctx.font = 'bold 10px monospace';
+            this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            this.ctx.textAlign = 'center';
+            this.ctx.fillText(i + 1, x + keyWidth / 2, y + keyHeight - 10);
+        }
+
+        // Draw fingertip indicators for current hand positions
+        if (this.latestHands) {
+            this.latestHands.forEach((hand) => {
+                const handedness = hand.handedness.toLowerCase();
+
+                // Draw indicators for each fingertip
+                const fingerTips = [
+                    { name: 'thumb', index: 4 },
+                    { name: 'index', index: 8 },
+                    { name: 'middle', index: 12 },
+                    { name: 'ring', index: 16 },
+                    { name: 'pinky', index: 20 }
+                ];
+
+                fingerTips.forEach(finger => {
+                    const landmark = hand.landmarks[finger.index];
+                    if (landmark) {
+                        const x = landmark.x * this.canvas.width;
+                        const y_pos = landmark.y * this.canvas.height;
+
+                        // Check if fingertip is in piano zone
+                        const inPianoZone = y_pos >= y && y_pos <= (y + keyHeight);
+
+                        if (inPianoZone) {
+                            // Draw larger indicator when in zone
+                            this.ctx.fillStyle = handedness === 'left' ? 'rgba(0, 255, 100, 0.8)' : 'rgba(100, 255, 255, 0.8)';
+                            this.ctx.beginPath();
+                            this.ctx.arc(x, y_pos, 15, 0, Math.PI * 2);
+                            this.ctx.fill();
+
+                            // Draw fingertip label
+                            this.ctx.font = 'bold 10px monospace';
+                            this.ctx.fillStyle = 'rgba(255, 255, 255, 1)';
+                            this.ctx.textAlign = 'center';
+                            this.ctx.fillText(finger.name[0].toUpperCase(), x, y_pos + 4);
+                        } else {
+                            // Draw smaller indicator when not in zone
+                            this.ctx.strokeStyle = handedness === 'left' ? 'rgba(0, 255, 100, 0.4)' : 'rgba(100, 255, 255, 0.4)';
+                            this.ctx.lineWidth = 2;
+                            this.ctx.beginPath();
+                            this.ctx.arc(x, y_pos, 8, 0, Math.PI * 2);
+                            this.ctx.stroke();
+                        }
+                    }
+                });
+            });
+        }
+
+        // Draw played notes indicators
+        const now = performance.now();
+
+        ['left', 'right'].forEach((hand, handIndex) => {
+            const note = this.lastPlayedNotes[hand];
+            const noteTime = this.lastPlayedNotesTime[hand];
+
+            if (note && (now - noteTime < this.noteDisplayDuration)) {
+                // Calculate opacity based on time elapsed
+                const elapsed = now - noteTime;
+                const opacity = 1 - (elapsed / this.noteDisplayDuration);
+
+                // Get position where note was played
+                const position = this.previousHandPositions[hand];
+                if (position) {
+                    const x = position.x * this.canvas.width;
+                    const noteY = y + keyHeight / 2;
+
+                    // Draw note indicator on piano roll
+                    this.ctx.fillStyle = hand === 'left' ? `rgba(0, 255, 100, ${opacity})` : `rgba(100, 255, 255, ${opacity})`;
+                    this.ctx.beginPath();
+                    this.ctx.arc(x, noteY, 25, 0, Math.PI * 2);
+                    this.ctx.fill();
+
+                    // Draw note name on piano roll
+                    this.ctx.font = 'bold 18px monospace';
+                    this.ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
+                    this.ctx.textAlign = 'center';
+                    this.ctx.fillText(note, x, noteY + 6);
+                }
+            }
+        });
+
+        // Draw scale/key info at top of piano zone
+        const scale = this.musicMapper?.chordEngine?.getCurrentScale() || 'major';
+        const root = this.musicMapper?.chordEngine?.getCurrentRoot() || 'C';
+        this.ctx.font = 'bold 16px monospace';
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText(`${root} ${scale}`, this.canvas.width / 2, y - 15);
+    }
+
+    /**
+     * Draw drum grid overlay with zone indicators
+     */
+    drawDrumGridOverlay() {
+        const gridSize = 3;
+        const cellWidth = this.canvas.width / gridSize;
+        const cellHeight = this.canvas.height / gridSize;
+
+        // Drum zone labels
+        const zoneLabels = [
+            ['HI-HAT', 'CRASH', 'RIDE'],
+            ['TOM 1', 'SNARE', 'TOM 2'],
+            ['KICK', 'FLOOR', 'KICK']
+        ];
+
+        // Draw grid and labels
+        this.ctx.strokeStyle = 'rgba(255, 100, 0, 0.6)';
+        this.ctx.lineWidth = 2;
+        this.ctx.font = 'bold 16px monospace';
+        this.ctx.textAlign = 'center';
+
+        for (let row = 0; row < gridSize; row++) {
+            for (let col = 0; col < gridSize; col++) {
+                const x = col * cellWidth;
+                const y = row * cellHeight;
+
+                // Draw cell outline
+                this.ctx.strokeRect(x, y, cellWidth, cellHeight);
+
+                // Draw label
+                this.ctx.fillStyle = 'rgba(255, 100, 0, 0.7)';
+                this.ctx.fillText(zoneLabels[row][col], x + cellWidth / 2, y + cellHeight / 2);
+            }
+        }
+
+        // Draw hit indicators
+        const now = performance.now();
+
+        ['left', 'right'].forEach((hand) => {
+            const zone = this.lastDrumHits[hand];
+            const hitTime = this.lastDrumHitsTime[hand];
+
+            if (zone && (now - hitTime < this.noteDisplayDuration)) {
+                // Calculate opacity based on time elapsed
+                const elapsed = now - hitTime;
+                const opacity = 1 - (elapsed / this.noteDisplayDuration);
+
+                // Get zone position
+                const position = this.previousHandPositions[hand];
+                if (position) {
+                    const x = position.x * this.canvas.width;
+                    const y = position.y * this.canvas.height;
+
+                    // Draw hit indicator
+                    this.ctx.fillStyle = hand === 'left' ? `rgba(255, 100, 0, ${opacity * 0.5})` : `rgba(255, 200, 0, ${opacity * 0.5})`;
+                    this.ctx.beginPath();
+                    this.ctx.arc(x, y, 50, 0, Math.PI * 2);
+                    this.ctx.fill();
+
+                    // Draw zone label
+                    this.ctx.font = 'bold 24px monospace';
+                    this.ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
+                    this.ctx.textAlign = 'center';
+                    this.ctx.fillText(zone.toUpperCase(), x, y + 8);
+
+                    // Draw hand label
+                    this.ctx.font = 'bold 16px monospace';
+                    this.ctx.fillStyle = `rgba(255, 255, 255, ${opacity * 0.8})`;
+                    this.ctx.fillText(hand === 'left' ? 'L' : 'R', x, y - 50);
+                }
+            }
+        });
+
+        // Draw drum kit info
+        this.ctx.font = 'bold 14px monospace';
+        this.ctx.fillStyle = 'rgba(255, 100, 0, 0.8)';
+        this.ctx.textAlign = 'left';
+        this.ctx.fillText(`Kit: ${this.drumKit}`, 10, 30);
     }
 }

@@ -42,6 +42,20 @@ class GestureMusicMapper {
         this.thereminOctaveShift = 0; // Track current octave shift for display
         this.initializeThereminSynth();
 
+        // Piano mode (tap-to-play notes)
+        this.pianoSynths = {
+            tonejs: null,
+            wad: null,
+            dirt: null
+        };
+        this.pianoActiveNotes = new Set(); // Track currently playing notes
+        this.initializePianoSynths();
+
+        // Drum mode (strike-to-hit drums)
+        this.drumSampler = null;
+        this.drumLastHitTime = {}; // Track last hit time per drum
+        this.initializeDrumKit();
+
         // Available scales to cycle through
         this.scales = ['phrygian', 'dorian', 'lydian', 'mixolydian', 'major', 'minor'];
         this.currentScaleIndex = 0;
@@ -144,6 +158,39 @@ class GestureMusicMapper {
         this.thereminSynth.volume.value = -Infinity;
 
         console.log('🎵 Theremin synth initialized with reverb & delay effects');
+    }
+
+    /**
+     * Initialize piano synths for all engines
+     */
+    initializePianoSynths() {
+        if (typeof Tone !== 'undefined') {
+            // Tone.js piano (polyphonic sampler or synth)
+            this.pianoSynths.tonejs = new Tone.PolySynth(Tone.Synth, {
+                oscillator: {
+                    type: 'sine'
+                },
+                envelope: {
+                    attack: 0.005,
+                    decay: 0.1,
+                    sustain: 0.3,
+                    release: 1
+                }
+            }).toDestination();
+
+            console.log('🎹 Tone.js piano synth initialized');
+        }
+
+        // WAD and Dirt pianos will be initialized on-demand
+        console.log('🎹 Piano mode initialized');
+    }
+
+    /**
+     * Initialize drum kit sampler
+     */
+    initializeDrumKit() {
+        // Drum kit will use Dirt samples, initialized on-demand
+        console.log('🥁 Drum mode initialized (using Dirt samples)');
     }
 
     /**
@@ -693,7 +740,218 @@ class GestureMusicMapper {
 
             this.thereminActive = false;
             this._lastDirtNote = null;
-            console.log('🔇 Theremin stopped');
+            console.log('Theremin stopped');
+        }
+    }
+
+    /**
+     * Process Piano Mode - tap-to-play notes
+     */
+    processPianoMode(leftGesture, rightGesture) {
+        const leftPosition = this.audioSettings.leftPosition;
+        const rightPosition = this.audioSettings.rightPosition;
+        const leftTap = this.audioSettings.leftTap;
+        const rightTap = this.audioSettings.rightTap;
+        const fingertipTriggers = this.audioSettings.fingertipTriggers || [];
+        const engine = this.audioSettings.pianoEngine || 'tonejs';
+
+        // Process fingertip zone triggers (primary method)
+        if (fingertipTriggers.length > 0) {
+            fingertipTriggers.forEach(trigger => {
+                const velocity = this.calculateVelocityFromPosition(trigger.position);
+                this.playPianoNote(trigger.note, velocity, engine);
+                console.log(`[PIANO FINGERTIP] ${trigger.handedness} ${trigger.finger}: ${trigger.note} (velocity: ${velocity.toFixed(2)})`);
+            });
+        }
+
+        // Process left hand tap (fallback method)
+        if (leftTap && leftPosition) {
+            const note = this.getPianoNoteFromPosition(leftPosition);
+            const velocity = this.calculateVelocityFromPosition(leftPosition);
+            this.playPianoNote(note, velocity, engine);
+            console.log(`[PIANO TAP] Left hand: ${note} (velocity: ${velocity.toFixed(2)})`);
+        }
+
+        // Process right hand tap (fallback method)
+        if (rightTap && rightPosition) {
+            const note = this.getPianoNoteFromPosition(rightPosition);
+            const velocity = this.calculateVelocityFromPosition(rightPosition);
+            this.playPianoNote(note, velocity, engine);
+            console.log(`[PIANO TAP] Right hand: ${note} (velocity: ${velocity.toFixed(2)})`);
+        }
+    }
+
+    /**
+     * Get piano note from hand position
+     */
+    getPianoNoteFromPosition(position) {
+        const x = position.x;
+
+        // Get current scale from chord engine
+        const scale = this.chordEngine.getCurrentScale() || 'major';
+        const rootNote = this.chordEngine.getCurrentRoot() || 'C';
+
+        // Define scale intervals
+        const scaleIntervals = {
+            'major': [0, 2, 4, 5, 7, 9, 11],
+            'minor': [0, 2, 3, 5, 7, 8, 10],
+            'dorian': [0, 2, 3, 5, 7, 9, 10],
+            'phrygian': [0, 1, 3, 5, 7, 8, 10],
+            'lydian': [0, 2, 4, 6, 7, 9, 11],
+            'mixolydian': [0, 2, 4, 5, 7, 9, 10]
+        };
+
+        const intervals = scaleIntervals[scale] || scaleIntervals['major'];
+        const octaveRange = this.audioSettings.pianoOctaveRange || 3;
+        const notesPerOctave = intervals.length;
+        const totalNotes = notesPerOctave * octaveRange;
+
+        // Map X position to note index
+        const noteIndex = Math.floor(x * totalNotes);
+        const octave = Math.floor(noteIndex / notesPerOctave) + 3;
+        const scaleStep = noteIndex % notesPerOctave;
+        const semitone = intervals[scaleStep];
+
+        // Calculate MIDI note
+        const rootMidi = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'].indexOf(rootNote);
+        const midiNote = 12 + rootMidi + (octave * 12) + semitone;
+
+        // Convert to note name
+        const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+        const noteName = noteNames[midiNote % 12];
+        const finalOctave = Math.floor(midiNote / 12) - 1;
+
+        return `${noteName}${finalOctave}`;
+    }
+
+    /**
+     * Calculate velocity from hand position (Y-axis)
+     */
+    calculateVelocityFromPosition(position) {
+        // Higher hand = louder (invert Y since 0 is top)
+        const y = 1 - position.y;
+        return Math.max(0.2, Math.min(1.0, y));
+    }
+
+    /**
+     * Play piano note with specified engine
+     */
+    playPianoNote(note, velocity, engine) {
+        const volume = Tone.gainToDb(velocity);
+
+        if (engine === 'tonejs' && this.pianoSynths.tonejs) {
+            // Tone.js piano
+            this.pianoSynths.tonejs.triggerAttackRelease(note, '8n', undefined, velocity);
+            this.pianoActiveNotes.add(note);
+        } else if (engine === 'wad' && this.wadEngine) {
+            // WAD piano
+            this.wadEngine.playNote(note, velocity, 0.5);
+        } else if (engine === 'dirt' && this.dirtEngine) {
+            // Dirt piano samples
+            const preset = this.audioSettings.pianoPreset || 'piano';
+            this.dirtEngine.playNote(note, preset, velocity);
+        }
+    }
+
+    /**
+     * Process Drum Mode - strike-to-hit drums
+     */
+    processDrumMode(leftGesture, rightGesture) {
+        const leftPosition = this.audioSettings.leftPosition;
+        const rightPosition = this.audioSettings.rightPosition;
+        const leftStrike = this.audioSettings.leftStrike;
+        const rightStrike = this.audioSettings.rightStrike;
+        const drumKit = this.audioSettings.drumKit || 'acoustic';
+
+        // Process left hand strike
+        if (leftStrike && leftStrike.detected && leftPosition) {
+            const zone = this.getDrumZoneFromPosition(leftPosition);
+            const velocity = leftStrike.velocity;
+            this.playDrumHit(zone, velocity, drumKit);
+            console.log(`[DRUM] Left hand strike: ${zone} (velocity: ${velocity.toFixed(2)})`);
+        }
+
+        // Process right hand strike
+        if (rightStrike && rightStrike.detected && rightPosition) {
+            const zone = this.getDrumZoneFromPosition(rightPosition);
+            const velocity = rightStrike.velocity;
+            this.playDrumHit(zone, velocity, drumKit);
+            console.log(`[DRUM] Right hand strike: ${zone} (velocity: ${velocity.toFixed(2)})`);
+        }
+    }
+
+    /**
+     * Get drum zone from hand position (3x3 grid)
+     */
+    getDrumZoneFromPosition(position) {
+        const x = position.x;
+        const y = position.y;
+
+        // 3x3 grid layout
+        if (y < 0.33) {
+            // Top row
+            if (x < 0.33) return 'hihat';
+            else if (x < 0.66) return 'crash';
+            else return 'ride';
+        } else if (y < 0.66) {
+            // Middle row
+            if (x < 0.33) return 'tom1';
+            else if (x < 0.66) return 'snare';
+            else return 'tom2';
+        } else {
+            // Bottom row
+            if (x < 0.33) return 'kick';
+            else if (x < 0.66) return 'floortom';
+            else return 'kick';
+        }
+    }
+
+    /**
+     * Play drum hit using Dirt samples
+     */
+    playDrumHit(zone, velocity, drumKit) {
+        if (!this.musicEngine || !this.musicEngine.drumSamples) {
+            console.warn('Drum samples not available');
+            return;
+        }
+
+        // Map zones to drum sample names (matching Tone.Players keys)
+        const drumMap = {
+            'hihat': 'hihat',
+            'crash': 'clap',
+            'ride': 'cowbell',
+            'tom1': 'openhat',
+            'snare': 'snare',
+            'tom2': 'openhat',
+            'floortom': 'openhat',
+            'kick': 'kick'
+        };
+
+        const sampleName = drumMap[zone] || 'kick';
+
+        // Normalize velocity (0-1) to (0.3-1.0) for better audibility
+        const normalizedVelocity = 0.3 + (velocity * 0.7);
+
+        // Play the drum sample using musicEngine's drumSamples
+        if (this.musicEngine.drumSamples.has(sampleName)) {
+            const player = this.musicEngine.drumSamples.player(sampleName);
+
+            // Stop if already playing
+            if (player.state === 'started') {
+                try {
+                    player.stop();
+                } catch (e) {
+                    // Ignore stop errors
+                }
+            }
+
+            // Play with velocity
+            player.volume.value = -10 + (normalizedVelocity * 10); // Volume range: -10dB to 0dB
+            player.start();
+
+            console.log(`[DRUM HIT] ${sampleName} at velocity ${normalizedVelocity.toFixed(2)}`);
+        } else {
+            console.warn(`⚠️ Drum sample "${sampleName}" not found`);
         }
     }
 
@@ -710,7 +968,7 @@ class GestureMusicMapper {
         // Store previous theremin sound to detect changes
         const prevThereminSound = this.audioSettings?.thereminSound;
 
-        // Store audio settings (MUST include ALL theremin settings!)
+        // Store audio settings (MUST include ALL mode settings!)
         this.audioSettings = {
             volume: audioSettings.volume || 0.7,
             engine: audioSettings.engine || 'tonejs',
@@ -722,11 +980,21 @@ class GestureMusicMapper {
             thereminSound: audioSettings.thereminSound || 'sine',
             thereminQuantize: audioSettings.thereminQuantize || false,
             thereminOtherHand: audioSettings.thereminOtherHand || 'volume',
-            thereminPlaybackMode: audioSettings.thereminPlaybackMode || 'continuous',  // FIX: Was missing!
-            thereminEngine: audioSettings.thereminEngine || 'tonejs',  // FIX: THIS WAS MISSING!!!
-            thereminPreset: audioSettings.thereminPreset || 'sine',  // FIX: THIS WAS MISSING!!!
+            thereminPlaybackMode: audioSettings.thereminPlaybackMode || 'continuous',
+            thereminEngine: audioSettings.thereminEngine || 'tonejs',
+            thereminPreset: audioSettings.thereminPreset || 'sine',
+            pianoMode: audioSettings.pianoMode || false,
+            pianoEngine: audioSettings.pianoEngine || 'tonejs',
+            pianoPreset: audioSettings.pianoPreset || 'piano',
+            pianoOctaveRange: audioSettings.pianoOctaveRange || 3,
+            drumMode: audioSettings.drumMode || false,
+            drumKit: audioSettings.drumKit || 'acoustic',
             leftPosition: audioSettings.leftPosition || null,
-            rightPosition: audioSettings.rightPosition || null
+            rightPosition: audioSettings.rightPosition || null,
+            leftTap: audioSettings.leftTap || false,
+            rightTap: audioSettings.rightTap || false,
+            leftStrike: audioSettings.leftStrike || null,
+            rightStrike: audioSettings.rightStrike || null
         };
 
         // Debug log to verify values are stored
@@ -755,6 +1023,20 @@ class GestureMusicMapper {
             if (this.audioSettings.thereminMode && !hasPositionData) {
                 console.log('⚠️ Theremin mode ON but no position data - hand tracking not running?');
             }
+        }
+
+        // Handle Piano Mode
+        if (this.audioSettings.pianoMode && hasPositionData) {
+            console.log('[PIANO] Piano mode active - processing taps');
+            this.processPianoMode(leftGesture, rightGesture);
+            return; // Skip normal gesture processing in piano mode
+        }
+
+        // Handle Drum Mode
+        if (this.audioSettings.drumMode && hasPositionData) {
+            console.log('[DRUM] Drum mode active - processing strikes');
+            this.processDrumMode(leftGesture, rightGesture);
+            return; // Skip normal gesture processing in drum mode
         }
 
         // Handle generative music control based on interaction mode
