@@ -72,6 +72,16 @@ class HandTracking {
         };
         this.tapDebounceMs = 100; // Minimum time between taps
 
+        // Drumstick mode: Track index fingertip positions for more accurate drum hitting
+        this.previousDrumstickPositions = {
+            left: null,
+            right: null
+        };
+        this.drumstickVelocities = {
+            left: { x: 0, y: 0, z: 0 },
+            right: { x: 0, y: 0, z: 0 }
+        };
+
         // Visual indicators for played notes/drums
         this.lastPlayedNotes = {
             left: null,
@@ -870,6 +880,8 @@ class HandTracking {
         let rightGesture = null;
         let leftPosition = null;
         let rightPosition = null;
+        let leftDrumstickPosition = null;
+        let rightDrumstickPosition = null;
 
         // Process each detected hand
         for (let i = 0; i < results.landmarks.length; i++) {
@@ -887,19 +899,32 @@ class HandTracking {
                 z: palmCenter.z  // depth (negative is closer to camera)
             };
 
+            // Extract drumstick position (using index fingertip - landmark 8)
+            const indexFingertip = landmarks[8];
+            const drumstickPosition = {
+                x: indexFingertip.x,
+                y: indexFingertip.y,
+                z: indexFingertip.z
+            };
+
             if (handedness === 'left') {
                 leftGesture = gesture;
                 leftPosition = position;
+                leftDrumstickPosition = drumstickPosition;
                 console.log(`👈 LEFT hand detected: X=${position.x.toFixed(2)}, Y=${position.y.toFixed(2)}`);
             } else {
                 rightGesture = gesture;
                 rightPosition = position;
+                rightDrumstickPosition = drumstickPosition;
                 console.log(`👉 RIGHT hand detected: X=${position.x.toFixed(2)}, Y=${position.y.toFixed(2)}`);
             }
         }
 
         // Calculate hand velocities for motion detection (for piano/drum modes)
         this.updateHandVelocities(leftPosition, rightPosition);
+
+        // Calculate drumstick velocities for drum mode
+        this.updateDrumstickVelocities(leftDrumstickPosition, rightDrumstickPosition);
 
         // Get hand velocities
         const velocities = {
@@ -1467,6 +1492,39 @@ class HandTracking {
     }
 
     /**
+     * Update drumstick (index fingertip) velocities for drum strike detection
+     */
+    updateDrumstickVelocities(leftDrumstickPosition, rightDrumstickPosition) {
+        const now = performance.now();
+
+        // Update left drumstick velocity
+        if (leftDrumstickPosition && this.previousDrumstickPositions.left) {
+            this.drumstickVelocities.left = {
+                x: leftDrumstickPosition.x - this.previousDrumstickPositions.left.x,
+                y: leftDrumstickPosition.y - this.previousDrumstickPositions.left.y,
+                z: leftDrumstickPosition.z - this.previousDrumstickPositions.left.z
+            };
+        } else if (!leftDrumstickPosition) {
+            this.drumstickVelocities.left = { x: 0, y: 0, z: 0 };
+        }
+
+        // Update right drumstick velocity
+        if (rightDrumstickPosition && this.previousDrumstickPositions.right) {
+            this.drumstickVelocities.right = {
+                x: rightDrumstickPosition.x - this.previousDrumstickPositions.right.x,
+                y: rightDrumstickPosition.y - this.previousDrumstickPositions.right.y,
+                z: rightDrumstickPosition.z - this.previousDrumstickPositions.right.z
+            };
+        } else if (!rightDrumstickPosition) {
+            this.drumstickVelocities.right = { x: 0, y: 0, z: 0 };
+        }
+
+        // Store current drumstick positions for next frame
+        this.previousDrumstickPositions.left = leftDrumstickPosition ? { ...leftDrumstickPosition } : null;
+        this.previousDrumstickPositions.right = rightDrumstickPosition ? { ...rightDrumstickPosition } : null;
+    }
+
+    /**
      * Detect tap motion (for piano mode)
      * Returns true if a downward tap is detected
      */
@@ -1502,11 +1560,13 @@ class HandTracking {
     }
 
     /**
-     * Detect strike motion (for drum mode)
+     * Detect strike motion (for drum mode) - DRUMSTICK MODE
+     * Uses index fingertip position/velocity instead of palm center
      * Returns true if a strong downward strike is detected
      */
     detectStrike(handedness) {
-        const velocity = this.handVelocities[handedness];
+        // USE DRUMSTICK VELOCITY (index fingertip) instead of palm
+        const velocity = this.drumstickVelocities[handedness];
         if (!velocity) return { detected: false, velocity: 0 };
 
         const now = performance.now();
@@ -1524,14 +1584,15 @@ class HandTracking {
             this.lastTapTime[handedness] = now;
             // Calculate velocity magnitude for velocity-sensitive playback
             const velocityMagnitude = Math.abs(velocity.y);
-            // Store which drum was hit for visual feedback
-            const position = this.previousHandPositions[handedness];
-            if (position) {
-                const zone = this.getDrumZone(position);
+
+            // USE DRUMSTICK POSITION (index fingertip) for zone detection
+            const drumstickPosition = this.previousDrumstickPositions[handedness];
+            if (drumstickPosition) {
+                const zone = this.getDrumZone(drumstickPosition);
                 this.lastDrumHits[handedness] = zone;
                 this.lastDrumHitsTime[handedness] = now;
+                console.log(`[DRUMSTICK STRIKE] ${handedness} fingertip: zone=${zone}, Y-vel=${velocity.y.toFixed(4)}, pos=(${drumstickPosition.x.toFixed(2)}, ${drumstickPosition.y.toFixed(2)})`);
             }
-            console.log(`[STRIKE DETECTED] ${handedness} hand: Y-velocity = ${velocity.y.toFixed(4)}, magnitude = ${velocityMagnitude.toFixed(4)}`);
             return { detected: true, velocity: velocityMagnitude };
         }
 
@@ -1862,6 +1923,47 @@ class HandTracking {
             }
         }
 
+        // Draw DRUMSTICK indicators (index fingertips)
+        if (this.latestHands) {
+            this.latestHands.forEach((hand) => {
+                const handedness = hand.handedness.toLowerCase();
+
+                // Get index fingertip (landmark 8)
+                const indexFingertip = hand.landmarks[8];
+                if (indexFingertip) {
+                    const x = indexFingertip.x * this.canvas.width;
+                    const y = indexFingertip.y * this.canvas.height;
+
+                    // Draw drumstick crosshair
+                    this.ctx.strokeStyle = handedness === 'left' ? 'rgba(255, 100, 0, 0.8)' : 'rgba(255, 200, 0, 0.8)';
+                    this.ctx.lineWidth = 3;
+
+                    // Vertical line
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(x, y - 15);
+                    this.ctx.lineTo(x, y + 15);
+                    this.ctx.stroke();
+
+                    // Horizontal line
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(x - 15, y);
+                    this.ctx.lineTo(x + 15, y);
+                    this.ctx.stroke();
+
+                    // Circle around crosshair
+                    this.ctx.beginPath();
+                    this.ctx.arc(x, y, 10, 0, Math.PI * 2);
+                    this.ctx.stroke();
+
+                    // Label "STICK"
+                    this.ctx.font = 'bold 10px monospace';
+                    this.ctx.fillStyle = handedness === 'left' ? 'rgba(255, 100, 0, 1)' : 'rgba(255, 200, 0, 1)';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.fillText(handedness === 'left' ? 'L-STICK' : 'R-STICK', x, y - 25);
+                }
+            });
+        }
+
         // Draw hit indicators
         const now = performance.now();
 
@@ -1874,11 +1976,11 @@ class HandTracking {
                 const elapsed = now - hitTime;
                 const opacity = 1 - (elapsed / this.noteDisplayDuration);
 
-                // Get zone position
-                const position = this.previousHandPositions[hand];
-                if (position) {
-                    const x = position.x * this.canvas.width;
-                    const y = position.y * this.canvas.height;
+                // USE DRUMSTICK POSITION for hit indicator
+                const drumstickPosition = this.previousDrumstickPositions[hand];
+                if (drumstickPosition) {
+                    const x = drumstickPosition.x * this.canvas.width;
+                    const y = drumstickPosition.y * this.canvas.height;
 
                     // Draw hit indicator
                     this.ctx.fillStyle = hand === 'left' ? `rgba(255, 100, 0, ${opacity * 0.5})` : `rgba(255, 200, 0, ${opacity * 0.5})`;
@@ -1904,6 +2006,6 @@ class HandTracking {
         this.ctx.font = 'bold 14px monospace';
         this.ctx.fillStyle = 'rgba(255, 100, 0, 0.8)';
         this.ctx.textAlign = 'left';
-        this.ctx.fillText(`Kit: ${this.drumKit}`, 10, 30);
+        this.ctx.fillText(`Kit: ${this.drumKit} (Drumstick Mode)`, 10, 30);
     }
 }
