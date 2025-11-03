@@ -36,6 +36,12 @@ class GestureMusicMapper {
         this.arpeggioLoop = null; // Track active arpeggio loop
         this.noteLoop = null; // Track active note loop (for hold mode)
 
+        // Theremin mode synth (continuous pitch/volume control)
+        this.thereminSynth = null;
+        this.thereminActive = false;
+        this.thereminOctaveShift = 0; // Track current octave shift for display
+        this.initializeThereminSynth();
+
         // Available scales to cycle through
         this.scales = ['phrygian', 'dorian', 'lydian', 'mixolydian', 'major', 'minor'];
         this.currentScaleIndex = 0;
@@ -85,6 +91,613 @@ class GestureMusicMapper {
     }
 
     /**
+     * Initialize Theremin Synth (continuous tone)
+     */
+    initializeThereminSynth() {
+        if (typeof Tone === 'undefined') {
+            console.warn('⚠️ Tone.js not available for theremin');
+            return;
+        }
+
+        // Create reverb and delay effects
+        this.thereminReverb = new Tone.Reverb({
+            decay: 2,
+            wet: 0
+        });
+
+        this.thereminDelay = new Tone.FeedbackDelay({
+            delayTime: 0.25,
+            feedback: 0.3,
+            wet: 0
+        });
+
+        // Create a MonoSynth with filter for theremin (more features than basic Synth)
+        this.thereminSynth = new Tone.MonoSynth({
+            oscillator: {
+                type: 'sine'
+            },
+            filter: {
+                type: 'lowpass',
+                Q: 1,
+                rolloff: -24
+            },
+            filterEnvelope: {
+                attack: 0.01,
+                decay: 0.1,
+                sustain: 1.0,
+                release: 0.2,
+                baseFrequency: 200,
+                octaves: 6
+            },
+            envelope: {
+                attack: 0.05,   // Very quick attack
+                decay: 0.1,
+                sustain: 1.0,   // Hold at full volume
+                release: 0.2    // Quick release
+            }
+        });
+
+        // Connect signal chain: synth → delay → reverb → destination
+        this.thereminSynth.chain(this.thereminDelay, this.thereminReverb, Tone.Destination);
+
+        // Set initial volume to 0
+        this.thereminSynth.volume.value = -Infinity;
+
+        console.log('🎵 Theremin synth initialized with reverb & delay effects');
+    }
+
+    /**
+     * Update theremin synth sound/oscillator type
+     */
+    updateThereminSound(soundType) {
+        if (!this.thereminSynth) {
+            console.warn('⚠️ Theremin synth not initialized');
+            return;
+        }
+
+        try {
+            // Stop theremin if active before changing sound
+            const wasActive = this.thereminActive;
+            if (wasActive) {
+                this.stopTheremin();
+            }
+
+            // Dispose old synth
+            this.thereminSynth.dispose();
+
+            // Map sound types to oscillator configurations
+            const soundConfigs = {
+                'sine': { type: 'sine' },
+                'triangle': { type: 'triangle' },
+                'sawtooth': { type: 'sawtooth' },
+                'square': { type: 'square' },
+                'fatsine': { type: 'fatsine' },
+                'fatsawtooth': { type: 'fatsawtooth' },
+                'amsine': { type: 'sine' }, // Use simple sine for AM
+                'fmsine': { type: 'sine' }  // Use simple sine for FM
+            };
+
+            const config = soundConfigs[soundType] || soundConfigs['sine'];
+
+            // Create new MonoSynth with updated oscillator and filter
+            this.thereminSynth = new Tone.MonoSynth({
+                oscillator: {
+                    type: config.type
+                },
+                filter: {
+                    type: 'lowpass',
+                    Q: 1,
+                    rolloff: -24
+                },
+                filterEnvelope: {
+                    attack: 0.01,
+                    decay: 0.1,
+                    sustain: 1.0,
+                    release: 0.2,
+                    baseFrequency: 200,
+                    octaves: 6
+                },
+                envelope: {
+                    attack: 0.05,
+                    decay: 0.1,
+                    sustain: 1.0,
+                    release: 0.2
+                }
+            });
+
+            // Reconnect effects chain: synth → delay → reverb → destination
+            this.thereminSynth.chain(this.thereminDelay, this.thereminReverb, Tone.Destination);
+
+            // Set initial volume
+            this.thereminSynth.volume.value = -Infinity;
+
+            console.log(`🔊 Theremin sound updated to: ${soundType} with reverb & delay`);
+
+            // Restart if it was playing
+            // (Will restart on next processGestures call)
+        } catch (error) {
+            console.error('❌ Error updating theremin sound:', error);
+        }
+    }
+
+    /**
+     * Quantize frequency to nearest note in current scale
+     * @param {number} frequency - Continuous frequency in Hz
+     * @returns {number} - Quantized frequency snapped to scale
+     */
+    quantizeFrequency(frequency) {
+        if (!this.chordEngine) {
+            console.warn('⚠️ ChordEngine not available for quantization');
+            return frequency;
+        }
+
+        try {
+            // Get current scale and root from chord engine
+            const scaleName = this.chordEngine.currentScale;
+            const scaleIntervals = this.chordEngine.scales[scaleName];
+            const rootNote = this.chordEngine.currentRoot;
+
+            if (!scaleIntervals) {
+                console.warn(`⚠️ Scale "${scaleName}" not found`);
+                return frequency;
+            }
+
+            // Get root note index (C=0, C#=1, D=2, etc.)
+            // rootNote might be "C3", "D3", etc., so extract just the note name
+            const noteNameOnly = rootNote.replace(/[0-9]/g, ''); // Remove octave numbers
+            const rootIndex = this.chordEngine.noteNames.indexOf(noteNameOnly);
+
+            if (rootIndex === -1) {
+                console.warn(`⚠️ Root note "${rootNote}" not found`);
+                return frequency;
+            }
+
+            // Throttle logging (only log occasionally to avoid spam)
+            if (!this._lastQuantizeLog || Date.now() - this._lastQuantizeLog > 500) {
+                console.log(`🎹 Quantizing to: ${noteNameOnly} ${scaleName} (rootIndex: ${rootIndex})`);
+                this._lastQuantizeLog = Date.now();
+            }
+
+            // Convert frequency to MIDI note number
+            // MIDI 69 = A4 = 440Hz
+            // Formula: midi = 69 + 12 * log2(freq / 440)
+            const midiNote = 69 + 12 * Math.log2(frequency / 440);
+
+            // Get octave and note within octave (0-11)
+            const octave = Math.floor(midiNote / 12) - 1;
+            let noteInOctave = Math.round(midiNote) % 12;
+
+            // Transpose scale intervals to the selected key
+            // Example: C minor (0,2,3,5,7,8,10) transposed to D = (2,4,5,7,9,10,0)
+            const transposedIntervals = scaleIntervals.map(interval => (interval + rootIndex) % 12);
+
+            // Find nearest scale degree in the transposed scale
+            let closestInterval = transposedIntervals[0];
+            let minDistance = Math.abs(noteInOctave - closestInterval);
+
+            for (let interval of transposedIntervals) {
+                // Check both current octave and wrapping
+                const distance = Math.abs(noteInOctave - interval);
+                const wrappedDistance = Math.abs(noteInOctave - (interval + 12));
+                const wrappedDistanceDown = Math.abs(noteInOctave - (interval - 12));
+
+                const actualDistance = Math.min(distance, wrappedDistance, wrappedDistanceDown);
+
+                if (actualDistance < minDistance) {
+                    minDistance = actualDistance;
+                    closestInterval = interval;
+                }
+            }
+
+            // Adjust for wrapping
+            let adjustedInterval = closestInterval;
+            if (noteInOctave - closestInterval > 6) {
+                adjustedInterval = closestInterval + 12;
+            } else if (noteInOctave - closestInterval < -6) {
+                adjustedInterval = closestInterval - 12;
+            }
+
+            // Convert back to MIDI
+            const quantizedMidi = (octave + 1) * 12 + adjustedInterval;
+
+            // Convert MIDI back to frequency
+            // Formula: freq = 440 * 2^((midi - 69) / 12)
+            const quantizedFreq = 440 * Math.pow(2, (quantizedMidi - 69) / 12);
+
+            // Log what note we quantized to (throttled)
+            const quantizedNoteName = this.chordEngine.noteNames[adjustedInterval % 12];
+            if (!this._lastQuantizeNoteLog || Date.now() - this._lastQuantizeNoteLog > 500) {
+                console.log(`   🎯 ${Math.round(frequency)}Hz → ${Math.round(quantizedFreq)}Hz (${quantizedNoteName})`);
+                this._lastQuantizeNoteLog = Date.now();
+            }
+
+            return quantizedFreq;
+        } catch (error) {
+            console.error('❌ Error in quantizeFrequency:', error);
+            return frequency; // Return original on error
+        }
+    }
+
+    /**
+     * Convert frequency to note name (for Dirt sample engine)
+     */
+    frequencyToNote(frequency) {
+        const A4 = 440;
+        const C0 = A4 * Math.pow(2, -4.75);
+        const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+
+        const halfSteps = 12 * Math.log2(frequency / C0);
+        const noteIndex = Math.round(halfSteps);
+        const octave = Math.floor(noteIndex / 12);
+        const note = noteNames[noteIndex % 12];
+
+        return `${note}${octave}`;
+    }
+
+    /**
+     * Process Theremin Mode - continuous pitch or arpeggio playback with multi-engine support
+     */
+    processThereminMode(leftGesture, rightGesture) {
+        if (!this.thereminSynth) {
+            console.warn('⚠️ Theremin synth not initialized');
+            return;
+        }
+
+        // Get playback mode and engine
+        const playbackMode = this.audioSettings.thereminPlaybackMode || 'continuous';
+        const thereminEngine = this.audioSettings.thereminEngine || 'tonejs';
+
+        // DEBUG: Log routing (throttled)
+        if (!this._lastRoutingLog || Date.now() - this._lastRoutingLog > 2000) {
+            console.log(`🎯 [MAPPER-ROUTING] Theremin mode active, routing to: ${playbackMode} mode with ${thereminEngine} engine`);
+            this._lastRoutingLog = Date.now();
+        }
+
+        // Route to appropriate playback method
+        if (playbackMode === 'arpeggio') {
+            this.processThereminArpeggio(leftGesture, rightGesture);
+        } else {
+            this.processThereminContinuous(leftGesture, rightGesture);
+        }
+    }
+
+    /**
+     * Process Theremin in continuous mode (classic theremin behavior)
+     */
+    processThereminContinuous(leftGesture, rightGesture) {
+        // Get the position of the pitch hand
+        const thereminHand = this.audioSettings.thereminHand;
+        const pitchPosition = thereminHand === 'right'
+            ? this.audioSettings.rightPosition
+            : this.audioSettings.leftPosition;
+
+        // Get the position of the other hand
+        const otherHand = thereminHand === 'right' ? 'left' : 'right';
+        const otherPosition = otherHand === 'right'
+            ? this.audioSettings.rightPosition
+            : this.audioSettings.leftPosition;
+
+        // Check if pitch hand is detected
+        const pitchHandDetected = thereminHand === 'right' ? rightGesture : leftGesture;
+
+        if (!pitchHandDetected || !pitchPosition) {
+            // No pitch hand detected - stop theremin
+            this.stopTheremin();
+            return;
+        }
+
+        // Map Y position to frequency
+        const normalizedY = 1 - pitchPosition.y;
+
+        // Base frequency range
+        let minFreq = 100;
+        let maxFreq = 2000;
+
+        // Other hand control
+        const otherHandControl = this.audioSettings.thereminOtherHand || 'volume';
+
+        // Handle octave shift (-4 to +4 octaves)
+        if (otherHandControl === 'octave' && otherPosition) {
+            const otherY = otherPosition.y;
+            // Map Y position (0 to 1) to octave shift (-4 to +4)
+            // Y=0 (top) = +4 octaves, Y=1 (bottom) = -4 octaves
+            const octaveShift = Math.round(4 - (otherY * 8)); // 4 to -4
+
+            // Store for display
+            this.thereminOctaveShift = octaveShift;
+
+            const multiplier = Math.pow(2, octaveShift);
+            minFreq *= multiplier;
+            maxFreq *= multiplier;
+
+            // Clamp to audible range (20Hz to 20kHz)
+            minFreq = Math.max(20, Math.min(20000, minFreq));
+            maxFreq = Math.max(20, Math.min(20000, maxFreq));
+        } else if (otherHandControl === 'octave') {
+            // Reset to 0 when other hand not detected
+            this.thereminOctaveShift = 0;
+        }
+
+        let frequency = minFreq + (normalizedY * (maxFreq - minFreq));
+
+        // Apply quantization if enabled
+        const quantizeEnabled = this.audioSettings.thereminQuantize || false;
+        if (quantizeEnabled) {
+            frequency = this.quantizeFrequency(frequency);
+        }
+
+        // Determine volume
+        let volume = 0.5;
+        let volumeDb;
+        if (otherHandControl === 'volume' && otherPosition) {
+            const otherX = otherPosition.x;
+            volumeDb = -60 + (otherX * 60);
+            volume = otherX; // 0 to 1
+        } else {
+            volumeDb = -6; // Fixed volume
+            volume = 0.5;
+        }
+
+        // Get engine and preset settings
+        const thereminEngine = this.audioSettings.thereminEngine || 'tonejs';
+        const thereminPreset = this.audioSettings.thereminPreset || 'sine';
+
+        // DEBUG: Log received settings (throttled)
+        if (!this._lastSettingsLog || Date.now() - this._lastSettingsLog > 2000) {
+            console.log(`📥 [MAPPER-CONTINUOUS] Received: engine="${thereminEngine}", preset="${thereminPreset}" (from audioSettings)`);
+            console.log(`📥 [MAPPER-CONTINUOUS] Current tracking: _lastEngine="${this._lastThereminEngine}", _lastPreset="${this._lastThereminPreset}"`);
+            this._lastSettingsLog = Date.now();
+        }
+
+        // Check if engine or preset changed - if so, restart theremin
+        if (this._lastThereminEngine !== thereminEngine || this._lastThereminPreset !== thereminPreset) {
+            console.log(`🔄 [MAPPER-CONTINUOUS] Theremin settings changed: ${this._lastThereminEngine}/${this._lastThereminPreset} → ${thereminEngine}/${thereminPreset}`);
+            this.stopTheremin();
+            this._lastThereminEngine = thereminEngine;
+            this._lastThereminPreset = thereminPreset;
+
+            // For Tone.js, also update the synth oscillator type
+            if (thereminEngine === 'tonejs') {
+                console.log(`🎛️ [MAPPER-CONTINUOUS] Calling updateThereminSound("${thereminPreset}")`);
+                this.updateThereminSound(thereminPreset);
+            }
+        }
+
+        // Route to appropriate engine
+        if (thereminEngine === 'tonejs') {
+            // Tone.js - continuous pitch control
+            if (!this.thereminActive) {
+                this.thereminSynth.triggerAttack(frequency);
+                this.thereminActive = true;
+                console.log(`🎵 Theremin CONTINUOUS started [Tone.js/${thereminPreset}]`);
+            } else {
+                const rampTime = quantizeEnabled ? 0.08 : 0.05;
+                this.thereminSynth.frequency.rampTo(frequency, rampTime);
+            }
+
+            // Update volume
+            this.thereminSynth.volume.rampTo(volumeDb, 0.05);
+
+            // Handle other hand controls
+            if (otherPosition) {
+                try {
+                    if (otherHandControl === 'filter') {
+                        // Filter sweep: Y-axis controls cutoff frequency
+                        const filterY = 1 - otherPosition.y;
+                        const cutoff = Math.max(100, 200 + (filterY * 7800)); // Min 100Hz to avoid Tone.js error
+                        if (this.thereminSynth.filter && this.thereminSynth.filter.frequency) {
+                            this.thereminSynth.filter.frequency.rampTo(cutoff, 0.05);
+                        }
+                    } else if (otherHandControl === 'reverb') {
+                        // Reverb: X-axis controls wet/dry mix
+                        const reverbAmount = Math.max(0, Math.min(1, otherPosition.x));
+                        if (this.thereminReverb) {
+                            this.thereminReverb.wet.rampTo(reverbAmount, 0.1);
+                        }
+                    } else if (otherHandControl === 'delay') {
+                        // Delay: X-axis controls delay time
+                        const delayTime = 0.05 + (otherPosition.x * 0.95); // 50ms to 1000ms
+                        const delayWet = Math.min(0.7, otherPosition.x); // Max 70% wet
+                        if (this.thereminDelay) {
+                            this.thereminDelay.delayTime.rampTo(delayTime, 0.1);
+                            this.thereminDelay.wet.rampTo(delayWet, 0.1);
+                        }
+                    }
+                } catch (error) {
+                    console.error('❌ Other hand control error:', error);
+                }
+            }
+
+            // Reset octave shift when not using octave control
+            if (otherHandControl !== 'octave') {
+                this.thereminOctaveShift = 0;
+            }
+
+        } else if (thereminEngine === 'wad' && window.Wad) {
+            // WAD - continuous pitch control
+            // Note: WAD doesn't support live pitch/volume changes on playing voices
+            // So we need to retrigger on significant changes
+            const frequencyChanged = !this._lastWadFrequency || Math.abs(frequency - this._lastWadFrequency) > 20;
+
+            if (!this.thereminActive || !this.wadThereminVoice || frequencyChanged) {
+                // Stop previous voice if exists
+                if (this.wadThereminVoice && this.wadThereminVoice.stop) {
+                    this.wadThereminVoice.stop();
+                }
+
+                // Create new WAD voice
+                this.wadThereminVoice = new Wad({
+                    source: thereminPreset || 'sine',
+                    pitch: frequency,
+                    env: { attack: 0.01, decay: 0.1, sustain: 1.0, release: 0.2 },
+                    volume: volume,
+                    filter: { type: 'lowpass', frequency: 2000, q: 1 }
+                });
+                this.wadThereminVoice.play();
+                this.thereminActive = true;
+                this._lastWadFrequency = frequency;
+
+                if (!this.thereminActive) {
+                    console.log(`🎵 Theremin CONTINUOUS started [WAD/${thereminPreset}] @ ${Math.round(frequency)}Hz`);
+                }
+            }
+
+        } else if (thereminEngine === 'dirt' && this.dirtEngine) {
+            // Dirt - quantized notes (samples can't do continuous pitch)
+            // Convert frequency to closest note
+            const note = this.frequencyToNote(frequency);
+
+            // Only trigger new note if it changed
+            if (!this.thereminActive || this._lastDirtNote !== note) {
+                this.dirtEngine.playSample(thereminPreset || 'arpy', note, volume);
+                this._lastDirtNote = note;
+                this.thereminActive = true;
+                console.log(`🎵 Theremin CONTINUOUS: ${note} [Dirt/${thereminPreset}]`);
+            }
+        }
+    }
+
+    /**
+     * Process Theremin in arpeggio mode (quantized note triggering)
+     */
+    processThereminArpeggio(leftGesture, rightGesture) {
+        // Get the position of the pitch hand
+        const thereminHand = this.audioSettings.thereminHand;
+        const pitchPosition = thereminHand === 'right'
+            ? this.audioSettings.rightPosition
+            : this.audioSettings.leftPosition;
+
+        // Check if pitch hand is detected
+        const pitchHandDetected = thereminHand === 'right' ? rightGesture : leftGesture;
+
+        if (!pitchHandDetected || !pitchPosition) {
+            // No pitch hand detected - stop previous note if any
+            if (this.thereminActive) {
+                this.thereminSynth.triggerRelease();
+                this.thereminActive = false;
+                this._lastThereminNote = null;
+            }
+            return;
+        }
+
+        // Map Y position to note (0.0 to 1.0 → high to low)
+        const normalizedY = 1 - pitchPosition.y;
+
+        // Use chromatic scale (all 12 notes)
+        const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+
+        // Map Y position to note (3 octaves: C2 to B4)
+        const octaveRange = 3;
+        const totalNotes = notes.length * octaveRange;
+        const noteIndex = Math.floor(normalizedY * totalNotes);
+
+        // Calculate note and octave
+        const baseOctave = 2;
+        const note = notes[noteIndex % notes.length];
+        const octave = baseOctave + Math.floor(noteIndex / notes.length);
+        const fullNote = `${note}${octave}`;
+
+        // Get engine and preset settings
+        const thereminEngine = this.audioSettings.thereminEngine || 'tonejs';
+        const thereminPreset = this.audioSettings.thereminPreset || 'sine';
+
+        // DEBUG: Log received settings (throttled)
+        if (!this._lastArpeggioLog || Date.now() - this._lastArpeggioLog > 2000) {
+            console.log(`📥 [MAPPER-ARPEGGIO] Received: engine="${thereminEngine}", preset="${thereminPreset}"`);
+            console.log(`📥 [MAPPER-ARPEGGIO] Current tracking: _lastEngine="${this._lastThereminEngine}", _lastPreset="${this._lastThereminPreset}"`);
+            this._lastArpeggioLog = Date.now();
+        }
+
+        // Check if engine or preset changed
+        if (this._lastThereminEngine !== thereminEngine || this._lastThereminPreset !== thereminPreset) {
+            console.log(`🔄 [MAPPER-ARPEGGIO] Theremin ARPEGGIO settings changed: ${this._lastThereminEngine}/${this._lastThereminPreset} → ${thereminEngine}/${thereminPreset}`);
+
+            // Stop any active sound
+            if (this.thereminActive) {
+                if (this.thereminSynth) {
+                    this.thereminSynth.triggerRelease();
+                }
+                if (this.wadThereminVoice && this.wadThereminVoice.stop) {
+                    this.wadThereminVoice.stop();
+                    this.wadThereminVoice = null;
+                }
+                this.thereminActive = false;
+            }
+
+            this._lastThereminEngine = thereminEngine;
+            this._lastThereminPreset = thereminPreset;
+            this._lastThereminNote = null;
+
+            // For Tone.js, also update the synth oscillator type
+            if (thereminEngine === 'tonejs') {
+                console.log(`🎛️ [MAPPER-ARPEGGIO] Calling updateThereminSound("${thereminPreset}")`);
+                this.updateThereminSound(thereminPreset);
+            }
+        }
+
+        // Only trigger new note if it changed
+        if (this._lastThereminNote !== fullNote) {
+            // Release previous note
+            if (this.thereminActive) {
+                if (this.thereminSynth) {
+                    this.thereminSynth.triggerRelease();
+                }
+                if (this.wadThereminVoice && this.wadThereminVoice.stop) {
+                    this.wadThereminVoice.stop();
+                    this.wadThereminVoice = null;
+                }
+            }
+
+            // Trigger new note
+            if (thereminEngine === 'tonejs') {
+                // Tone.js - use theremin synth
+                this.thereminSynth.triggerAttack(fullNote);
+            } else if (thereminEngine === 'wad' && window.Wad) {
+                // WAD engine
+                if (this.wadThereminVoice) {
+                    this.wadThereminVoice.stop();
+                }
+                this.wadThereminVoice = new Wad({
+                    source: thereminPreset || 'sine',
+                    env: { attack: 0.01, decay: 0.1, sustain: 0.8, release: 0.3 },
+                    volume: 0.5
+                });
+                this.wadThereminVoice.play({ pitch: fullNote });
+            } else if (thereminEngine === 'dirt' && this.dirtEngine) {
+                // Dirt sample engine
+                this.dirtEngine.playSample(thereminPreset || 'arpy', fullNote, 0.7);
+            }
+
+            this.thereminActive = true;
+            this._lastThereminNote = fullNote;
+
+            console.log(`🎹 Theremin ARPEGGIO: ${fullNote} [${thereminEngine}/${thereminPreset}]`);
+        }
+    }
+
+    /**
+     * Stop theremin playback
+     */
+    stopTheremin() {
+        if (this.thereminActive) {
+            // Stop Tone.js synth
+            if (this.thereminSynth) {
+                this.thereminSynth.triggerRelease();
+            }
+
+            // Stop WAD voice
+            if (this.wadThereminVoice && this.wadThereminVoice.stop) {
+                this.wadThereminVoice.stop();
+                this.wadThereminVoice = null;
+            }
+
+            this.thereminActive = false;
+            this._lastDirtNote = null;
+            console.log('🔇 Theremin stopped');
+        }
+    }
+
+    /**
      * Process gestures and trigger musical actions
      * @param {Object} leftGesture - Gesture from left hand
      * @param {Object} rightGesture - Gesture from right hand
@@ -94,14 +707,55 @@ class GestureMusicMapper {
     processGestures(leftGesture, rightGesture, velocities, audioSettings = {}) {
         const now = Date.now();
 
-        // Store audio settings
+        // Store previous theremin sound to detect changes
+        const prevThereminSound = this.audioSettings?.thereminSound;
+
+        // Store audio settings (MUST include ALL theremin settings!)
         this.audioSettings = {
             volume: audioSettings.volume || 0.7,
             engine: audioSettings.engine || 'tonejs',
             preset: audioSettings.preset || 'sine',
             mode: audioSettings.mode || 'note',
-            interactionMode: audioSettings.interactionMode || 'layer'
+            interactionMode: audioSettings.interactionMode || 'layer',
+            thereminMode: audioSettings.thereminMode || false,
+            thereminHand: audioSettings.thereminHand || 'right',
+            thereminSound: audioSettings.thereminSound || 'sine',
+            thereminQuantize: audioSettings.thereminQuantize || false,
+            thereminOtherHand: audioSettings.thereminOtherHand || 'volume',
+            thereminPlaybackMode: audioSettings.thereminPlaybackMode || 'continuous',  // FIX: Was missing!
+            thereminEngine: audioSettings.thereminEngine || 'tonejs',  // FIX: THIS WAS MISSING!!!
+            thereminPreset: audioSettings.thereminPreset || 'sine',  // FIX: THIS WAS MISSING!!!
+            leftPosition: audioSettings.leftPosition || null,
+            rightPosition: audioSettings.rightPosition || null
         };
+
+        // Debug log to verify values are stored
+        console.log(`📥 STORED audioSettings: engine="${this.audioSettings.thereminEngine}", preset="${this.audioSettings.thereminPreset}", mode="${this.audioSettings.thereminPlaybackMode}"`);
+
+        // Update theremin sound if it changed
+        if (this.audioSettings.thereminSound !== prevThereminSound && this.audioSettings.thereminMode) {
+            this.updateThereminSound(this.audioSettings.thereminSound);
+        }
+
+        // Handle Theremin Mode - ONLY if hand tracking is providing data
+        // If theremin mode is on but no gesture/position data, it means hand tracking isn't running
+        const hasPositionData = this.audioSettings.leftPosition || this.audioSettings.rightPosition;
+
+        if (this.audioSettings.thereminMode && hasPositionData) {
+            console.log('🎵 Theremin mode active - processing theremin');
+            this.processThereminMode(leftGesture, rightGesture);
+            return; // Skip normal gesture processing in theremin mode
+        } else {
+            // Stop theremin if it was active
+            if (this.thereminActive) {
+                console.log('🔇 Stopping theremin - mode off or no position data');
+                this.stopTheremin();
+            }
+            // If theremin mode is on but no position data, log it
+            if (this.audioSettings.thereminMode && !hasPositionData) {
+                console.log('⚠️ Theremin mode ON but no position data - hand tracking not running?');
+            }
+        }
 
         // Handle generative music control based on interaction mode
         if (this.audioSettings.interactionMode === 'control') {
@@ -627,10 +1281,17 @@ class GestureMusicMapper {
      * Get current state (for UI display)
      */
     getState() {
+        // In theremin mode with octave control, show theremin octave shift instead
+        const inThereminMode = this.audioSettings && this.audioSettings.thereminMode;
+        const usingOctaveControl = this.audioSettings && this.audioSettings.thereminOtherHand === 'octave';
+        const displayOctave = (inThereminMode && usingOctaveControl)
+            ? this.thereminOctaveShift
+            : this.chordEngine.getCurrentOctave();
+
         return {
             scale: this.chordEngine.getCurrentScale(),
             root: this.chordEngine.getCurrentRoot(),
-            octave: this.chordEngine.getCurrentOctave(),
+            octave: displayOctave,
             playbackMode: this.chordEngine.getPlaybackMode(),
             synthVoice: this.synthVoices[this.currentSynthVoice].name,
             autoFilter: this.autoFilterEnabled,

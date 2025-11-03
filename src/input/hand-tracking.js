@@ -34,6 +34,16 @@ class HandTracking {
         this.playbackMode = 'note'; // note, legato, arpeggio, chord
         this.handInteractionMode = 'layer'; // layer (additional) or control (generative)
 
+        // Theremin mode settings
+        this.thereminMode = false; // Theremin mode toggle
+        this.thereminHand = 'right'; // Which hand controls theremin (right or left)
+        this.thereminSound = 'sine'; // Theremin oscillator type (legacy - kept for backwards compat)
+        this.thereminQuantize = false; // Quantize theremin to scale notes
+        this.thereminOtherHand = 'volume'; // What the other hand controls (none, volume, filter, octave)
+        this.thereminPlaybackMode = 'continuous'; // continuous or arpeggio
+        this.thereminEngine = 'tonejs'; // tonejs, wad, dirt
+        this.thereminPreset = 'sine'; // Current theremin preset
+
         // Performance
         this.frameCount = 0;
         this.fps = 0;
@@ -151,36 +161,256 @@ class HandTracking {
         } else {
             console.error('❌ Hand mode toggle buttons not found in DOM!');
         }
+
+        // Theremin Mode Controls
+        const thereminToggle = document.getElementById('thereminToggle');
+        const thereminHandSelect = document.getElementById('thereminHandSelect');
+        const thereminSoundSelect = document.getElementById('thereminSoundSelect');
+        const thereminQuantize = document.getElementById('thereminQuantize');
+
+        console.log('🔍 DEBUG: thereminToggle found?', !!thereminToggle);
+        console.log('🔍 DEBUG: thereminHandSelect found?', !!thereminHandSelect);
+        console.log('🔍 DEBUG: thereminSoundSelect found?', !!thereminSoundSelect);
+        console.log('🔍 DEBUG: thereminQuantize found?', !!thereminQuantize);
+
+        if (thereminToggle) {
+            console.log('✅ Adding theremin toggle event listener');
+            thereminToggle.addEventListener('change', (e) => {
+                this.thereminMode = e.target.checked;
+                console.log('🎵 Theremin mode:', this.thereminMode ? 'ON' : 'OFF');
+            });
+
+            // Also add click handler for extra safety
+            thereminToggle.addEventListener('click', (e) => {
+                console.log('🎵 Theremin toggle clicked!', e.target.checked);
+            });
+        } else {
+            console.error('❌ Theremin toggle not found in DOM!');
+        }
+
+        if (thereminHandSelect) {
+            console.log('✅ Adding theremin hand select event listener');
+            thereminHandSelect.addEventListener('change', (e) => {
+                this.thereminHand = e.target.value;
+                console.log('✋ Theremin pitch hand:', this.thereminHand);
+            });
+        } else {
+            console.error('❌ Theremin hand select not found in DOM!');
+        }
+
+        // Theremin other hand control selector
+        const thereminOtherHandSelect = document.getElementById('thereminOtherHandSelect');
+        const otherHandHint = document.getElementById('otherHandHint');
+
+        if (thereminOtherHandSelect) {
+            console.log('✅ Adding theremin other hand select event listener');
+
+            // Function to update hint text
+            const updateHint = (value) => {
+                if (!otherHandHint) return;
+                const hints = {
+                    'none': '💡 Other hand is disabled',
+                    'volume': '💡 Move other hand LEFT/RIGHT for volume',
+                    'filter': '💡 Move other hand UP/DOWN for filter brightness',
+                    'octave': '💡 Move other hand UP/DOWN to shift octaves',
+                    'reverb': '💡 Move other hand LEFT/RIGHT for reverb amount',
+                    'delay': '💡 Move other hand LEFT/RIGHT for delay time'
+                };
+                otherHandHint.textContent = hints[value] || hints['none'];
+            };
+
+            // Set initial hint
+            updateHint(this.thereminOtherHand);
+
+            thereminOtherHandSelect.addEventListener('change', (e) => {
+                const oldValue = this.thereminOtherHand;
+                this.thereminOtherHand = e.target.value;
+                updateHint(this.thereminOtherHand);
+                console.log(`🔄 Other hand control: "${oldValue}" → "${this.thereminOtherHand}"`);
+            });
+        } else {
+            console.error('❌ thereminOtherHandSelect NOT FOUND IN DOM!');
+        }
+
+        if (thereminSoundSelect) {
+            console.log('✅ Adding theremin sound select event listener');
+            thereminSoundSelect.addEventListener('change', (e) => {
+                this.thereminSound = e.target.value;
+                console.log('🔊 Theremin sound:', this.thereminSound);
+
+                // Notify music mapper to update theremin synth
+                if (this.musicMapper && this.musicMapper.updateThereminSound) {
+                    this.musicMapper.updateThereminSound(this.thereminSound);
+                }
+            });
+        } else {
+            console.error('❌ Theremin sound select not found in DOM!');
+        }
+
+        if (thereminQuantize) {
+            console.log('✅ Adding theremin quantize event listener');
+            thereminQuantize.addEventListener('change', (e) => {
+                this.thereminQuantize = e.target.checked;
+                console.log('🎹 Theremin quantize:', this.thereminQuantize ? 'ON (Snapping to scale notes)' : 'OFF (Continuous pitch)');
+            });
+
+            // Also add click handler for extra safety
+            thereminQuantize.addEventListener('click', (e) => {
+                console.log('🎹 Theremin quantize clicked!', e.target.checked);
+            });
+        } else {
+            console.error('❌ Theremin quantize checkbox not found in DOM!');
+        }
+
+        // NEW: Theremin Mode selector (Continuous/Arpeggio)
+        const thereminModeSelect = document.getElementById('thereminModeSelect');
+        if (thereminModeSelect) {
+            console.log('✅ Adding theremin mode select event listener');
+            thereminModeSelect.addEventListener('change', (e) => {
+                this.thereminPlaybackMode = e.target.value;
+                console.log('🎵 Theremin playback mode:', this.thereminPlaybackMode);
+            });
+        } else {
+            console.warn('⚠️ Theremin mode select not found in DOM');
+        }
+
+        // NEW: Theremin Engine selector (Tone.js/WAD/Dirt)
+        const thereminEngineSelect = document.getElementById('thereminEngineSelect');
+        if (thereminEngineSelect) {
+            console.log('✅ Adding theremin engine select event listener');
+            thereminEngineSelect.addEventListener('change', (e) => {
+                const oldEngine = this.thereminEngine;
+                this.thereminEngine = e.target.value;
+                console.log(`🔧 [HAND-TRACKING] Engine changed: ${oldEngine} → ${this.thereminEngine}`);
+
+                // Update preset dropdown options based on engine
+                this.updateThereminPresetOptions();
+            });
+        } else {
+            console.warn('⚠️ Theremin engine select not found in DOM');
+        }
+
+        // NEW: Theremin Preset selector
+        const thereminPresetSelect = document.getElementById('thereminPresetSelect');
+        if (thereminPresetSelect) {
+            console.log('✅ Adding theremin preset select event listener');
+            thereminPresetSelect.addEventListener('change', (e) => {
+                const oldPreset = this.thereminPreset;
+                this.thereminPreset = e.target.value;
+                console.log(`🎨 [HAND-TRACKING] Preset changed: ${oldPreset} → ${this.thereminPreset}`);
+            });
+        } else {
+            console.warn('⚠️ Theremin preset select not found in DOM');
+        }
+    }
+
+    /**
+     * Update theremin preset options based on selected engine
+     */
+    updateThereminPresetOptions() {
+        const thereminPresetSelect = document.getElementById('thereminPresetSelect');
+        if (!thereminPresetSelect) return;
+
+        const presetsByEngine = {
+            tonejs: [
+                { value: 'sine', label: '🎵 Classic Sine' },
+                { value: 'triangle', label: '🔺 Warm Triangle' },
+                { value: 'sawtooth', label: '🔶 Bright Sawtooth' },
+                { value: 'square', label: '⬜ Square Wave' },
+                { value: 'fatsine', label: '🎶 Fat Sine' },
+                { value: 'fatsawtooth', label: '🔸 Fat Sawtooth' },
+                { value: 'amsine', label: '✨ AM Sine' },
+                { value: 'fmsine', label: '🌀 FM Sine' }
+            ],
+            wad: [
+                { value: 'sine', label: '🌊 Pure Sine' },
+                { value: 'sawtooth', label: '🔪 Sharp Sawtooth' },
+                { value: 'square', label: '📦 Pulse Square' },
+                { value: 'triangle', label: '🔺 Soft Triangle' }
+            ],
+            dirt: [
+                { value: 'pad', label: '🌌 Ethereal Pad' },
+                { value: 'pluck', label: '🎸 Plucked String' },
+                { value: 'bass', label: '🔊 Deep Bass' },
+                { value: 'arpy', label: '🎹 Arpeggio Synth' }
+            ]
+        };
+
+        const presets = presetsByEngine[this.thereminEngine] || presetsByEngine.tonejs;
+
+        // Clear existing options
+        thereminPresetSelect.innerHTML = '';
+
+        // Add new options
+        presets.forEach(preset => {
+            const option = document.createElement('option');
+            option.value = preset.value;
+            option.textContent = preset.label;
+            thereminPresetSelect.appendChild(option);
+        });
+
+        // Set to first preset
+        this.thereminPreset = presets[0].value;
+        thereminPresetSelect.value = this.thereminPreset;
+
+        console.log(`🎨 Theremin presets updated for ${this.thereminEngine} engine`);
     }
 
     /**
      * Update Active Preset Display with sound preset name
      */
     updateActivePresetDisplay() {
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log('📺 updateActivePresetDisplay() CALLED');
+
         const activePresetText = document.getElementById('activePresetText');
         const activePreset = document.getElementById('activePreset');
         const handScaleOverlay = document.getElementById('handScaleOverlay');
 
+        console.log(`📋 handScaleOverlay element exists: ${!!handScaleOverlay}`);
+        console.log(`📋 musicMapper exists: ${!!this.musicMapper}`);
+        console.log(`📋 chordEngine exists: ${!!(this.musicMapper && this.musicMapper.chordEngine)}`);
+
         // Update scale/key/mode overlay on video
         if (handScaleOverlay) {
-            const scale = this.musicMapper && this.musicMapper.chordEngine
-                ? this.musicMapper.chordEngine.getCurrentScale()
-                : 'phrygian';
-            const key = this.musicMapper && this.musicMapper.chordEngine
-                ? this.musicMapper.chordEngine.getCurrentRoot()
-                : 'C';
+            // Check if chord engine is available
+            if (this.musicMapper && this.musicMapper.chordEngine) {
+                const scale = this.musicMapper.chordEngine.getCurrentScale();
+                const key = this.musicMapper.chordEngine.getCurrentRoot();
+                const scaleName = scale.charAt(0).toUpperCase() + scale.slice(1);
+                const modeNames = {
+                    'note': 'Note',
+                    'legato': 'Legato',
+                    'arpeggio': 'Arpeggio',
+                    'chord': 'Chord'
+                };
+                const modeName = modeNames[this.playbackMode] || 'Note';
 
-            const scaleName = scale.charAt(0).toUpperCase() + scale.slice(1);
-            const modeNames = {
-                'note': 'Note',
-                'legato': 'Legato',
-                'arpeggio': 'Arpeggio',
-                'chord': 'Chord'
-            };
-            const modeName = modeNames[this.playbackMode] || 'Note';
+                console.log(`📋 Read from ChordEngine:`);
+                console.log(`   - scale: "${scale}"`);
+                console.log(`   - key: "${key}"`);
+                console.log(`   - scaleName: "${scaleName}"`);
+                console.log(`   - modeName: "${modeName}"`);
 
-            handScaleOverlay.textContent = `${key} ${scaleName} • ${modeName}`;
+                const newText = `${key} ${scaleName} • ${modeName}`;
+                console.log(`📋 Setting overlay text to: "${newText}"`);
+                handScaleOverlay.textContent = newText;
+
+                console.log(`✅ Overlay updated successfully: ${key} ${scaleName} • ${modeName}`);
+            } else {
+                // Fallback to defaults if chord engine not ready yet
+                console.warn('⚠️ Chord engine not ready, using defaults');
+                console.log(`📋 this.musicMapper = ${this.musicMapper}`);
+                if (this.musicMapper) {
+                    console.log(`📋 this.musicMapper.chordEngine = ${this.musicMapper.chordEngine}`);
+                }
+                handScaleOverlay.textContent = 'C3 Minor • Note';
+            }
+        } else {
+            console.error('❌ handScaleOverlay element NOT FOUND in DOM!');
         }
+
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
         // Update active preset with sound preset name
         if (activePresetText && activePreset) {
@@ -450,6 +680,12 @@ class HandTracking {
 
         this.isRunning = true;
         console.log('▶️ Hand tracking started');
+
+        // Update overlay display to show current scale/key
+        setTimeout(() => {
+            this.updateActivePresetDisplay();
+        }, 100); // Small delay to ensure chord engine is ready
+
         this.detectHands();
     }
 
@@ -508,6 +744,8 @@ class HandTracking {
 
         let leftGesture = null;
         let rightGesture = null;
+        let leftPosition = null;
+        let rightPosition = null;
 
         // Process each detected hand
         for (let i = 0; i < results.landmarks.length; i++) {
@@ -517,10 +755,22 @@ class HandTracking {
             // Recognize gesture
             const gesture = this.gestureRecognizer.recognize(landmarks, handedness);
 
+            // Extract hand position (using palm center - landmark 9 is middle finger base)
+            const palmCenter = landmarks[9];
+            const position = {
+                x: palmCenter.x, // 0.0 to 1.0 (left to right)
+                y: palmCenter.y, // 0.0 to 1.0 (top to bottom)
+                z: palmCenter.z  // depth (negative is closer to camera)
+            };
+
             if (handedness === 'left') {
                 leftGesture = gesture;
+                leftPosition = position;
+                console.log(`👈 LEFT hand detected: X=${position.x.toFixed(2)}, Y=${position.y.toFixed(2)}`);
             } else {
                 rightGesture = gesture;
+                rightPosition = position;
+                console.log(`👉 RIGHT hand detected: X=${position.x.toFixed(2)}, Y=${position.y.toFixed(2)}`);
             }
         }
 
@@ -530,13 +780,34 @@ class HandTracking {
             right: this.gestureRecognizer.getVelocity('right')
         };
 
-        // Send to music mapper with volume, preset, playback mode, and interaction mode settings
+        // Send to music mapper with volume, preset, playback mode, interaction mode, and theremin settings
+        // Debug log to verify thereminOtherHand value before passing
+        if (this.thereminMode) {
+            console.log(`🚀 PASSING to processGestures: thereminOtherHand="${this.thereminOtherHand}"`);
+        }
+
+        // DEBUG: Log settings being passed (only when theremin is active)
+        if (this.thereminMode && !this._lastDebugLog || Date.now() - this._lastDebugLog > 2000) {
+            console.log(`📤 [HAND-TRACKING] Passing to mapper: engine="${this.thereminEngine}", preset="${this.thereminPreset}", mode="${this.thereminPlaybackMode}"`);
+            this._lastDebugLog = Date.now();
+        }
+
         this.musicMapper.processGestures(leftGesture, rightGesture, velocities, {
             volume: this.handVolume,
             engine: this.currentEngine,
             preset: this.currentPreset,
             mode: this.playbackMode,
-            interactionMode: this.handInteractionMode
+            interactionMode: this.handInteractionMode,
+            thereminMode: this.thereminMode,
+            thereminHand: this.thereminHand,
+            thereminSound: this.thereminSound,
+            thereminQuantize: this.thereminQuantize,
+            thereminOtherHand: this.thereminOtherHand,
+            thereminPlaybackMode: this.thereminPlaybackMode,
+            thereminEngine: this.thereminEngine,
+            thereminPreset: this.thereminPreset,
+            leftPosition: leftPosition,
+            rightPosition: rightPosition
         });
     }
 
@@ -574,6 +845,11 @@ class HandTracking {
 
         // Draw gesture labels
         this.drawGestureLabels();
+
+        // Draw theremin visualization if enabled
+        if (this.thereminMode) {
+            this.drawThereminOverlay();
+        }
     }
 
     /**
@@ -668,7 +944,9 @@ class HandTracking {
         // Octave display (large, prominent)
         this.ctx.fillStyle = '#00ffff';
         this.ctx.font = 'bold 32px monospace';
-        const octaveText = `OCT ${state.octave}`;
+        // Format octave with + sign for positive values
+        const octaveValue = state.octave > 0 ? `+${state.octave}` : state.octave;
+        const octaveText = `OCT ${octaveValue}`;
         const octaveWidth = this.ctx.measureText(octaveText).width;
         this.ctx.strokeStyle = '#000000';
         this.ctx.lineWidth = 4;
@@ -686,6 +964,270 @@ class HandTracking {
         const modeWidth = this.ctx.measureText(modeString).width;
         this.ctx.strokeText(modeString, this.canvas.width - modeWidth - 10, 30);
         this.ctx.fillText(modeString, this.canvas.width - modeWidth - 10, 30);
+    }
+
+    /**
+     * Draw theremin overlay visualization
+     */
+    drawThereminOverlay() {
+        if (!this.results || !this.results.landmarks || this.results.landmarks.length === 0) {
+            // No hand detected - just show the grid
+            this.drawThereminGrid();
+            return;
+        }
+
+        // Find the theremin hand
+        let thereminHandIndex = -1;
+        for (let i = 0; i < this.results.landmarks.length; i++) {
+            const handedness = this.results.handednesses[i][0].categoryName.toLowerCase();
+            if (handedness === this.thereminHand) {
+                thereminHandIndex = i;
+                break;
+            }
+        }
+
+        // Draw the grid first (underneath)
+        this.drawThereminGrid();
+
+        // If hand is found, draw the interactive elements
+        if (thereminHandIndex !== -1) {
+            const landmarks = this.results.landmarks[thereminHandIndex];
+            const palmCenter = landmarks[9];
+            const canvasPos = this.landmarkToCanvas(palmCenter);
+
+            // Draw crosshairs at hand position (brighter when hand detected)
+            this.ctx.strokeStyle = 'rgba(0, 255, 255, 0.8)';
+            this.ctx.lineWidth = 2;
+            this.ctx.setLineDash([10, 5]); // Dashed line
+
+            // Horizontal line
+            this.ctx.beginPath();
+            this.ctx.moveTo(0, canvasPos.y);
+            this.ctx.lineTo(this.canvas.width, canvasPos.y);
+            this.ctx.stroke();
+
+            // Vertical line
+            this.ctx.strokeStyle = 'rgba(255, 0, 255, 0.8)';
+            this.ctx.beginPath();
+            this.ctx.moveTo(canvasPos.x, 0);
+            this.ctx.lineTo(canvasPos.x, this.canvas.height);
+            this.ctx.stroke();
+
+            this.ctx.setLineDash([]); // Reset to solid line
+
+            // Draw hand position indicator (glowing circle)
+            const gradient = this.ctx.createRadialGradient(canvasPos.x, canvasPos.y, 0, canvasPos.x, canvasPos.y, 30);
+            gradient.addColorStop(0, 'rgba(255, 255, 0, 0.8)');
+            gradient.addColorStop(0.5, 'rgba(255, 255, 0, 0.4)');
+            gradient.addColorStop(1, 'rgba(255, 255, 0, 0)');
+            this.ctx.fillStyle = gradient;
+            this.ctx.beginPath();
+            this.ctx.arc(canvasPos.x, canvasPos.y, 30, 0, 2 * Math.PI);
+            this.ctx.fill();
+
+            // Inner bright dot
+            this.ctx.fillStyle = 'rgba(255, 255, 255, 1)';
+            this.ctx.beginPath();
+            this.ctx.arc(canvasPos.x, canvasPos.y, 5, 0, 2 * Math.PI);
+            this.ctx.fill();
+
+            // Calculate frequency from Y position
+            const normalizedY = 1 - palmCenter.y;
+            const minFreq = 100;
+            const maxFreq = 2000;
+            let frequency = minFreq + (normalizedY * (maxFreq - minFreq));
+
+            // Get quantized frequency and note name if quantize is enabled
+            let displayFreq = frequency;
+            let noteName = '';
+            if (this.thereminQuantize && this.musicMapper && this.musicMapper.chordEngine) {
+                displayFreq = this.frequencyToQuantized(frequency);
+                noteName = this.frequencyToNoteName(displayFreq);
+            }
+
+            const volPercent = Math.round(palmCenter.x * 100);
+
+            this.ctx.font = 'bold 20px monospace';
+
+            // Frequency display (top-left)
+            let freqText = '';
+            if (this.thereminQuantize && noteName) {
+                // Show note name in quantized mode
+                freqText = `♪ ${noteName} (${Math.round(displayFreq)}Hz)`;
+            } else {
+                // Show frequency in continuous mode
+                freqText = `FREQ: ${Math.round(displayFreq)}Hz`;
+            }
+
+            const freqWidth = this.ctx.measureText(freqText).width;
+            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+            this.ctx.fillRect(5, 65, freqWidth + 10, 30);
+            this.ctx.strokeStyle = '#000000';
+            this.ctx.lineWidth = 3;
+            this.ctx.strokeText(freqText, 10, 85);
+            // Use yellow color for quantized mode
+            this.ctx.fillStyle = this.thereminQuantize ? '#ffff00' : '#00ffff';
+            this.ctx.fillText(freqText, 10, 85);
+
+            // Volume display (top-left, below freq)
+            const volText = `VOL: ${volPercent}%`;
+            const volWidth = this.ctx.measureText(volText).width;
+            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+            this.ctx.fillRect(5, 100, volWidth + 10, 30);
+            this.ctx.strokeStyle = '#000000';
+            this.ctx.lineWidth = 3;
+            this.ctx.strokeText(volText, 10, 120);
+            this.ctx.fillStyle = '#ff00ff';
+            this.ctx.fillText(volText, 10, 120);
+        }
+
+        // Draw "THEREMIN MODE" label at top
+        let label = '🎵 THEREMIN MODE';
+        let labelColor = '#00ffff';
+
+        // Add quantized indicator if enabled
+        if (this.thereminQuantize) {
+            label = '🎹 THEREMIN - QUANTIZED';
+            labelColor = '#ffff00'; // Yellow for quantized
+
+            // Also show scale name if available
+            if (this.musicMapper && this.musicMapper.chordEngine) {
+                const scaleName = this.musicMapper.chordEngine.currentScale;
+                const scaleDisplayName = scaleName.charAt(0).toUpperCase() + scaleName.slice(1);
+                label = `🎹 THEREMIN - ${scaleDisplayName} Scale`;
+            }
+        }
+
+        this.ctx.font = 'bold 20px monospace';
+        this.ctx.strokeStyle = '#000000';
+        this.ctx.lineWidth = 4;
+        const labelWidth = this.ctx.measureText(label).width;
+        const labelX = (this.canvas.width - labelWidth) / 2;
+
+        // Semi-transparent background for label
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+        this.ctx.fillRect(labelX - 10, 25, labelWidth + 20, 35);
+
+        this.ctx.fillStyle = labelColor;
+        this.ctx.strokeText(label, labelX, 50);
+        this.ctx.fillText(label, labelX, 50);
+    }
+
+    /**
+     * Convert frequency to quantized frequency using current scale
+     * (Duplicates logic from gesture-music-mapper for visualization)
+     */
+    frequencyToQuantized(frequency) {
+        if (!this.musicMapper || !this.musicMapper.chordEngine) {
+            return frequency;
+        }
+
+        try {
+            const chordEngine = this.musicMapper.chordEngine;
+            const scaleName = chordEngine.currentScale;
+            const scaleIntervals = chordEngine.scales[scaleName];
+
+            if (!scaleIntervals) {
+                return frequency;
+            }
+
+            // Convert frequency to MIDI note number
+            const midiNote = 69 + 12 * Math.log2(frequency / 440);
+
+            // Get octave and note within octave (0-11)
+            const octave = Math.floor(midiNote / 12) - 1;
+            const noteInOctave = Math.round(midiNote) % 12;
+
+            // Find nearest scale degree
+            let closestInterval = scaleIntervals[0];
+            let minDistance = Math.abs(noteInOctave - closestInterval);
+
+            for (let interval of scaleIntervals) {
+                const distance = Math.abs(noteInOctave - interval);
+                const wrappedDistance = Math.abs(noteInOctave - (interval + 12));
+                const wrappedDistanceDown = Math.abs(noteInOctave - (interval - 12));
+
+                const actualDistance = Math.min(distance, wrappedDistance, wrappedDistanceDown);
+
+                if (actualDistance < minDistance) {
+                    minDistance = actualDistance;
+                    closestInterval = interval;
+                }
+            }
+
+            // Adjust for wrapping
+            let adjustedInterval = closestInterval;
+            if (noteInOctave - closestInterval > 6) {
+                adjustedInterval = closestInterval + 12;
+            } else if (noteInOctave - closestInterval < -6) {
+                adjustedInterval = closestInterval - 12;
+            }
+
+            // Convert back to MIDI
+            const quantizedMidi = (octave + 1) * 12 + adjustedInterval;
+
+            // Convert MIDI back to frequency
+            const quantizedFreq = 440 * Math.pow(2, (quantizedMidi - 69) / 12);
+
+            return quantizedFreq;
+        } catch (error) {
+            return frequency;
+        }
+    }
+
+    /**
+     * Convert frequency to note name (e.g., "A4", "C#3")
+     */
+    frequencyToNoteName(frequency) {
+        const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+
+        // Convert frequency to MIDI note number
+        const midiNote = 69 + 12 * Math.log2(frequency / 440);
+        const roundedMidi = Math.round(midiNote);
+
+        // Get octave and note name
+        const octave = Math.floor(roundedMidi / 12) - 1;
+        const noteIndex = roundedMidi % 12;
+
+        return `${noteNames[noteIndex]}${octave}`;
+    }
+
+    /**
+     * Draw theremin grid (frequency and volume zones)
+     */
+    drawThereminGrid() {
+        // Draw frequency grid (horizontal lines) - very subtle
+        this.ctx.strokeStyle = 'rgba(0, 255, 255, 0.15)';
+        this.ctx.lineWidth = 1;
+        for (let i = 1; i < 10; i++) { // Skip edges for cleaner look
+            const y = (this.canvas.height / 10) * i;
+            this.ctx.beginPath();
+            this.ctx.moveTo(0, y);
+            this.ctx.lineTo(this.canvas.width, y);
+            this.ctx.stroke();
+        }
+
+        // Draw volume grid (vertical lines) - very subtle
+        this.ctx.strokeStyle = 'rgba(255, 0, 255, 0.15)';
+        for (let i = 1; i < 10; i++) { // Skip edges for cleaner look
+            const x = (this.canvas.width / 10) * i;
+            this.ctx.beginPath();
+            this.ctx.moveTo(x, 0);
+            this.ctx.lineTo(x, this.canvas.height);
+            this.ctx.stroke();
+        }
+
+        // Draw zone labels in corners (very subtle)
+        this.ctx.font = 'bold 10px monospace';
+        this.ctx.fillStyle = 'rgba(0, 255, 255, 0.4)';
+        this.ctx.fillText('HIGH ↑', 10, 20);
+        this.ctx.fillText('LOW ↓', 10, this.canvas.height - 10);
+
+        this.ctx.fillStyle = 'rgba(255, 0, 255, 0.4)';
+        const quietText = 'QUIET ←';
+        const loudText = 'LOUD →';
+        this.ctx.fillText(quietText, 10, this.canvas.height / 2);
+        this.ctx.fillText(loudText, this.canvas.width - this.ctx.measureText(loudText).width - 10, this.canvas.height / 2);
     }
 
     /**

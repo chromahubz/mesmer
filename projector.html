@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mesmer - Projector View</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #000;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+
+        #projectorCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+
+        #fullscreenButton {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(139, 92, 246, 0.9);
+            color: white;
+            border: 2px solid rgba(167, 139, 250, 1);
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            z-index: 1000;
+            transition: all 0.3s;
+            font-family: monospace;
+        }
+
+        #fullscreenButton:hover {
+            background: rgba(167, 139, 250, 1);
+            transform: scale(1.05);
+        }
+
+        #fullscreenButton:active {
+            transform: scale(0.95);
+        }
+
+        #info {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: #0f0;
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid #0f0;
+            font-size: 12px;
+            z-index: 999;
+            max-width: 300px;
+        }
+
+        #info.hidden {
+            display: none;
+        }
+
+        #status {
+            color: #ff0;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="projectorCanvas"></canvas>
+
+    <div id="info">
+        <div id="status">🎬 PROJECTOR MODE</div>
+        <div>Waiting for connection from main window...</div>
+        <div style="margin-top: 10px; font-size: 10px; opacity: 0.7;">
+            Tip: Drag this window to your projector/external display, then click "Fullscreen" button.
+        </div>
+    </div>
+
+    <button id="fullscreenButton">⛶ Fullscreen</button>
+
+    <script>
+        const canvas = document.getElementById('projectorCanvas');
+        const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
+        const fullscreenButton = document.getElementById('fullscreenButton');
+        const info = document.getElementById('info');
+        const status = document.getElementById('status');
+
+        let connected = false;
+        let lastFrame = null;
+
+        // Resize canvas to match window
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            console.log(`📺 Canvas resized: ${canvas.width}x${canvas.height}`);
+        }
+
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // Listen for messages from main window
+        window.addEventListener('message', (event) => {
+            const { type, data } = event.data;
+
+            if (type === 'FRAME_DATA') {
+                if (!connected) {
+                    connected = true;
+                    status.textContent = '✅ CONNECTED';
+                    setTimeout(() => {
+                        info.classList.add('hidden');
+                    }, 3000);
+                }
+
+                // Receive frame data and draw to canvas
+                lastFrame = data;
+                drawFrame(data);
+            }
+        });
+
+        // Draw frame to canvas
+        function drawFrame(imageData) {
+            if (!imageData) return;
+
+            // Create ImageData object
+            const imgData = new ImageData(
+                new Uint8ClampedArray(imageData.data),
+                imageData.width,
+                imageData.height
+            );
+
+            // Draw to canvas (scale to fit)
+            const scale = Math.min(
+                canvas.width / imageData.width,
+                canvas.height / imageData.height
+            );
+
+            const x = (canvas.width - imageData.width * scale) / 2;
+            const y = (canvas.height - imageData.height * scale) / 2;
+
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Create temporary canvas for ImageData
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = imageData.width;
+            tempCanvas.height = imageData.height;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.putImageData(imgData, 0, 0);
+
+            // Draw scaled
+            ctx.drawImage(tempCanvas, x, y, imageData.width * scale, imageData.height * scale);
+        }
+
+        // Fullscreen functionality
+        fullscreenButton.addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen()
+                    .then(() => {
+                        console.log('✅ Entered fullscreen mode');
+                        fullscreenButton.textContent = '✕ Exit Fullscreen';
+                    })
+                    .catch(err => {
+                        console.error('❌ Error entering fullscreen:', err);
+                    });
+            } else {
+                document.exitFullscreen()
+                    .then(() => {
+                        console.log('✅ Exited fullscreen mode');
+                        fullscreenButton.textContent = '⛶ Fullscreen';
+                    })
+                    .catch(err => {
+                        console.error('❌ Error exiting fullscreen:', err);
+                    });
+            }
+        });
+
+        // Update button text when fullscreen changes
+        document.addEventListener('fullscreenchange', () => {
+            if (document.fullscreenElement) {
+                fullscreenButton.textContent = '✕ Exit Fullscreen';
+                fullscreenButton.style.opacity = '0.5';
+            } else {
+                fullscreenButton.textContent = '⛶ Fullscreen';
+                fullscreenButton.style.opacity = '1';
+            }
+        });
+
+        // Hide info message after 5 seconds if not connected
+        setTimeout(() => {
+            if (!connected) {
+                status.textContent = '⚠️ NOT CONNECTED';
+                status.style.color = '#f00';
+            }
+        }, 5000);
+
+        console.log('🎬 Projector view initialized');
+        console.log('📺 Canvas:', canvas.width, 'x', canvas.height);
+    </script>
+</body>
+</html>

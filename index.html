@@ -5,6 +5,42 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mesmer - Generative Audiovisual Engine</title>
     <link rel="stylesheet" href="styles.css">
+    <style>
+        /* Custom scrollbar styling for voice and guitar panels */
+        #voiceInputPanel::-webkit-scrollbar,
+        #guitarPedalboardPanel::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        #voiceInputPanel::-webkit-scrollbar-track,
+        #guitarPedalboardPanel::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+        }
+
+        #voiceInputPanel::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, rgba(236, 72, 153, 0.7), rgba(219, 39, 119, 0.7));
+            border-radius: 10px;
+            border: 2px solid rgba(0, 0, 0, 0.3);
+        }
+
+        #guitarPedalboardPanel::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, rgba(255, 87, 34, 0.7), rgba(230, 74, 25, 0.7));
+            border-radius: 10px;
+            border: 2px solid rgba(0, 0, 0, 0.3);
+        }
+
+        #voiceInputPanel::-webkit-scrollbar-thumb:hover,
+        #guitarPedalboardPanel::-webkit-scrollbar-thumb:hover {
+            opacity: 0.9;
+        }
+
+        /* Make panel headers draggable cursor */
+        .draggable-header {
+            cursor: move;
+            user-select: none;
+        }
+    </style>
 </head>
 <body>
     <div id="app">
@@ -37,7 +73,11 @@
                     <canvas id="handTrackingCanvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></canvas>
                     <!-- Scale/Key/Mode Overlay -->
                     <div id="handScaleOverlay" style="position: absolute; top: 10px; right: 10px; background: rgba(0, 0, 0, 0.7); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(139, 92, 246, 0.5); font-family: monospace; font-size: 12px; color: #fff; font-weight: 600; pointer-events: none;">
-                        C Phrygian • Note
+                        C3 Minor • Note
+                    </div>
+                    <!-- Emotion Overlay -->
+                    <div id="emotionOverlay" style="position: absolute; top: 10px; left: 10px; background: rgba(0, 0, 0, 0.7); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(139, 92, 246, 0.5); font-family: monospace; font-size: 12px; color: #fff; font-weight: 600; pointer-events: none; display: none;">
+                        <span id="emotionEmoji">😐</span> <span id="emotionText">Neutral</span> <span id="emotionConfidence" style="color: rgba(167, 139, 250, 1);">0%</span>
                     </div>
                 </div>
 
@@ -47,7 +87,7 @@
                 </div>
 
                 <!-- Hand Tracking Audio Controls -->
-                <div style="background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 8px; padding: 12px; margin-bottom: 12px; margin-top: 0px; padding-top: 8px;">
+                <div id="handAudioSettings" style="background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 8px; padding: 12px; margin-bottom: 12px; margin-top: 0px; padding-top: 8px; max-height: 450px; overflow-y: auto; overflow-x: hidden;">
                     <div style="color: rgba(167, 139, 250, 1); font-weight: 600; font-size: 11px; margin-bottom: 10px; margin-top: 0px; text-transform: uppercase; letter-spacing: 0.5px;">🎹 Hand Audio Settings</div>
 
                     <!-- Active Preset Display -->
@@ -132,6 +172,7 @@
                         </div>
                     </div>
 
+
                     <!-- Hand Volume Slider -->
                     <div style="margin-bottom: 5px;">
                         <label style="display: flex; justify-content: space-between; align-items: center; color: rgba(255, 255, 255, 0.8); font-size: 11px; margin-bottom: 5px; font-weight: 600;">
@@ -139,6 +180,99 @@
                             <span id="handVolumeValue" style="color: rgba(167, 139, 250, 1);">70%</span>
                         </label>
                         <input type="range" id="handVolumeSlider" min="0" max="100" value="70" style="width: 100%; cursor: pointer; height: 6px; background: linear-gradient(90deg, rgba(139, 92, 246, 0.3) 0%, rgba(139, 92, 246, 0.6) 100%); border-radius: 3px; -webkit-appearance: none; appearance: none;">
+                    </div>
+
+                    <!-- Theremin Mode Controls -->
+                    <div style="margin-top: 10px; padding: 10px; background: rgba(0, 255, 255, 0.1); border: 1px solid rgba(0, 255, 255, 0.3); border-radius: 6px; pointer-events: auto;">
+                        <div style="color: rgba(0, 255, 255, 1); font-size: 12px; font-weight: 600; margin-bottom: 8px;">🎵 Theremin Mode</div>
+
+                        <!-- Theremin Toggles (side by side) -->
+                        <div style="display: flex; gap: 15px; margin-bottom: 8px; pointer-events: auto; flex-wrap: wrap;">
+                            <!-- Enable Theremin Mode -->
+                            <div style="display: flex; align-items: center; gap: 6px; pointer-events: auto;">
+                                <input type="checkbox" id="thereminToggle" style="cursor: pointer; width: 18px; height: 18px; accent-color: #00ffff; position: relative; z-index: 10; pointer-events: auto; flex-shrink: 0;">
+                                <label for="thereminToggle" style="color: rgba(255, 255, 255, 0.9); font-size: 11px; cursor: pointer; user-select: none; pointer-events: auto;">
+                                    Enable Theremin
+                                </label>
+                            </div>
+
+                            <!-- Quantize to Scale -->
+                            <div style="display: flex; align-items: center; gap: 6px; pointer-events: auto;">
+                                <input type="checkbox" id="thereminQuantize" style="cursor: pointer; width: 18px; height: 18px; accent-color: #ffff00; position: relative; z-index: 10; pointer-events: auto; flex-shrink: 0;">
+                                <label for="thereminQuantize" style="color: rgba(255, 255, 255, 0.9); font-size: 11px; cursor: pointer; user-select: none; pointer-events: auto;">
+                                    🎹 Quantize to Scale
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Hand Selector -->
+                        <div style="margin-bottom: 5px; pointer-events: auto;">
+                            <label style="color: rgba(255, 255, 255, 0.8); font-size: 10px; margin-bottom: 3px; display: block;">Pitch Hand:</label>
+                            <select id="thereminHandSelect" style="width: 100%; background: rgba(0, 255, 255, 0.1); color: #fff; border: 1px solid rgba(0, 255, 255, 0.3); border-radius: 4px; padding: 6px; font-size: 10px; cursor: pointer; pointer-events: auto;">
+                                <option value="right">Right Hand</option>
+                                <option value="left">Left Hand</option>
+                            </select>
+                        </div>
+
+                        <!-- Other Hand Control -->
+                        <div style="margin-bottom: 5px; pointer-events: auto;">
+                            <label style="color: rgba(255, 255, 255, 0.8); font-size: 10px; margin-bottom: 3px; display: block;">Other Hand Controls:</label>
+                            <select id="thereminOtherHandSelect" style="width: 100%; background: rgba(0, 255, 255, 0.1); color: #fff; border: 1px solid rgba(0, 255, 255, 0.3); border-radius: 4px; padding: 6px; font-size: 10px; cursor: pointer; pointer-events: auto;">
+                                <option value="none">🚫 Nothing</option>
+                                <option value="volume" selected>🔊 Volume (X: left→right = quiet→loud)</option>
+                                <option value="filter">🎛️ Filter (Y: up→down = bright→dark)</option>
+                                <option value="octave">🎹 Octave (Y: up→down = +4→-4 octaves)</option>
+                                <option value="reverb">🌊 Reverb (X: left→right = dry→wet)</option>
+                                <option value="delay">⏱️ Delay (X: left→right = short→long)</option>
+                            </select>
+                            <div id="otherHandHint" style="color: rgba(0, 255, 255, 0.7); font-size: 9px; margin-top: 3px; padding: 4px; background: rgba(0, 255, 255, 0.1); border-radius: 3px; line-height: 1.3;">
+                                💡 Move other hand LEFT/RIGHT for volume
+                            </div>
+                        </div>
+
+                        <!-- Theremin Mode (Continuous/Arpeggio) -->
+                        <div style="margin-bottom: 5px; pointer-events: auto;">
+                            <label style="color: rgba(255, 255, 255, 0.8); font-size: 10px; margin-bottom: 3px; display: block;">Theremin Mode:</label>
+                            <select id="thereminModeSelect" style="width: 100%; background: rgba(0, 255, 255, 0.1); color: #fff; border: 1px solid rgba(0, 255, 255, 0.3); border-radius: 4px; padding: 6px; font-size: 10px; cursor: pointer; pointer-events: auto;">
+                                <option value="continuous" selected>🎵 Continuous (Classic)</option>
+                                <option value="arpeggio">🎹 Arpeggio (Quantized)</option>
+                            </select>
+                        </div>
+
+                        <!-- Theremin Engine Selector -->
+                        <div style="margin-bottom: 5px; pointer-events: auto;">
+                            <label style="color: rgba(255, 255, 255, 0.8); font-size: 10px; margin-bottom: 3px; display: block;">Synth Engine:</label>
+                            <select id="thereminEngineSelect" style="width: 100%; background: rgba(0, 255, 255, 0.1); color: #fff; border: 1px solid rgba(0, 255, 255, 0.3); border-radius: 4px; padding: 6px; font-size: 10px; cursor: pointer; pointer-events: auto;">
+                                <option value="tonejs" selected>🌌 Celestial (Tone.js)</option>
+                                <option value="wad">🔥 Magma (WAD)</option>
+                                <option value="dirt">⚡ Chaos (Dirt)</option>
+                            </select>
+                        </div>
+
+                        <!-- Theremin Sound Preset -->
+                        <div style="margin-bottom: 5px; pointer-events: auto;">
+                            <label style="color: rgba(255, 255, 255, 0.8); font-size: 10px; margin-bottom: 3px; display: block;">Sound Preset:</label>
+                            <select id="thereminPresetSelect" style="width: 100%; background: rgba(0, 255, 255, 0.1); color: #fff; border: 1px solid rgba(0, 255, 255, 0.3); border-radius: 4px; padding: 6px; font-size: 10px; cursor: pointer; pointer-events: auto;">
+                                <!-- Options populated dynamically based on engine -->
+                                <option value="sine" selected>🎵 Classic Sine</option>
+                                <option value="triangle">🔺 Warm Triangle</option>
+                                <option value="sawtooth">🔶 Bright Sawtooth</option>
+                                <option value="square">⬜ Square Wave</option>
+                                <option value="fatsine">🎶 Fat Sine</option>
+                                <option value="fatsawtooth">🔸 Fat Sawtooth</option>
+                                <option value="amsine">✨ AM Sine</option>
+                                <option value="fmsine">🌀 FM Sine</option>
+                            </select>
+                        </div>
+
+                        <!-- Instructions -->
+                        <div style="font-size: 8px; color: rgba(255, 255, 255, 0.6); margin-top: 5px; line-height: 1.4;">
+                            <strong style="color: rgba(0, 255, 255, 0.8);">How to use:</strong><br>
+                            • Pitch Hand Y-axis (↕️): Controls pitch (frequency)<br>
+                            • Other Hand: Controls selected parameter (volume/filter/octave)<br>
+                            • Volume Mode: Other hand X-axis (↔️) controls volume<br>
+                            • Move hands smoothly for expressive theremin control
+                        </div>
                     </div>
                 </div>
 
@@ -410,6 +544,478 @@
                         <div><strong>Beatbox:</strong> Drum sounds<br/>(boots, cats, tss)</div>
                         <div style="margin-top: 4px;"><strong>Pitch:</strong> Hum melody</div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Voice Input & Effects Panel -->
+        <div id="voiceInputPanel" style="position: fixed; top: 370px; left: 20px; width: 380px; background: rgba(10, 10, 15, 0.98); border: 2px solid rgba(236, 72, 153, 0.5); border-radius: 12px; padding: 0; z-index: 1000; display: none; box-shadow: 0 0 40px rgba(236, 72, 153, 0.4); backdrop-filter: blur(12px); max-height: calc(100vh - 390px); overflow-y: auto;">
+            <div id="voiceInputHeader" class="draggable-header" style="display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; background: linear-gradient(135deg, rgba(236, 72, 153, 0.95), rgba(219, 39, 119, 0.95)); border-bottom: 1px solid rgba(236, 72, 153, 0.5); border-radius: 10px 10px 0 0; position: sticky; top: 0; z-index: 10; backdrop-filter: blur(8px);">
+                <h3 style="margin: 0; color: #fff; font-family: monospace; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Voice Input & Effects</h3>
+                <button id="closeVoiceInput" class="btn-icon" title="Close">
+                    <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div style="padding: 15px;">
+                <!-- Mic Status & Level Meter -->
+                <div style="margin-bottom: 12px;">
+                    <div id="voiceInputStatus" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 6px; padding: 10px; font-family: monospace; font-size: 12px; color: rgba(248, 113, 113, 0.8); text-align: center; margin-bottom: 8px;">
+                        🎤 Microphone Off
+                    </div>
+
+                    <!-- Level Meter -->
+                    <div style="background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(236, 72, 153, 0.3); border-radius: 4px; padding: 8px;">
+                        <div style="font-size: 10px; color: rgba(244, 114, 182, 0.8); margin-bottom: 4px; font-weight: 600;">INPUT LEVEL</div>
+                        <div style="position: relative; height: 20px; background: rgba(0, 0, 0, 0.5); border-radius: 4px; overflow: hidden;">
+                            <div id="voiceInputLevel" style="height: 100%; width: 0%; background: linear-gradient(90deg, #10b981 0%, #fbbf24 70%, #ef4444 100%); transition: width 0.1s;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Pitch Display -->
+                    <div id="voicePitchDisplay" style="margin-top: 8px; background: rgba(236, 72, 153, 0.1); border: 1px solid rgba(236, 72, 153, 0.3); border-radius: 4px; padding: 8px; text-align: center; font-family: monospace; display: none;">
+                        <div style="font-size: 18px; color: rgba(244, 114, 182, 1); font-weight: bold;" id="currentNote">--</div>
+                        <div style="font-size: 10px; color: rgba(156, 163, 175, 0.7);" id="currentFreq">0 Hz</div>
+                    </div>
+                </div>
+
+                <!-- Main Controls -->
+                <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                    <button id="startVoiceInput" style="flex: 1; background: rgba(236, 72, 153, 0.6); color: #fff; border: none; border-radius: 6px; padding: 10px; cursor: pointer; font-weight: 600; font-size: 12px;">
+                        Start Mic
+                    </button>
+                    <button id="stopVoiceInput" style="flex: 1; background: rgba(99, 102, 241, 0.6); color: #fff; border: none; border-radius: 6px; padding: 10px; cursor: pointer; font-weight: 600; font-size: 12px; display: none;">
+                        Stop
+                    </button>
+                    <button id="recordVoice" style="flex: 1; background: rgba(239, 68, 68, 0.6); color: #fff; border: none; border-radius: 6px; padding: 10px; cursor: pointer; font-weight: 600; font-size: 12px; display: none;">
+                        Record
+                    </button>
+                </div>
+
+                <!-- Preset Selector -->
+                <div style="margin-bottom: 12px;">
+                    <label style="display: block; color: rgba(244, 114, 182, 0.9); font-size: 11px; margin-bottom: 5px; font-weight: 600;">Vocal Preset:</label>
+                    <select id="voicePresetSelect" style="width: 100%; background: rgba(236, 72, 153, 0.1); color: #fff; border: 1px solid rgba(236, 72, 153, 0.3); border-radius: 6px; padding: 8px; font-size: 12px; cursor: pointer;">
+                        <option value="clean" selected>🎵 Clean (Natural Vocal)</option>
+                        <option value="robotic">🤖 Robotic (Hard Auto-Tune)</option>
+                        <option value="ethereal">✨ Ethereal (Dreamy Atmosphere)</option>
+                        <option value="underwater">🌊 Underwater (Submerged)</option>
+                        <option value="radio">📻 Radio (Lo-Fi Transmission)</option>
+                        <option value="warm">🔥 Warm (Analog Tape)</option>
+                    </select>
+                </div>
+
+                <!-- Auto-Tune Section -->
+                <details style="margin-bottom: 10px;">
+                    <summary style="color: rgba(244, 114, 182, 1); cursor: pointer; font-family: monospace; font-size: 12px; padding: 8px; background: rgba(236, 72, 153, 0.1); border-radius: 6px; font-weight: 600;">🎹 Auto-Tune Settings</summary>
+                    <div style="margin-top: 10px; padding: 10px; background: rgba(0, 0, 0, 0.3); border-radius: 6px;">
+                        <!-- Auto-Tune Enable -->
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                            <input type="checkbox" id="autoTuneEnable" style="width: 18px; height: 18px; accent-color: #ec4899;">
+                            <label for="autoTuneEnable" style="color: #fff; font-size: 12px; cursor: pointer;">Enable Auto-Tune</label>
+                        </div>
+
+                        <!-- Strength Slider -->
+                        <div style="margin-bottom: 10px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                <label style="color: rgba(244, 114, 182, 0.9); font-size: 10px;">Strength:</label>
+                                <span id="autoTuneStrengthValue" style="color: rgba(244, 114, 182, 1); font-size: 10px; font-weight: 600;">80%</span>
+                            </div>
+                            <input type="range" id="autoTuneStrength" min="0" max="100" value="80" style="width: 100%; accent-color: #ec4899;">
+                        </div>
+
+                        <!-- Scale Selection -->
+                        <div style="margin-bottom: 8px;">
+                            <label style="display: block; color: rgba(244, 114, 182, 0.9); font-size: 10px; margin-bottom: 4px;">Musical Scale:</label>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+                                <select id="autoTuneRoot" style="background: rgba(236, 72, 153, 0.1); color: #fff; border: 1px solid rgba(236, 72, 153, 0.3); border-radius: 4px; padding: 6px; font-size: 11px;">
+                                    <option value="C" selected>C</option>
+                                    <option value="C#">C#</option>
+                                    <option value="D">D</option>
+                                    <option value="D#">D#</option>
+                                    <option value="E">E</option>
+                                    <option value="F">F</option>
+                                    <option value="F#">F#</option>
+                                    <option value="G">G</option>
+                                    <option value="G#">G#</option>
+                                    <option value="A">A</option>
+                                    <option value="A#">A#</option>
+                                    <option value="B">B</option>
+                                </select>
+                                <select id="autoTuneScale" style="background: rgba(236, 72, 153, 0.1); color: #fff; border: 1px solid rgba(236, 72, 153, 0.3); border-radius: 4px; padding: 6px; font-size: 11px;">
+                                    <option value="major" selected>Major</option>
+                                    <option value="minor">Minor</option>
+                                    <option value="pentatonic">Pentatonic</option>
+                                    <option value="blues">Blues</option>
+                                    <option value="chromatic">Chromatic</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </details>
+
+                <!-- Effects Rack -->
+                <details open style="margin-bottom: 10px;">
+                    <summary style="color: rgba(244, 114, 182, 1); cursor: pointer; font-family: monospace; font-size: 12px; padding: 8px; background: rgba(236, 72, 153, 0.1); border-radius: 6px; font-weight: 600;">🎛️ Effects Rack</summary>
+                    <div style="margin-top: 10px; padding: 10px; background: rgba(0, 0, 0, 0.3); border-radius: 6px;">
+
+                        <!-- Distortion -->
+                        <div style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid rgba(236, 72, 153, 0.2);">
+                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                                <input type="checkbox" id="distortionEnable" style="width: 16px; height: 16px; accent-color: #ec4899;">
+                                <label for="distortionEnable" style="color: #fff; font-size: 11px; font-weight: 600;">Distortion</label>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                <span style="color: rgba(156, 163, 175, 0.7); font-size: 9px;">Amount:</span>
+                                <span id="distortionValue" style="color: rgba(244, 114, 182, 1); font-size: 9px;">40%</span>
+                            </div>
+                            <input type="range" id="distortionAmount" min="0" max="100" value="40" style="width: 100%; height: 6px; accent-color: #ec4899;">
+                        </div>
+
+                        <!-- Chorus -->
+                        <div style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid rgba(236, 72, 153, 0.2);">
+                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                                <input type="checkbox" id="chorusEnable" style="width: 16px; height: 16px; accent-color: #ec4899;">
+                                <label for="chorusEnable" style="color: #fff; font-size: 11px; font-weight: 600;">Chorus</label>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                <span style="color: rgba(156, 163, 175, 0.7); font-size: 9px;">Depth:</span>
+                                <span id="chorusValue" style="color: rgba(244, 114, 182, 1); font-size: 9px;">70%</span>
+                            </div>
+                            <input type="range" id="chorusDepth" min="0" max="100" value="70" style="width: 100%; height: 6px; accent-color: #ec4899;">
+                        </div>
+
+                        <!-- Reverb -->
+                        <div style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid rgba(236, 72, 153, 0.2);">
+                            <div style="color: #fff; font-size: 11px; font-weight: 600; margin-bottom: 6px;">Reverb</div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                <span style="color: rgba(156, 163, 175, 0.7); font-size: 9px;">Mix:</span>
+                                <span id="voiceReverbValue" style="color: rgba(244, 114, 182, 1); font-size: 9px;">20%</span>
+                            </div>
+                            <input type="range" id="voiceReverbMix" min="0" max="100" value="20" style="width: 100%; height: 6px; accent-color: #ec4899;">
+                        </div>
+
+                        <!-- Delay -->
+                        <div style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid rgba(236, 72, 153, 0.2);">
+                            <div style="color: #fff; font-size: 11px; font-weight: 600; margin-bottom: 6px;">Delay</div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                <span style="color: rgba(156, 163, 175, 0.7); font-size: 9px;">Mix:</span>
+                                <span id="voiceDelayValue" style="color: rgba(244, 114, 182, 1); font-size: 9px;">10%</span>
+                            </div>
+                            <input type="range" id="voiceDelayMix" min="0" max="100" value="10" style="width: 100%; height: 6px; accent-color: #ec4899;">
+                        </div>
+
+                        <!-- Compression -->
+                        <div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <input type="checkbox" id="compressionEnable" checked style="width: 16px; height: 16px; accent-color: #ec4899;">
+                                <label for="compressionEnable" style="color: #fff; font-size: 11px; font-weight: 600;">Compression (Dynamics)</label>
+                            </div>
+                        </div>
+                    </div>
+                </details>
+
+                <!-- Gain Controls -->
+                <details style="margin-bottom: 10px;">
+                    <summary style="color: rgba(244, 114, 182, 1); cursor: pointer; font-family: monospace; font-size: 12px; padding: 8px; background: rgba(236, 72, 153, 0.1); border-radius: 6px; font-weight: 600;">🎚️ Volume Controls</summary>
+                    <div style="margin-top: 10px; padding: 10px; background: rgba(0, 0, 0, 0.3); border-radius: 6px;">
+                        <!-- Input Gain -->
+                        <div style="margin-bottom: 10px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                <label style="color: rgba(244, 114, 182, 0.9); font-size: 10px;">Input Gain:</label>
+                                <span id="inputGainValue" style="color: rgba(244, 114, 182, 1); font-size: 10px; font-weight: 600;">100%</span>
+                            </div>
+                            <input type="range" id="voiceInputGain" min="0" max="200" value="100" style="width: 100%; accent-color: #ec4899;">
+                        </div>
+
+                        <!-- Output Volume -->
+                        <div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                <label style="color: rgba(244, 114, 182, 0.9); font-size: 10px;">Output Volume:</label>
+                                <span id="outputGainValue" style="color: rgba(244, 114, 182, 1); font-size: 10px; font-weight: 600;">80%</span>
+                            </div>
+                            <input type="range" id="voiceOutputGain" min="0" max="100" value="80" style="width: 100%; accent-color: #ec4899;">
+                        </div>
+                    </div>
+                </details>
+
+                <!-- Tips -->
+                <div style="margin-top: 12px; padding: 10px; background: rgba(236, 72, 153, 0.05); border: 1px solid rgba(236, 72, 153, 0.2); border-radius: 6px; font-size: 9px; color: rgba(156, 163, 175, 0.8); line-height: 1.5;">
+                    <div style="color: rgba(244, 114, 182, 1); font-weight: 600; margin-bottom: 4px;">💡 TIPS:</div>
+                    <div>• Use <strong>Clean</strong> for natural singing</div>
+                    <div>• Use <strong>Robotic</strong> for T-Pain effect</div>
+                    <div>• Adjust auto-tune strength for subtlety</div>
+                    <div>• Enable compression for consistent volume</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Guitar Pedalboard Panel -->
+        <div id="guitarPedalboardPanel" style="position: fixed; top: 20px; right: 420px; width: 480px; background: rgba(20, 15, 10, 0.98); border: 3px solid rgba(255, 87, 34, 0.6); border-radius: 16px; padding: 0; z-index: 1000; display: none; box-shadow: 0 0 50px rgba(255, 87, 34, 0.5); backdrop-filter: blur(12px); max-height: calc(100vh - 40px); overflow-y: auto;">
+            <div id="guitarPedalboardHeader" class="draggable-header" style="display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: linear-gradient(135deg, rgba(255, 87, 34, 0.95), rgba(230, 74, 25, 0.95)); border-bottom: 2px solid rgba(255, 87, 34, 0.6); border-radius: 13px 13px 0 0; position: sticky; top: 0; z-index: 10; backdrop-filter: blur(8px);">
+                <h3 style="margin: 0; color: #fff; font-family: 'Courier New', monospace; font-size: 16px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);">GUITAR PEDALBOARD</h3>
+                <button id="closeGuitarPedalboard" class="btn-icon" title="Close">
+                    <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div style="padding: 18px;">
+                <!-- Guitar Input Status & Tuner -->
+                <div style="margin-bottom: 14px;">
+                    <div id="guitarInputStatus" style="background: rgba(239, 68, 68, 0.1); border: 2px solid rgba(239, 68, 68, 0.3); border-radius: 8px; padding: 12px; font-family: monospace; font-size: 13px; color: rgba(248, 113, 113, 0.9); text-align: center; margin-bottom: 10px; font-weight: 600;">
+                        🎸 Guitar Input Off
+                    </div>
+
+                    <!-- Input Level Meter -->
+                    <div style="background: rgba(0, 0, 0, 0.5); border: 2px solid rgba(255, 87, 34, 0.4); border-radius: 6px; padding: 10px; margin-bottom: 10px;">
+                        <div style="font-size: 11px; color: rgba(255, 138, 101, 0.9); margin-bottom: 5px; font-weight: 700;">INPUT LEVEL</div>
+                        <div style="position: relative; height: 24px; background: rgba(0, 0, 0, 0.6); border-radius: 6px; overflow: hidden; border: 1px solid rgba(255, 87, 34, 0.3);">
+                            <div id="guitarInputLevel" style="height: 100%; width: 0%; background: linear-gradient(90deg, #10b981 0%, #fbbf24 50%, #f97316 80%, #ef4444 100%); transition: width 0.08s; box-shadow: 0 0 10px rgba(255, 87, 34, 0.5);"></div>
+                        </div>
+                    </div>
+
+                    <!-- Tuner Display -->
+                    <div id="guitarTuner" style="background: linear-gradient(135deg, rgba(0, 0, 0, 0.6), rgba(20, 10, 5, 0.6)); border: 2px solid rgba(255, 87, 34, 0.4); border-radius: 8px; padding: 14px; text-align: center; display: none;">
+                        <div style="font-size: 32px; color: rgba(255, 138, 101, 1); font-weight: bold; font-family: 'Courier New', monospace; margin-bottom: 6px; text-shadow: 0 0 15px rgba(255, 87, 34, 0.6);" id="tunerNote">--</div>
+                        <div style="font-size: 12px; color: rgba(156, 163, 175, 0.8); margin-bottom: 8px;" id="tunerFreq">0 Hz</div>
+                        <div style="display: flex; justify-content: center; align-items: center; gap: 4px;">
+                            <div style="width: 8px; height: 8px; background: rgba(255, 87, 34, 0.2); border-radius: 50%;"></div>
+                            <div style="width: 8px; height: 8px; background: rgba(255, 87, 34, 0.2); border-radius: 50%;"></div>
+                            <div style="width: 12px; height: 12px; background: rgba(16, 185, 129, 0.8); border-radius: 50%; box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);"></div>
+                            <div style="width: 8px; height: 8px; background: rgba(255, 87, 34, 0.2); border-radius: 50%;"></div>
+                            <div style="width: 8px; height: 8px; background: rgba(255, 87, 34, 0.2); border-radius: 50%;"></div>
+                        </div>
+                        <div style="font-size: 10px; color: rgba(156, 163, 175, 0.7); margin-top: 8px;" id="tunerCents">0 cents</div>
+                    </div>
+                </div>
+
+                <!-- Main Controls -->
+                <div style="display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap;">
+                    <button id="startGuitar" style="flex: 1; min-width: 110px; background: linear-gradient(135deg, rgba(255, 87, 34, 0.7), rgba(230, 74, 25, 0.7)); color: #fff; border: none; border-radius: 8px; padding: 12px; cursor: pointer; font-weight: 700; font-size: 13px; box-shadow: 0 4px 15px rgba(255, 87, 34, 0.3); transition: all 0.2s;">
+                        Start Guitar
+                    </button>
+                    <button id="stopGuitar" style="flex: 1; min-width: 110px; background: linear-gradient(135deg, rgba(99, 102, 241, 0.7), rgba(79, 70, 229, 0.7)); color: #fff; border: none; border-radius: 8px; padding: 12px; cursor: pointer; font-weight: 700; font-size: 13px; display: none; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);">
+                        Stop
+                    </button>
+                    <button id="recordGuitar" style="flex: 1; min-width: 110px; background: linear-gradient(135deg, rgba(239, 68, 68, 0.7), rgba(220, 38, 38, 0.7)); color: #fff; border: none; border-radius: 8px; padding: 12px; cursor: pointer; font-weight: 700; font-size: 13px; display: none; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);">
+                        Record
+                    </button>
+                    <button id="toggleTuner" style="flex: 1; min-width: 110px; background: linear-gradient(135deg, rgba(16, 185, 129, 0.7), rgba(5, 150, 105, 0.7)); color: #fff; border: none; border-radius: 8px; padding: 12px; cursor: pointer; font-weight: 700; font-size: 13px; display: none; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);">
+                        Tuner
+                    </button>
+                </div>
+
+                <!-- Preset Selector -->
+                <div style="margin-bottom: 14px; padding: 12px; background: rgba(0, 0, 0, 0.4); border: 2px solid rgba(255, 87, 34, 0.3); border-radius: 8px;">
+                    <label style="display: block; color: rgba(255, 138, 101, 1); font-size: 12px; margin-bottom: 6px; font-weight: 700;">PRESET:</label>
+                    <select id="guitarPresetSelect" style="width: 100%; background: rgba(255, 87, 34, 0.15); color: #fff; border: 2px solid rgba(255, 87, 34, 0.4); border-radius: 6px; padding: 10px; font-size: 13px; cursor: pointer; font-weight: 600;">
+                        <option value="clean" selected>🎵 Clean (Natural Tone)</option>
+                        <option value="blues">🎸 Blues (Smooth Overdrive)</option>
+                        <option value="rock">🤘 Rock (Classic Crunch)</option>
+                        <option value="metal">⚡ Metal (High Gain)</option>
+                        <option value="fuzz">🌀 Fuzz (Psychedelic)</option>
+                        <option value="ambient">✨ Ambient (Ethereal)</option>
+                        <option value="funk">🎺 Funk (Wah + Phaser)</option>
+                    </select>
+                </div>
+
+                <!-- PEDALBOARD - Gain/Drive Section -->
+                <details open style="margin-bottom: 12px;">
+                    <summary style="color: rgba(255, 138, 101, 1); cursor: pointer; font-family: 'Courier New', monospace; font-size: 13px; padding: 10px; background: rgba(255, 87, 34, 0.15); border-radius: 8px; font-weight: 700; border: 2px solid rgba(255, 87, 34, 0.3);">🔥 GAIN / DRIVE PEDALS</summary>
+                    <div style="margin-top: 12px; padding: 14px; background: rgba(0, 0, 0, 0.4); border-radius: 8px; border: 2px solid rgba(255, 87, 34, 0.2);">
+
+                        <!-- Compressor Pedal -->
+                        <div style="margin-bottom: 14px; padding: 12px; background: linear-gradient(135deg, rgba(100, 50, 200, 0.15), rgba(80, 40, 180, 0.15)); border: 2px solid rgba(139, 92, 246, 0.4); border-radius: 8px;">
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                                <input type="checkbox" id="compressorEnable" style="width: 20px; height: 20px; accent-color: #8b5cf6; cursor: pointer;">
+                                <label for="compressorEnable" style="color: rgba(167, 139, 250, 1); font-size: 12px; font-weight: 700; cursor: pointer;">COMPRESSOR</label>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                <span style="color: rgba(156, 163, 175, 0.8); font-size: 10px;">Threshold:</span>
+                                <span id="compressorValue" style="color: rgba(167, 139, 250, 1); font-size: 10px; font-weight: 600;">-24dB</span>
+                            </div>
+                            <input type="range" id="compressorThreshold" min="-40" max="-10" value="-24" style="width: 100%; height: 8px; accent-color: #8b5cf6;">
+                        </div>
+
+                        <!-- Overdrive Pedal -->
+                        <div style="margin-bottom: 14px; padding: 12px; background: linear-gradient(135deg, rgba(251, 146, 60, 0.15), rgba(249, 115, 22, 0.15)); border: 2px solid rgba(251, 146, 60, 0.5); border-radius: 8px;">
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                                <input type="checkbox" id="overdriveEnable" style="width: 20px; height: 20px; accent-color: #fb923c; cursor: pointer;">
+                                <label for="overdriveEnable" style="color: rgba(251, 146, 60, 1); font-size: 12px; font-weight: 700; cursor: pointer;">OVERDRIVE</label>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                <span style="color: rgba(156, 163, 175, 0.8); font-size: 10px;">Drive:</span>
+                                <span id="overdriveValue" style="color: rgba(251, 146, 60, 1); font-size: 10px; font-weight: 600;">30%</span>
+                            </div>
+                            <input type="range" id="overdriveAmount" min="0" max="100" value="30" style="width: 100%; height: 8px; accent-color: #fb923c;">
+                        </div>
+
+                        <!-- Distortion Pedal -->
+                        <div style="margin-bottom: 14px; padding: 12px; background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(220, 38, 38, 0.15)); border: 2px solid rgba(239, 68, 68, 0.5); border-radius: 8px;">
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                                <input type="checkbox" id="distortionEnable" style="width: 20px; height: 20px; accent-color: #ef4444; cursor: pointer;">
+                                <label for="distortionEnable" style="color: rgba(248, 113, 113, 1); font-size: 12px; font-weight: 700; cursor: pointer;">DISTORTION</label>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                <span style="color: rgba(156, 163, 175, 0.8); font-size: 10px;">Gain:</span>
+                                <span id="distortionValue" style="color: rgba(248, 113, 113, 1); font-size: 10px; font-weight: 600;">60%</span>
+                            </div>
+                            <input type="range" id="guitarDistortionAmount" min="0" max="100" value="60" style="width: 100%; height: 8px; accent-color: #ef4444;">
+                        </div>
+
+                        <!-- Fuzz Pedal -->
+                        <div style="padding: 12px; background: linear-gradient(135deg, rgba(219, 39, 119, 0.15), rgba(190, 24, 93, 0.15)); border: 2px solid rgba(219, 39, 119, 0.5); border-radius: 8px;">
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                                <input type="checkbox" id="fuzzEnable" style="width: 20px; height: 20px; accent-color: #db2777; cursor: pointer;">
+                                <label for="fuzzEnable" style="color: rgba(244, 114, 182, 1); font-size: 12px; font-weight: 700; cursor: pointer;">FUZZ</label>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                <span style="color: rgba(156, 163, 175, 0.8); font-size: 10px;">Fuzz:</span>
+                                <span id="fuzzValue" style="color: rgba(244, 114, 182, 1); font-size: 10px; font-weight: 600;">70%</span>
+                            </div>
+                            <input type="range" id="fuzzAmount" min="0" max="100" value="70" style="width: 100%; height: 8px; accent-color: #db2777;">
+                        </div>
+                    </div>
+                </details>
+
+                <!-- PEDALBOARD - Filter/Modulation Section -->
+                <details style="margin-bottom: 12px;">
+                    <summary style="color: rgba(255, 138, 101, 1); cursor: pointer; font-family: 'Courier New', monospace; font-size: 13px; padding: 10px; background: rgba(255, 87, 34, 0.15); border-radius: 8px; font-weight: 700; border: 2px solid rgba(255, 87, 34, 0.3);">🌀 MODULATION / FILTER PEDALS</summary>
+                    <div style="margin-top: 12px; padding: 14px; background: rgba(0, 0, 0, 0.4); border-radius: 8px; border: 2px solid rgba(255, 87, 34, 0.2);">
+
+                        <!-- Wah Pedal -->
+                        <div style="margin-bottom: 14px; padding: 12px; background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(217, 119, 6, 0.15)); border: 2px solid rgba(245, 158, 11, 0.5); border-radius: 8px;">
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                                <input type="checkbox" id="wahEnable" style="width: 20px; height: 20px; accent-color: #f59e0b; cursor: pointer;">
+                                <label for="wahEnable" style="color: rgba(251, 191, 36, 1); font-size: 12px; font-weight: 700; cursor: pointer;">WAH</label>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                <span style="color: rgba(156, 163, 175, 0.8); font-size: 10px;">Frequency:</span>
+                                <span id="wahValue" style="color: rgba(251, 191, 36, 1); font-size: 10px; font-weight: 600;">1000Hz</span>
+                            </div>
+                            <input type="range" id="wahFrequency" min="200" max="2000" value="1000" style="width: 100%; height: 8px; accent-color: #f59e0b;">
+                        </div>
+
+                        <!-- Chorus Pedal -->
+                        <div style="margin-bottom: 14px; padding: 12px; background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(37, 99, 235, 0.15)); border: 2px solid rgba(59, 130, 246, 0.5); border-radius: 8px;">
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                                <input type="checkbox" id="guitarChorusEnable" style="width: 20px; height: 20px; accent-color: #3b82f6; cursor: pointer;">
+                                <label for="guitarChorusEnable" style="color: rgba(96, 165, 250, 1); font-size: 12px; font-weight: 700; cursor: pointer;">CHORUS</label>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                <span style="color: rgba(156, 163, 175, 0.8); font-size: 10px;">Depth:</span>
+                                <span id="guitarChorusValue" style="color: rgba(96, 165, 250, 1); font-size: 10px; font-weight: 600;">70%</span>
+                            </div>
+                            <input type="range" id="guitarChorusDepth" min="0" max="100" value="70" style="width: 100%; height: 8px; accent-color: #3b82f6;">
+                        </div>
+
+                        <!-- Phaser Pedal -->
+                        <div style="padding: 12px; background: linear-gradient(135deg, rgba(168, 85, 247, 0.15), rgba(147, 51, 234, 0.15)); border: 2px solid rgba(168, 85, 247, 0.5); border-radius: 8px;">
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                                <input type="checkbox" id="phaserEnable" style="width: 20px; height: 20px; accent-color: #a855f7; cursor: pointer;">
+                                <label for="phaserEnable" style="color: rgba(192, 132, 252, 1); font-size: 12px; font-weight: 700; cursor: pointer;">PHASER</label>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                <span style="color: rgba(156, 163, 175, 0.8); font-size: 10px;">Rate:</span>
+                                <span id="phaserValue" style="color: rgba(192, 132, 252, 1); font-size: 10px; font-weight: 600;">0.5Hz</span>
+                            </div>
+                            <input type="range" id="phaserFrequency" min="1" max="100" value="50" style="width: 100%; height: 8px; accent-color: #a855f7;">
+                        </div>
+                    </div>
+                </details>
+
+                <!-- PEDALBOARD - Time-Based Effects -->
+                <details style="margin-bottom: 12px;">
+                    <summary style="color: rgba(255, 138, 101, 1); cursor: pointer; font-family: 'Courier New', monospace; font-size: 13px; padding: 10px; background: rgba(255, 87, 34, 0.15); border-radius: 8px; font-weight: 700; border: 2px solid rgba(255, 87, 34, 0.3);">⏱️ TIME-BASED EFFECTS</summary>
+                    <div style="margin-top: 12px; padding: 14px; background: rgba(0, 0, 0, 0.4); border-radius: 8px; border: 2px solid rgba(255, 87, 34, 0.2);">
+
+                        <!-- Delay Pedal -->
+                        <div style="margin-bottom: 14px; padding: 12px; background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.15)); border: 2px solid rgba(16, 185, 129, 0.5); border-radius: 8px;">
+                            <div style="color: rgba(52, 211, 153, 1); font-size: 12px; font-weight: 700; margin-bottom: 8px;">DELAY</div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                <span style="color: rgba(156, 163, 175, 0.8); font-size: 10px;">Mix:</span>
+                                <span id="guitarDelayValue" style="color: rgba(52, 211, 153, 1); font-size: 10px; font-weight: 600;">20%</span>
+                            </div>
+                            <input type="range" id="guitarDelayMix" min="0" max="100" value="20" style="width: 100%; height: 8px; accent-color: #10b981; margin-bottom: 8px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                <span style="color: rgba(156, 163, 175, 0.8); font-size: 10px;">Feedback:</span>
+                                <span id="delayFeedbackValue" style="color: rgba(52, 211, 153, 1); font-size: 10px; font-weight: 600;">30%</span>
+                            </div>
+                            <input type="range" id="delayFeedback" min="0" max="90" value="30" style="width: 100%; height: 8px; accent-color: #10b981;">
+                        </div>
+
+                        <!-- Reverb Pedal -->
+                        <div style="padding: 12px; background: linear-gradient(135deg, rgba(14, 165, 233, 0.15), rgba(2, 132, 199, 0.15)); border: 2px solid rgba(14, 165, 233, 0.5); border-radius: 8px;">
+                            <div style="color: rgba(56, 189, 248, 1); font-size: 12px; font-weight: 700; margin-bottom: 8px;">REVERB</div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                <span style="color: rgba(156, 163, 175, 0.8); font-size: 10px;">Mix:</span>
+                                <span id="guitarReverbValue" style="color: rgba(56, 189, 248, 1); font-size: 10px; font-weight: 600;">15%</span>
+                            </div>
+                            <input type="range" id="guitarReverbMix" min="0" max="100" value="15" style="width: 100%; height: 8px; accent-color: #0ea5e9;">
+                        </div>
+                    </div>
+                </details>
+
+                <!-- EQ & Output Section -->
+                <details style="margin-bottom: 12px;">
+                    <summary style="color: rgba(255, 138, 101, 1); cursor: pointer; font-family: 'Courier New', monospace; font-size: 13px; padding: 10px; background: rgba(255, 87, 34, 0.15); border-radius: 8px; font-weight: 700; border: 2px solid rgba(255, 87, 34, 0.3);">🎚️ EQ & OUTPUT</summary>
+                    <div style="margin-top: 12px; padding: 14px; background: rgba(0, 0, 0, 0.4); border-radius: 8px; border: 2px solid rgba(255, 87, 34, 0.2);">
+
+                        <!-- 3-Band EQ -->
+                        <div style="margin-bottom: 14px; padding: 12px; background: rgba(100, 100, 100, 0.15); border: 2px solid rgba(156, 163, 175, 0.4); border-radius: 8px;">
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                                <input type="checkbox" id="eqEnable" checked style="width: 20px; height: 20px; accent-color: #9ca3af; cursor: pointer;">
+                                <label for="eqEnable" style="color: rgba(209, 213, 219, 1); font-size: 12px; font-weight: 700; cursor: pointer;">3-BAND EQ</label>
+                            </div>
+
+                            <div style="margin-bottom: 8px;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                    <span style="color: rgba(156, 163, 175, 0.8); font-size: 10px;">Bass:</span>
+                                    <span id="eqBassValue" style="color: rgba(209, 213, 219, 1); font-size: 10px; font-weight: 600;">0dB</span>
+                                </div>
+                                <input type="range" id="eqBass" min="-12" max="12" value="0" style="width: 100%; height: 8px; accent-color: #9ca3af;">
+                            </div>
+
+                            <div style="margin-bottom: 8px;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                    <span style="color: rgba(156, 163, 175, 0.8); font-size: 10px;">Mid:</span>
+                                    <span id="eqMidValue" style="color: rgba(209, 213, 219, 1); font-size: 10px; font-weight: 600;">0dB</span>
+                                </div>
+                                <input type="range" id="eqMid" min="-12" max="12" value="0" style="width: 100%; height: 8px; accent-color: #9ca3af;">
+                            </div>
+
+                            <div>
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                    <span style="color: rgba(156, 163, 175, 0.8); font-size: 10px;">Treble:</span>
+                                    <span id="eqTrebleValue" style="color: rgba(209, 213, 219, 1); font-size: 10px; font-weight: 600;">0dB</span>
+                                </div>
+                                <input type="range" id="eqTreble" min="-12" max="12" value="0" style="width: 100%; height: 8px; accent-color: #9ca3af;">
+                            </div>
+                        </div>
+
+                        <!-- Output Gain -->
+                        <div style="padding: 12px; background: rgba(255, 87, 34, 0.15); border: 2px solid rgba(255, 87, 34, 0.4); border-radius: 8px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                                <label style="color: rgba(255, 138, 101, 1); font-size: 11px; font-weight: 700;">Output Volume:</label>
+                                <span id="guitarOutputValue" style="color: rgba(255, 138, 101, 1); font-size: 11px; font-weight: 600;">70%</span>
+                            </div>
+                            <input type="range" id="guitarOutputGain" min="0" max="100" value="70" style="width: 100%; height: 10px; accent-color: #ff5722;">
+                        </div>
+                    </div>
+                </details>
+
+                <!-- Tips -->
+                <div style="margin-top: 14px; padding: 12px; background: rgba(255, 87, 34, 0.08); border: 2px solid rgba(255, 87, 34, 0.25); border-radius: 8px; font-size: 10px; color: rgba(156, 163, 175, 0.9); line-height: 1.6;">
+                    <div style="color: rgba(255, 138, 101, 1); font-weight: 700; margin-bottom: 6px; font-size: 11px;">💡 PEDALBOARD TIPS:</div>
+                    <div>• Connect guitar via audio interface</div>
+                    <div>• Try presets for instant tone</div>
+                    <div>• Stack drive pedals for more gain</div>
+                    <div>• Use tuner before playing</div>
+                    <div>• Modulation pedals sound best after gain</div>
                 </div>
             </div>
         </div>
@@ -2247,6 +2853,22 @@
                         <div id="recordingStatus" style="font-size: 10px; color: #888; margin-top: 4px; text-align: center;"></div>
                     </div>
 
+                    <!-- Projector Mode -->
+                    <button id="projectorModeBtn" class="btn-secondary">
+                        <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M19 12.87c0-.47-.34-.85-.8-.98C17.52 10.73 16.32 10 15 10s-2.52.73-3.2 1.89c-.46.13-.8.51-.8.98 0 .57.47 1.03 1.05 1.03.26 0 .49-.1.67-.26.09-.08.17-.17.23-.27.14-.23.34-.43.57-.59.26-.18.55-.31.87-.37.53-.1 1.06.02 1.51.29.23.14.43.32.59.53.06.08.12.17.17.26.18.16.41.25.67.25.58 0 1.05-.46 1.05-1.03M8 19h12v2H8zM21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/>
+                        </svg>
+                        Projector Mode
+                    </button>
+
+                    <!-- Face Emotion Tracking -->
+                    <button id="faceTrackingBtn" class="btn-secondary">
+                        <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M9 11.75c-.69 0-1.25.56-1.25 1.25s.56 1.25 1.25 1.25 1.25-.56 1.25-1.25-.56-1.25-1.25-1.25zm6 0c-.69 0-1.25.56-1.25 1.25s.56 1.25 1.25 1.25 1.25-.56 1.25-1.25-.56-1.25-1.25-1.25zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8 0-.29.02-.58.05-.86 2.36-1.05 4.23-2.98 5.21-5.37C11.07 8.33 14.05 10 17.42 10c.78 0 1.53-.09 2.25-.26.21.71.33 1.47.33 2.26 0 4.41-3.59 8-8 8z"/>
+                        </svg>
+                        Face Emotion
+                    </button>
+
                     <button id="mpcToggleBtn" class="btn-secondary">
                         <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M4 6h4v4H4V6zm0 8h4v4H4v-4zm6-8h4v4h-4V6zm0 8h4v4h-4v-4zm6-8h4v4h-4V6zm0 8h4v4h-4v-4z"/>
@@ -2264,6 +2886,19 @@
                             <path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.30 6-6.72h-1.7z"/>
                         </svg>
                         Voice Control
+                    </button>
+                    <button id="openVoiceInput" class="btn-secondary">
+                        <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2c-1.1 0-2 .9-2 2v7c0 1.1.9 2 2 2s2-.9 2-2V4c0-1.1-.9-2-2-2zm0 11c-2.67 0-8 1.34-8 4v3h16v-3c0-2.66-5.33-4-8-4zm-1-11c-.55 0-1 .45-1 1v7c0 .55.45 1 1 1s1-.45 1-1V3c0-.55-.45-1-1-1zm2 0c-.55 0-1 .45-1 1v7c0 .55.45 1 1 1s1-.45 1-1V3c0-.55-.45-1-1-1z"/>
+                            <circle cx="12" cy="17" r="1" fill="currentColor"/>
+                        </svg>
+                        Voice Input
+                    </button>
+                    <button id="openGuitar" class="btn-secondary">
+                        <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2l-5.5 9h3v10h5V11h3zm0 3.84L13.93 9h-3.87zM22 19v-2c0-1.1-.9-2-2-2h-1v-2h1c1.1 0 2-.9 2-2v-1h-2v1h-1V9h1V7h-2v2h-1v2h1v2h-1v2h1c1.1 0 2 .9 2 2v2z"/>
+                        </svg>
+                        Guitar
                     </button>
                     <button id="openHandTracking" class="btn-secondary">
                         <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
@@ -2840,6 +3475,7 @@
     <script src="src/visuals/shader-presets.js"></script>
     <script src="src/visuals/main-shader.js"></script>
     <script src="src/visuals/toy-renderer.js"></script>
+    <script src="src/visuals/projector-manager.js"></script>
     <script src="src/audio/audio-engine.js"></script>
     <script src="src/audio/wad-synth-engine.js"></script>
     <script src="src/audio/dirt-sample-engine.js"></script>
@@ -2848,7 +3484,12 @@
     <script src="src/audio/gesture-music-mapper.js"></script>
     <script src="src/input/gesture-recognizer.js"></script>
     <script src="src/input/hand-tracking.js"></script>
+    <script src="src/input/emotion-detector.js"></script>
+    <script src="src/audio/emotion-music-mapper.js"></script>
+    <script src="src/input/face-tracking.js"></script>
     <script src="src/input/voice-audio-analyzer.js"></script>
+    <script src="src/audio/vocal-effects-chain.js"></script>
+    <script src="src/audio/guitar-effects-chain.js"></script>
     <script src="src/input/voice-control.js"></script>
     <script src="src/visuals/shader-editor.js"></script>
     <script src="app.js"></script>
@@ -2868,6 +3509,61 @@
                 DEBUG.error('Promise Error: ' + e.reason);
             }
             console.error('Unhandled rejection:', e);
+        });
+
+        // Make voice and guitar panels draggable
+        function makePanelDraggable(headerId, panelId) {
+            const header = document.getElementById(headerId);
+            const panel = document.getElementById(panelId);
+
+            if (!header || !panel) return;
+
+            let isDragging = false;
+            let currentX;
+            let currentY;
+            let initialX;
+            let initialY;
+
+            header.addEventListener('mousedown', (e) => {
+                // Don't drag if clicking on close button
+                if (e.target.closest('.btn-icon')) return;
+
+                isDragging = true;
+                initialX = e.clientX - panel.offsetLeft;
+                initialY = e.clientY - panel.offsetTop;
+                panel.style.cursor = 'grabbing';
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+
+                e.preventDefault();
+                currentX = e.clientX - initialX;
+                currentY = e.clientY - initialY;
+
+                // Keep panel within viewport
+                const maxX = window.innerWidth - panel.offsetWidth;
+                const maxY = window.innerHeight - panel.offsetHeight;
+                currentX = Math.max(0, Math.min(currentX, maxX));
+                currentY = Math.max(0, Math.min(currentY, maxY));
+
+                panel.style.left = currentX + 'px';
+                panel.style.top = currentY + 'px';
+                panel.style.right = 'auto'; // Remove right positioning
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isDragging) {
+                    isDragging = false;
+                    panel.style.cursor = '';
+                }
+            });
+        }
+
+        // Initialize draggable panels when DOM is ready
+        window.addEventListener('DOMContentLoaded', () => {
+            makePanelDraggable('voiceInputHeader', 'voiceInputPanel');
+            makePanelDraggable('guitarPedalboardHeader', 'guitarPedalboardPanel');
         });
     </script>
 </body>

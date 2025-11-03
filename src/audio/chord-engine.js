@@ -8,8 +8,8 @@ class ChordEngine {
         // Base note frequencies (A4 = 440Hz)
         this.baseOctave = 4;
         this.currentOctave = 4;
-        this.currentScale = 'phrygian';
-        this.currentRoot = 'C';
+        this.currentScale = 'minor'; // Default to minor (matches HTML select default)
+        this.currentRoot = 'C3'; // Default to C3 (matches HTML select default)
 
         // Define scales as intervals from root (semitones)
         this.scales = {
@@ -75,13 +75,15 @@ class ChordEngine {
     }
 
     /**
-     * Set the root note
+     * Set the root note (accepts both "C" and "C3" formats)
      */
     setRoot(noteName) {
-        if (this.noteNames.includes(noteName)) {
-            this.currentRoot = noteName;
-            console.log(`🎵 Root note changed to: ${noteName}`);
-        }
+        console.log(`🎵 setRoot() called with: "${noteName}"`);
+
+        // Accept both "C3" and "C" formats - just store the full value with octave
+        // No validation needed since HTML select controls the values
+        this.currentRoot = noteName;
+        console.log(`✅ Root note changed to: ${noteName}`);
     }
 
     /**

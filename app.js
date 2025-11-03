@@ -25,8 +25,18 @@ class Mesmer {
         this.musicMapper = null;
         this.handTracking = null;
 
+        // Face tracking engines
+        this.emotionMusicMapper = null;
+        this.faceTracking = null;
+
         // Voice control engine
         this.voiceControl = null;
+
+        // Voice input & effects
+        this.vocalEffects = null;
+
+        // Guitar input & effects
+        this.guitarEffects = null;
 
         // State
         this.isPlaying = false;
@@ -71,6 +81,11 @@ class Mesmer {
             console.log('✓ Shader editor initialized');
             if (window.DEBUG) DEBUG.success('Shader editor OK');
 
+            // Initialize projector manager
+            console.log('🎬 Initializing projector manager...');
+            this.projectorManager = new ProjectorManager(this.mainCanvas);
+            console.log('✓ Projector manager initialized');
+
             // Initialize audio engines (but DON'T start AudioContext yet)
             console.log('🎧 Setting up audio engine...');
             if (window.DEBUG) DEBUG.info('Setting up audio...');
@@ -96,12 +111,34 @@ class Mesmer {
             console.log('✓ Hand tracking modules ready');
             if (window.DEBUG) DEBUG.success('Hand tracking modules ready');
 
+            // Initialize face tracking engines
+            console.log('🎭 Setting up face tracking...');
+            if (window.DEBUG) DEBUG.info('Setting up face tracking...');
+            this.emotionMusicMapper = new EmotionMusicMapper(this.musicEngine, this.chordEngine);
+            this.faceTracking = new FaceTracking(this.emotionMusicMapper);
+            console.log('✓ Face tracking modules ready');
+            if (window.DEBUG) DEBUG.success('Face tracking modules ready');
+
             // Initialize voice control
             console.log('🎤 Setting up voice control...');
             if (window.DEBUG) DEBUG.info('Setting up voice control...');
             this.voiceControl = new VoiceControl(this);
             console.log('✓ Voice control ready');
             if (window.DEBUG) DEBUG.success('Voice control ready');
+
+            // Initialize vocal effects chain
+            console.log('🎤 Setting up vocal effects chain...');
+            if (window.DEBUG) DEBUG.info('Setting up vocal effects...');
+            this.vocalEffects = new VocalEffectsChain();
+            console.log('✓ Vocal effects chain ready');
+            if (window.DEBUG) DEBUG.success('Vocal effects ready');
+
+            // Initialize guitar effects chain
+            console.log('🎸 Setting up guitar effects chain...');
+            if (window.DEBUG) DEBUG.info('Setting up guitar effects...');
+            this.guitarEffects = new GuitarEffectsChain();
+            console.log('✓ Guitar effects chain ready');
+            if (window.DEBUG) DEBUG.success('Guitar effects ready');
 
             // Connect audio for analysis
             this.connectAudio();
@@ -471,7 +508,26 @@ class Mesmer {
             const oldScale = this.musicEngine.currentScaleName;
             const newScale = e.target.value;
 
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            console.log('🎵 SCALE CHANGE EVENT FIRED!');
+            console.log(`📋 Old scale: "${oldScale}" → New scale: "${newScale}"`);
+            console.log(`📋 ChordEngine exists: ${!!this.chordEngine}`);
+
+            // Update BOTH engines (musicEngine for generative music, chordEngine for hand tracking)
             this.musicEngine.setScale(newScale);
+            console.log('✅ MusicEngine scale updated to:', newScale);
+
+            if (this.chordEngine) {
+                const beforeUpdate = this.chordEngine.getCurrentScale();
+                console.log(`📋 ChordEngine BEFORE update: "${beforeUpdate}"`);
+
+                this.chordEngine.setScale(newScale);
+
+                const afterUpdate = this.chordEngine.getCurrentScale();
+                console.log(`✅ ChordEngine AFTER update: "${afterUpdate}"`);
+            } else {
+                console.error('❌ ChordEngine does NOT exist!');
+            }
 
             // Transpose synth sequencer notes if active
             if (this.synthSeqState && oldScale) {
@@ -479,20 +535,66 @@ class Mesmer {
                 this.renderPianoRoll();
                 this.updateKeyDisplay();
             }
+
+            // Update hand tracking overlay to show new scale
+            console.log(`📋 HandTracking exists: ${!!this.handTracking}`);
+            if (this.handTracking) {
+                console.log('🔄 Calling updateActivePresetDisplay()...');
+                this.handTracking.updateActivePresetDisplay();
+                console.log('✅ updateActivePresetDisplay() call completed');
+            } else {
+                console.error('❌ HandTracking does NOT exist!');
+            }
+
             console.log('🎹 Global scale changed from', oldScale, 'to', newScale);
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         });
 
         // Key selector (root note)
         const keySelect = document.getElementById('keySelect');
         keySelect.addEventListener('change', (e) => {
-            this.musicEngine.setKey(e.target.value);
+            const newKey = e.target.value;
+
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            console.log('🎵 KEY CHANGE EVENT FIRED!');
+            console.log(`📋 New key: "${newKey}"`);
+            console.log(`📋 ChordEngine exists: ${!!this.chordEngine}`);
+
+            // Update BOTH engines (musicEngine for generative music, chordEngine for hand tracking)
+            this.musicEngine.setKey(newKey);
+            console.log('✅ MusicEngine key updated to:', newKey);
+
+            if (this.chordEngine) {
+                const beforeUpdate = this.chordEngine.getCurrentRoot();
+                console.log(`📋 ChordEngine BEFORE update: "${beforeUpdate}"`);
+
+                this.chordEngine.setRoot(newKey);
+
+                const afterUpdate = this.chordEngine.getCurrentRoot();
+                console.log(`✅ ChordEngine AFTER update: "${afterUpdate}"`);
+            } else {
+                console.error('❌ ChordEngine does NOT exist!');
+            }
+
             // Always update piano roll and key display
             if (this.synthSeqState) {
                 this.transposeNotesToNewKey();
                 this.renderPianoRoll();
                 this.updateKeyDisplay();
             }
+
+            // Update hand tracking overlay to show new key
+            console.log(`📋 HandTracking exists: ${!!this.handTracking}`);
+            if (this.handTracking) {
+                console.log('🔄 Calling updateActivePresetDisplay()...');
+                this.handTracking.updateActivePresetDisplay();
+                console.log('✅ updateActivePresetDisplay() call completed');
+            } else {
+                console.error('❌ HandTracking does NOT exist!');
+            }
+
             console.log('🎹 Key changed, piano roll and display updated');
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         });
 
         // Reverb type selector
@@ -873,6 +975,12 @@ class Mesmer {
 
         // Voice Control
         this.setupVoiceControl();
+
+        // Voice Input & Effects
+        this.setupVoiceInput();
+
+        // Guitar Input & Effects
+        this.setupGuitar();
     }
 
     setupVoiceControl() {
@@ -1077,6 +1185,561 @@ class Mesmer {
         }
     }
 
+    setupVoiceInput() {
+        console.log('🎤 Setting up Voice Input & Effects UI...');
+
+        const openVoiceInputBtn = document.getElementById('openVoiceInput');
+        const voiceInputPanel = document.getElementById('voiceInputPanel');
+        const closeVoiceInputBtn = document.getElementById('closeVoiceInput');
+        const startVoiceInputBtn = document.getElementById('startVoiceInput');
+        const stopVoiceInputBtn = document.getElementById('stopVoiceInput');
+        const recordVoiceBtn = document.getElementById('recordVoice');
+        const voiceInputStatus = document.getElementById('voiceInputStatus');
+        const voiceInputLevel = document.getElementById('voiceInputLevel');
+
+        // Open voice input panel
+        openVoiceInputBtn.addEventListener('click', () => {
+            voiceInputPanel.style.display = 'block';
+            console.log('🎤 Voice input panel opened');
+        });
+
+        // Close voice input panel
+        closeVoiceInputBtn.addEventListener('click', () => {
+            voiceInputPanel.style.display = 'none';
+            if (this.vocalEffects && this.vocalEffects.mic && this.vocalEffects.mic.state === 'started') {
+                this.vocalEffects.stop();
+                startVoiceInputBtn.style.display = 'block';
+                stopVoiceInputBtn.style.display = 'none';
+                recordVoiceBtn.style.display = 'none';
+            }
+            console.log('🎤 Voice input panel closed');
+        });
+
+        // Start microphone
+        startVoiceInputBtn.addEventListener('click', async () => {
+            try {
+                // Initialize effects chain if not already done
+                if (!this.vocalEffects.isInitialized) {
+                    voiceInputStatus.textContent = '⏳ Initializing audio effects...';
+                    voiceInputStatus.style.background = 'rgba(251, 191, 36, 0.1)';
+                    voiceInputStatus.style.borderColor = 'rgba(251, 191, 36, 0.3)';
+                    voiceInputStatus.style.color = 'rgba(252, 211, 77, 0.8)';
+
+                    await this.vocalEffects.init();
+                }
+
+                // Start microphone
+                voiceInputStatus.textContent = '⏳ Opening microphone...';
+                await this.vocalEffects.start();
+
+                // Update UI
+                voiceInputStatus.innerHTML = '<div style="color: #10b981;">✅ Microphone Active</div>';
+                voiceInputStatus.style.background = 'rgba(16, 185, 129, 0.1)';
+                voiceInputStatus.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+                startVoiceInputBtn.style.display = 'none';
+                stopVoiceInputBtn.style.display = 'block';
+                recordVoiceBtn.style.display = 'block';
+
+                // Start monitoring input level
+                this.startVoiceInputMonitoring();
+
+                console.log('✅ Voice input started');
+            } catch (error) {
+                console.error('❌ Failed to start voice input:', error);
+                voiceInputStatus.innerHTML = '<div style="color: #ef4444;">❌ Microphone access denied</div>';
+                voiceInputStatus.style.background = 'rgba(239, 68, 68, 0.1)';
+                voiceInputStatus.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+            }
+        });
+
+        // Stop microphone
+        stopVoiceInputBtn.addEventListener('click', () => {
+            this.vocalEffects.stop();
+            this.stopVoiceInputMonitoring();
+
+            voiceInputStatus.innerHTML = '🎤 Microphone Off';
+            voiceInputStatus.style.background = 'rgba(239, 68, 68, 0.1)';
+            voiceInputStatus.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+            voiceInputStatus.style.color = 'rgba(248, 113, 113, 0.8)';
+            startVoiceInputBtn.style.display = 'block';
+            stopVoiceInputBtn.style.display = 'none';
+            recordVoiceBtn.style.display = 'none';
+            voiceInputLevel.style.width = '0%';
+
+            console.log('⏹️ Voice input stopped');
+        });
+
+        // Record button
+        recordVoiceBtn.addEventListener('click', async () => {
+            if (!this.vocalEffects.isRecording) {
+                // Start recording
+                await this.vocalEffects.startRecording();
+                recordVoiceBtn.textContent = '⏹️ Stop Recording';
+                recordVoiceBtn.style.background = 'rgba(99, 102, 241, 0.6)';
+                console.log('🔴 Voice recording started');
+            } else {
+                // Stop recording
+                const blob = await this.vocalEffects.stopRecording();
+                recordVoiceBtn.textContent = '🔴 Record';
+                recordVoiceBtn.style.background = 'rgba(239, 68, 68, 0.6)';
+
+                // Download recording
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `mesmer-vocal-${Date.now()}.webm`;
+                a.click();
+                URL.revokeObjectURL(url);
+
+                console.log('💾 Voice recording saved');
+            }
+        });
+
+        // Preset selector
+        const voicePresetSelect = document.getElementById('voicePresetSelect');
+        voicePresetSelect.addEventListener('change', (e) => {
+            this.vocalEffects.loadPreset(e.target.value);
+            console.log(`🎹 Vocal preset changed to: ${e.target.value}`);
+        });
+
+        // Auto-tune enable
+        const autoTuneEnable = document.getElementById('autoTuneEnable');
+        autoTuneEnable.addEventListener('change', (e) => {
+            this.vocalEffects.setAutoTuneEnabled(e.target.checked);
+        });
+
+        // Auto-tune strength
+        const autoTuneStrength = document.getElementById('autoTuneStrength');
+        const autoTuneStrengthValue = document.getElementById('autoTuneStrengthValue');
+        autoTuneStrength.addEventListener('input', (e) => {
+            const value = parseInt(e.target.value);
+            this.vocalEffects.setAutoTuneStrength(value / 100);
+            autoTuneStrengthValue.textContent = `${value}%`;
+        });
+
+        // Auto-tune scale
+        const autoTuneRoot = document.getElementById('autoTuneRoot');
+        const autoTuneScale = document.getElementById('autoTuneScale');
+        autoTuneRoot.addEventListener('change', () => {
+            this.vocalEffects.setScale(autoTuneRoot.value, autoTuneScale.value);
+        });
+        autoTuneScale.addEventListener('change', () => {
+            this.vocalEffects.setScale(autoTuneRoot.value, autoTuneScale.value);
+        });
+
+        // Distortion enable
+        const distortionEnable = document.getElementById('distortionEnable');
+        distortionEnable.addEventListener('change', (e) => {
+            this.vocalEffects.setDistortionEnabled(e.target.checked);
+        });
+
+        // Distortion amount
+        const distortionAmount = document.getElementById('distortionAmount');
+        const distortionValue = document.getElementById('distortionValue');
+        distortionAmount.addEventListener('input', (e) => {
+            const value = parseInt(e.target.value);
+            this.vocalEffects.setDistortionAmount(value / 100);
+            distortionValue.textContent = `${value}%`;
+        });
+
+        // Chorus enable
+        const chorusEnable = document.getElementById('chorusEnable');
+        chorusEnable.addEventListener('change', (e) => {
+            this.vocalEffects.setChorusEnabled(e.target.checked);
+        });
+
+        // Chorus depth
+        const chorusDepth = document.getElementById('chorusDepth');
+        const chorusValue = document.getElementById('chorusValue');
+        chorusDepth.addEventListener('input', (e) => {
+            const value = parseInt(e.target.value);
+            this.vocalEffects.setChorusDepth(value / 100);
+            chorusValue.textContent = `${value}%`;
+        });
+
+        // Reverb mix
+        const voiceReverbMix = document.getElementById('voiceReverbMix');
+        const voiceReverbValue = document.getElementById('voiceReverbValue');
+        voiceReverbMix.addEventListener('input', (e) => {
+            const value = parseInt(e.target.value);
+            this.vocalEffects.setReverbMix(value);
+            voiceReverbValue.textContent = `${value}%`;
+        });
+
+        // Delay mix
+        const voiceDelayMix = document.getElementById('voiceDelayMix');
+        const voiceDelayValue = document.getElementById('voiceDelayValue');
+        voiceDelayMix.addEventListener('input', (e) => {
+            const value = parseInt(e.target.value);
+            this.vocalEffects.setDelayMix(value);
+            voiceDelayValue.textContent = `${value}%`;
+        });
+
+        // Compression enable
+        const compressionEnable = document.getElementById('compressionEnable');
+        compressionEnable.addEventListener('change', (e) => {
+            this.vocalEffects.setCompressionEnabled(e.target.checked);
+        });
+
+        // Input gain
+        const voiceInputGain = document.getElementById('voiceInputGain');
+        const inputGainValue = document.getElementById('inputGainValue');
+        voiceInputGain.addEventListener('input', (e) => {
+            const value = parseInt(e.target.value);
+            this.vocalEffects.setInputGain(value / 100);
+            inputGainValue.textContent = `${value}%`;
+        });
+
+        // Output gain
+        const voiceOutputGain = document.getElementById('voiceOutputGain');
+        const outputGainValue = document.getElementById('outputGainValue');
+        voiceOutputGain.addEventListener('input', (e) => {
+            const value = parseInt(e.target.value);
+            this.vocalEffects.setOutputGain(value / 100);
+            outputGainValue.textContent = `${value}%`;
+        });
+
+        console.log('✅ Voice Input & Effects UI ready');
+    }
+
+    // Monitor voice input level
+    startVoiceInputMonitoring() {
+        if (this.voiceInputMonitorInterval) return;
+
+        const voiceInputLevel = document.getElementById('voiceInputLevel');
+
+        this.voiceInputMonitorInterval = setInterval(() => {
+            if (!this.vocalEffects || !this.vocalEffects.mic || this.vocalEffects.mic.state !== 'started') {
+                return;
+            }
+
+            const level = this.vocalEffects.getInputLevel();
+            const percentage = Math.min(100, level * 200); // Scale up for visibility
+            voiceInputLevel.style.width = `${percentage}%`;
+        }, 50); // Update every 50ms
+    }
+
+    stopVoiceInputMonitoring() {
+        if (this.voiceInputMonitorInterval) {
+            clearInterval(this.voiceInputMonitorInterval);
+            this.voiceInputMonitorInterval = null;
+        }
+    }
+
+    setupGuitar() {
+        console.log('🎸 Setting up Guitar Pedalboard UI...');
+
+        const openGuitarBtn = document.getElementById('openGuitar');
+        const guitarPanel = document.getElementById('guitarPedalboardPanel');
+        const closeGuitarBtn = document.getElementById('closeGuitarPedalboard');
+        const startGuitarBtn = document.getElementById('startGuitar');
+        const stopGuitarBtn = document.getElementById('stopGuitar');
+        const recordGuitarBtn = document.getElementById('recordGuitar');
+        const toggleTunerBtn = document.getElementById('toggleTuner');
+        const guitarInputStatus = document.getElementById('guitarInputStatus');
+        const guitarInputLevel = document.getElementById('guitarInputLevel');
+        const guitarTuner = document.getElementById('guitarTuner');
+
+        // Open guitar panel
+        openGuitarBtn.addEventListener('click', () => {
+            guitarPanel.style.display = 'block';
+            console.log('🎸 Guitar pedalboard panel opened');
+        });
+
+        // Close guitar panel
+        closeGuitarBtn.addEventListener('click', () => {
+            guitarPanel.style.display = 'none';
+            if (this.guitarEffects && this.guitarEffects.audioInput && this.guitarEffects.audioInput.state === 'started') {
+                this.guitarEffects.stop();
+                startGuitarBtn.style.display = 'block';
+                stopGuitarBtn.style.display = 'none';
+                recordGuitarBtn.style.display = 'none';
+                toggleTunerBtn.style.display = 'none';
+            }
+            console.log('🎸 Guitar pedalboard panel closed');
+        });
+
+        // Start guitar input
+        startGuitarBtn.addEventListener('click', async () => {
+            try {
+                // Initialize effects chain if not already done
+                if (!this.guitarEffects.isInitialized) {
+                    guitarInputStatus.textContent = '⏳ Initializing guitar effects...';
+                    guitarInputStatus.style.background = 'rgba(251, 191, 36, 0.1)';
+                    guitarInputStatus.style.borderColor = 'rgba(251, 191, 36, 0.3)';
+                    guitarInputStatus.style.color = 'rgba(252, 211, 77, 0.8)';
+
+                    await this.guitarEffects.init();
+                }
+
+                // Start guitar input
+                guitarInputStatus.textContent = '⏳ Opening guitar input...';
+                await this.guitarEffects.start();
+
+                // Update UI
+                guitarInputStatus.innerHTML = '<div style="color: #10b981;">✅ Guitar Input Active</div>';
+                guitarInputStatus.style.background = 'rgba(16, 185, 129, 0.1)';
+                guitarInputStatus.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+                startGuitarBtn.style.display = 'none';
+                stopGuitarBtn.style.display = 'block';
+                recordGuitarBtn.style.display = 'block';
+                toggleTunerBtn.style.display = 'block';
+
+                // Start monitoring input level
+                this.startGuitarInputMonitoring();
+
+                console.log('✅ Guitar input started');
+            } catch (error) {
+                console.error('❌ Failed to start guitar input:', error);
+                guitarInputStatus.innerHTML = '<div style="color: #ef4444;">❌ Guitar input access denied</div>';
+                guitarInputStatus.style.background = 'rgba(239, 68, 68, 0.1)';
+                guitarInputStatus.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+            }
+        });
+
+        // Stop guitar input
+        stopGuitarBtn.addEventListener('click', () => {
+            this.guitarEffects.stop();
+            this.stopGuitarInputMonitoring();
+            this.stopGuitarTuner();
+
+            guitarInputStatus.innerHTML = '🎸 Guitar Input Off';
+            guitarInputStatus.style.background = 'rgba(239, 68, 68, 0.1)';
+            guitarInputStatus.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+            guitarInputStatus.style.color = 'rgba(248, 113, 113, 0.8)';
+            startGuitarBtn.style.display = 'block';
+            stopGuitarBtn.style.display = 'none';
+            recordGuitarBtn.style.display = 'none';
+            toggleTunerBtn.style.display = 'none';
+            guitarInputLevel.style.width = '0%';
+            guitarTuner.style.display = 'none';
+
+            console.log('⏹️ Guitar input stopped');
+        });
+
+        // Record button
+        recordGuitarBtn.addEventListener('click', async () => {
+            if (!this.guitarEffects.isRecording) {
+                // Start recording
+                await this.guitarEffects.startRecording();
+                recordGuitarBtn.textContent = '⏹️ Stop Recording';
+                recordGuitarBtn.style.background = 'rgba(99, 102, 241, 0.6)';
+                console.log('🔴 Guitar recording started');
+            } else {
+                // Stop recording
+                const blob = await this.guitarEffects.stopRecording();
+                recordGuitarBtn.textContent = '🔴 Record';
+                recordGuitarBtn.style.background = 'rgba(239, 68, 68, 0.6)';
+
+                // Download recording
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `mesmer-guitar-${Date.now()}.webm`;
+                a.click();
+                URL.revokeObjectURL(url);
+
+                console.log('💾 Guitar recording saved');
+            }
+        });
+
+        // Toggle tuner
+        toggleTunerBtn.addEventListener('click', () => {
+            if (guitarTuner.style.display === 'none') {
+                guitarTuner.style.display = 'block';
+                this.startGuitarTuner();
+                toggleTunerBtn.style.background = 'rgba(99, 102, 241, 0.6)';
+                console.log('🎵 Guitar tuner enabled');
+            } else {
+                guitarTuner.style.display = 'none';
+                this.stopGuitarTuner();
+                toggleTunerBtn.style.background = 'rgba(255, 87, 34, 0.6)';
+                console.log('🎵 Guitar tuner disabled');
+            }
+        });
+
+        // Preset selector
+        const presetSelect = document.getElementById('guitarPresetSelect');
+        presetSelect.addEventListener('change', (e) => {
+            this.guitarEffects.loadPreset(e.target.value);
+            console.log(`🎸 Guitar preset changed to: ${e.target.value}`);
+        });
+
+        // Compressor
+        const compressorEnable = document.getElementById('compressorEnable');
+        const compressorThreshold = document.getElementById('compressorThreshold');
+        compressorEnable.addEventListener('change', (e) => {
+            this.guitarEffects.setCompressorEnabled(e.target.checked);
+        });
+        compressorThreshold.addEventListener('input', (e) => {
+            this.guitarEffects.setCompressorThreshold(parseFloat(e.target.value));
+        });
+
+        // Wah
+        const wahEnable = document.getElementById('wahEnable');
+        const wahFrequency = document.getElementById('wahFrequency');
+        wahEnable.addEventListener('change', (e) => {
+            this.guitarEffects.setWahEnabled(e.target.checked);
+        });
+        wahFrequency.addEventListener('input', (e) => {
+            this.guitarEffects.setWahFrequency(parseFloat(e.target.value));
+        });
+
+        // Overdrive
+        const overdriveEnable = document.getElementById('overdriveEnable');
+        const overdriveAmount = document.getElementById('overdriveAmount');
+        overdriveEnable.addEventListener('change', (e) => {
+            this.guitarEffects.setOverdriveEnabled(e.target.checked);
+        });
+        overdriveAmount.addEventListener('input', (e) => {
+            this.guitarEffects.setOverdriveAmount(parseInt(e.target.value) / 100);
+        });
+
+        // Distortion
+        const distortionEnable = document.getElementById('distortionEnable');
+        const guitarDistortionAmount = document.getElementById('guitarDistortionAmount');
+        distortionEnable.addEventListener('change', (e) => {
+            this.guitarEffects.setDistortionEnabled(e.target.checked);
+        });
+        guitarDistortionAmount.addEventListener('input', (e) => {
+            this.guitarEffects.setDistortionAmount(parseInt(e.target.value) / 100);
+        });
+
+        // Fuzz
+        const fuzzEnable = document.getElementById('fuzzEnable');
+        const fuzzAmount = document.getElementById('fuzzAmount');
+        fuzzEnable.addEventListener('change', (e) => {
+            this.guitarEffects.setFuzzEnabled(e.target.checked);
+        });
+        fuzzAmount.addEventListener('input', (e) => {
+            this.guitarEffects.setFuzzAmount(parseInt(e.target.value) / 100);
+        });
+
+        // Chorus
+        const guitarChorusEnable = document.getElementById('guitarChorusEnable');
+        const guitarChorusDepth = document.getElementById('guitarChorusDepth');
+        guitarChorusEnable.addEventListener('change', (e) => {
+            this.guitarEffects.setChorusEnabled(e.target.checked);
+        });
+        guitarChorusDepth.addEventListener('input', (e) => {
+            this.guitarEffects.setChorusDepth(parseInt(e.target.value) / 100);
+        });
+
+        // Phaser
+        const phaserEnable = document.getElementById('phaserEnable');
+        const phaserFrequency = document.getElementById('phaserFrequency');
+        phaserEnable.addEventListener('change', (e) => {
+            this.guitarEffects.setPhaserEnabled(e.target.checked);
+        });
+        phaserFrequency.addEventListener('input', (e) => {
+            this.guitarEffects.setPhaserRate(parseFloat(e.target.value) / 100);
+        });
+
+        // Delay
+        const guitarDelayMix = document.getElementById('guitarDelayMix');
+        const delayFeedback = document.getElementById('delayFeedback');
+        guitarDelayMix.addEventListener('input', (e) => {
+            this.guitarEffects.setDelayMix(parseInt(e.target.value));
+        });
+        delayFeedback.addEventListener('input', (e) => {
+            this.guitarEffects.setDelayFeedback(parseInt(e.target.value) / 100);
+        });
+
+        // Reverb
+        const guitarReverbMix = document.getElementById('guitarReverbMix');
+        guitarReverbMix.addEventListener('input', (e) => {
+            this.guitarEffects.setReverbMix(parseInt(e.target.value));
+        });
+
+        // EQ
+        const eqEnable = document.getElementById('eqEnable');
+        const eqBass = document.getElementById('eqBass');
+        const eqMid = document.getElementById('eqMid');
+        const eqTreble = document.getElementById('eqTreble');
+        eqEnable.addEventListener('change', (e) => {
+            this.guitarEffects.setEQEnabled(e.target.checked);
+        });
+        eqBass.addEventListener('input', (e) => {
+            this.guitarEffects.setEQBass(parseInt(e.target.value));
+        });
+        eqMid.addEventListener('input', (e) => {
+            this.guitarEffects.setEQMid(parseInt(e.target.value));
+        });
+        eqTreble.addEventListener('input', (e) => {
+            this.guitarEffects.setEQTreble(parseInt(e.target.value));
+        });
+
+        // Output volume
+        const guitarOutputGain = document.getElementById('guitarOutputGain');
+        guitarOutputGain.addEventListener('input', (e) => {
+            this.guitarEffects.setOutputVolume(parseInt(e.target.value) / 100);
+        });
+
+        console.log('✅ Guitar Pedalboard UI ready');
+    }
+
+    // Monitor guitar input level
+    startGuitarInputMonitoring() {
+        if (this.guitarInputMonitorInterval) return;
+
+        const guitarInputLevel = document.getElementById('guitarInputLevel');
+
+        this.guitarInputMonitorInterval = setInterval(() => {
+            if (!this.guitarEffects || !this.guitarEffects.audioInput || this.guitarEffects.audioInput.state !== 'started') {
+                return;
+            }
+
+            const level = this.guitarEffects.getInputLevel();
+            const percentage = Math.min(100, level * 200); // Scale up for visibility
+            guitarInputLevel.style.width = `${percentage}%`;
+        }, 50); // Update every 50ms
+    }
+
+    stopGuitarInputMonitoring() {
+        if (this.guitarInputMonitorInterval) {
+            clearInterval(this.guitarInputMonitorInterval);
+            this.guitarInputMonitorInterval = null;
+        }
+    }
+
+    // Guitar tuner
+    startGuitarTuner() {
+        if (this.guitarTunerInterval) return;
+
+        const tunerNote = document.getElementById('tunerNote');
+        const tunerFreq = document.getElementById('tunerFreq');
+        const tunerCents = document.getElementById('tunerCents');
+
+        this.guitarTunerInterval = setInterval(() => {
+            if (!this.guitarEffects || !this.guitarEffects.audioInput || this.guitarEffects.audioInput.state !== 'started') {
+                return;
+            }
+
+            const pitch = this.guitarEffects.detectPitch();
+            if (pitch) {
+                tunerNote.textContent = pitch.note;
+                tunerFreq.textContent = `${pitch.frequency.toFixed(1)} Hz`;
+                tunerCents.textContent = `${pitch.cents >= 0 ? '+' : ''}${pitch.cents} cents`;
+
+                // Color code based on accuracy
+                if (Math.abs(pitch.cents) < 5) {
+                    tunerCents.style.color = '#10b981'; // Green - in tune
+                } else if (Math.abs(pitch.cents) < 15) {
+                    tunerCents.style.color = '#fbbf24'; // Yellow - close
+                } else {
+                    tunerCents.style.color = '#ef4444'; // Red - out of tune
+                }
+            }
+        }, 100); // Update every 100ms
+    }
+
+    stopGuitarTuner() {
+        if (this.guitarTunerInterval) {
+            clearInterval(this.guitarTunerInterval);
+            this.guitarTunerInterval = null;
+        }
+    }
+
     setupHandTracking() {
         console.log('👋 Setting up Hand Tracking UI...');
 
@@ -1096,6 +1759,150 @@ class Mesmer {
             handTrackingPanel.style.display = 'block';
             console.log('👋 Hand tracking panel opened');
         });
+
+        // Projector Mode button
+        const projectorModeBtn = document.getElementById('projectorModeBtn');
+        if (projectorModeBtn) {
+            projectorModeBtn.addEventListener('click', () => {
+                this.projectorManager.toggle();
+
+                // Update button appearance
+                if (this.projectorManager.isProjectorActive()) {
+                    projectorModeBtn.style.background = 'rgba(139, 92, 246, 0.8)';
+                    projectorModeBtn.style.borderColor = 'rgba(167, 139, 250, 1)';
+                    console.log('🎬 Projector mode activated');
+                } else {
+                    projectorModeBtn.style.background = '';
+                    projectorModeBtn.style.borderColor = '';
+                    console.log('🎬 Projector mode deactivated');
+                }
+            });
+        }
+
+        // Face Emotion Tracking button
+        const faceTrackingBtn = document.getElementById('faceTrackingBtn');
+        console.log('🎭 Face tracking button element:', faceTrackingBtn);
+        if (faceTrackingBtn) {
+            console.log('✅ Face tracking button found, adding event listener');
+            let faceInitialized = false;
+            let emotionUpdateInterval = null;
+
+            // Emotion emoji mapping
+            const emotionEmojis = {
+                happy: '😊',
+                sad: '😢',
+                angry: '😠',
+                surprised: '😲',
+                neutral: '😐'
+            };
+
+            faceTrackingBtn.addEventListener('click', async () => {
+                console.log('🎭 Face tracking button clicked!');
+                try {
+                    // Get video and canvas elements
+                    const video = document.getElementById('handTrackingVideo');
+                    const canvas = document.getElementById('handTrackingCanvas');
+
+                    // Auto-start camera if needed
+                    if (!video || video.readyState < 2 || video.videoWidth === 0) {
+                        console.log('📹 Camera not active, auto-starting...');
+
+                        // Open hand tracking panel if closed
+                        if (handTrackingPanel.style.display === 'none') {
+                            handTrackingPanel.style.display = 'block';
+                            console.log('✅ Hand tracking panel opened');
+                        }
+
+                        // Start camera if not started
+                        if (!video || video.readyState < 2) {
+                            statusElement.textContent = 'Starting camera for face tracking...';
+
+                            // Initialize hand tracking if needed (for camera access)
+                            if (!this.handTracking.isInitialized) {
+                                await this.handTracking.init();
+                            }
+
+                            // Setup video
+                            await this.handTracking.setupVideo(videoElement, canvasElement);
+
+                            // Update UI to show camera is active
+                            startHandTrackingBtn.style.display = 'none';
+                            stopHandTrackingBtn.style.display = 'block';
+                            statusElement.innerHTML = '<div style="color: #00ff00;">✅ Camera active for face tracking!</div>';
+
+                            console.log('✅ Camera started for face tracking');
+
+                            // Wait a moment for video to stabilize
+                            await new Promise(resolve => setTimeout(resolve, 500));
+                        }
+                    }
+
+                    // Initialize face tracking on first click
+                    if (!faceInitialized) {
+                        console.log('🎭 Initializing face tracking...');
+                        await this.faceTracking.init();
+                        this.faceTracking.setupVideo(video, canvas);
+                        faceInitialized = true;
+                        console.log('✅ Face tracking initialized');
+                    }
+
+                    // Toggle face tracking
+                    const wasEnabled = this.faceTracking.enabled;
+                    const isActive = this.faceTracking.toggle();
+
+                    // If toggle failed (e.g., video not ready), don't update UI
+                    if (!wasEnabled && !isActive) {
+                        console.log('⚠️ Face tracking failed to start');
+                        return;
+                    }
+
+                    // Update button appearance and emotion overlay
+                    const emotionOverlay = document.getElementById('emotionOverlay');
+                    const emotionEmoji = document.getElementById('emotionEmoji');
+                    const emotionText = document.getElementById('emotionText');
+                    const emotionConfidence = document.getElementById('emotionConfidence');
+
+                    if (isActive) {
+                        faceTrackingBtn.style.background = 'rgba(139, 92, 246, 0.8)';
+                        faceTrackingBtn.style.borderColor = 'rgba(167, 139, 250, 1)';
+                        console.log('🎭 Face emotion tracking activated');
+
+                        // Show emotion overlay
+                        if (emotionOverlay) emotionOverlay.style.display = 'block';
+
+                        // Start emotion display update loop
+                        emotionUpdateInterval = setInterval(() => {
+                            if (this.faceTracking && this.faceTracking.enabled) {
+                                const emotionData = this.faceTracking.getCurrentEmotion();
+                                const emotion = emotionData.emotion;
+                                const confidence = emotionData.confidence;
+
+                                // Update overlay
+                                if (emotionEmoji) emotionEmoji.textContent = emotionEmojis[emotion] || '😐';
+                                if (emotionText) emotionText.textContent = emotion.charAt(0).toUpperCase() + emotion.slice(1);
+                                if (emotionConfidence) emotionConfidence.textContent = Math.round(confidence * 100) + '%';
+                            }
+                        }, 200);  // Update 5x per second
+                    } else {
+                        faceTrackingBtn.style.background = '';
+                        faceTrackingBtn.style.borderColor = '';
+                        console.log('🎭 Face emotion tracking deactivated');
+
+                        // Hide emotion overlay
+                        if (emotionOverlay) emotionOverlay.style.display = 'none';
+
+                        // Stop emotion display update loop
+                        if (emotionUpdateInterval) {
+                            clearInterval(emotionUpdateInterval);
+                            emotionUpdateInterval = null;
+                        }
+                    }
+                } catch (error) {
+                    console.error('❌ Face tracking error:', error);
+                    alert('Failed to initialize face tracking: ' + error.message);
+                }
+            });
+        }
 
         // Close hand tracking panel
         closeHandTrackingBtn.addEventListener('click', () => {
@@ -1598,7 +2405,7 @@ class Mesmer {
             length: 16,
             scale: 'major',
             octave: 3,
-            rootNote: 'C', // Root note of the key
+            rootNote: 'C3', // Root note of the key (with octave)
             velocity: 0.7,
             engine: 'tonejs', // tonejs, wad, dirt
             isDragging: false,
@@ -2618,10 +3425,42 @@ class Mesmer {
         gameGroup.label = '🎮 Game Music';
 
         const gamePatterns = [
+            // 🎵 CLASSIC LEADS
             { value: 'game_hero_theme', name: '🗡️ Hero Theme' },
             { value: 'game_dungeon', name: '🏰 Dungeon' },
             { value: 'game_overworld', name: '🌍 Overworld' },
-            { value: 'game_boss_battle', name: '👾 Boss Battle' }
+            { value: 'game_boss_battle', name: '👾 Boss Battle' },
+            { value: 'game_zelda_theme', name: '🗡️ Zelda Theme' },
+            { value: 'game_mario_underground', name: '🍄 Underground' },
+            { value: 'game_tetris', name: '🧱 Tetris' },
+            { value: 'game_megaman', name: '🤖 Mega Man' },
+            { value: 'game_sonic', name: '💨 Sonic Zone' },
+            { value: 'game_castlevania', name: '🧛 Castlevania' },
+            { value: 'game_pokemon', name: '⚡ Pokémon' },
+            { value: 'game_streets_rage', name: '🥋 Streets of Rage' },
+            { value: 'game_outrun', name: '🏎️ OutRun' },
+            { value: 'game_minecraft', name: '⛏️ Minecraft' },
+            { value: 'game_doom', name: '😈 DOOM' },
+            { value: 'game_undertale', name: '❤️ Undertale' },
+            { value: 'game_secret_mana', name: '✨ Secret of Mana (32)' },
+            { value: 'game_kingdom_hearts', name: '👑 Kingdom Hearts (32)' },
+            // 🎸 BASS PATTERNS
+            { value: 'game_earthbound_bass', name: '🌍 EarthBound Groove' },
+            { value: 'game_chrono_bass', name: '⏰ Chrono Trigger (32)' },
+            { value: 'game_donkey_bass', name: '🍌 DK Country Bass' },
+            { value: 'game_halo_bass', name: '🎖️ Halo Theme (32)' },
+            { value: 'game_golden_axe', name: '⚔️ Golden Axe' },
+            { value: 'game_hotline_miami', name: '🔪 Hotline Miami' },
+            // 🎹 ARPEGGIO PATTERNS
+            { value: 'game_ff7_arp', name: '⚔️ Final Fantasy VII' },
+            { value: 'game_kirby_arp', name: '⭐ Kirby Dreamland' },
+            { value: 'game_portal', name: '🔵 Portal' },
+            { value: 'game_zelda_fairy', name: '🧚 Zelda Fairy' },
+            { value: 'game_celeste', name: '🏔️ Celeste' },
+            // 🎼 PAD PATTERNS
+            { value: 'game_metroid', name: '👾 Metroid' },
+            { value: 'game_hollow_knight', name: '🦋 Hollow Knight (32)' },
+            { value: 'game_skyrim', name: '🐉 Skyrim (32)' }
         ];
 
         gamePatterns.forEach(({ value, name }) => {
@@ -2701,12 +3540,20 @@ class Mesmer {
                 }
             }
 
-            // Load pattern data
+            // 🔧 FIX: Clear ALL other tracks first to prevent pattern overlap!
+            // When loading a new pattern, we want ONLY that pattern to play
+            const otherTracks = ['pad', 'lead', 'bass', 'arp'].filter(t => t !== saved.track);
+            otherTracks.forEach(track => {
+                this.synthSeqState.patterns[track] = [];
+            });
+            console.log('🧹 Cleared other tracks:', otherTracks.join(', '));
+
+            // Load pattern data into the target track
             this.synthSeqState.patterns[saved.track] = saved.pattern;
             this.synthSeqState.length = saved.length || 16;
             this.synthSeqState.scale = saved.scale || 'major';
             this.synthSeqState.octave = saved.octave || 3;
-            this.synthSeqState.rootNote = saved.rootNote || 'C';
+            this.synthSeqState.rootNote = saved.rootNote || 'C3'; // 🔧 FIX: Default with octave
 
             // Switch to the pattern's track
             this.synthSeqState.currentTrack = saved.track;
@@ -2721,10 +3568,84 @@ class Mesmer {
             document.getElementById('synthSeqOctave').value = this.synthSeqState.octave;
             document.getElementById('synthSeqPatternName').innerHTML = `Current Pattern: <strong>${saved.name}</strong>`;
 
+            // 🔧 FIX: Also update GLOBAL scale/key to match the preset
+            // This ensures the piano roll displays notes in the correct key/octave
+            const globalScaleSelect = document.getElementById('scaleSelect');
+            const globalKeySelect = document.getElementById('keySelect');
+
+            console.log('🔍 DEBUG - Preset rootNote:', saved.rootNote, 'scale:', saved.scale);
+            console.log('🔍 DEBUG - Found scaleSelect:', !!globalScaleSelect);
+            console.log('🔍 DEBUG - Found keySelect:', !!globalKeySelect);
+
+            if (globalScaleSelect && saved.scale) {
+                const oldScale = globalScaleSelect.value;
+                globalScaleSelect.value = saved.scale;
+                this.musicEngine.setScale(saved.scale);
+                console.log('✅ Musical Scale: Changed from', oldScale, '→', saved.scale);
+            } else {
+                console.warn('⚠️ Cannot update scale - element:', !!globalScaleSelect, 'value:', saved.scale);
+            }
+
+            if (globalKeySelect && saved.rootNote) {
+                const oldKey = globalKeySelect.value;
+                console.log('🎹 BEFORE: keySelect.value =', oldKey);
+
+                // Method 1: Set value directly
+                globalKeySelect.value = saved.rootNote;
+                console.log('🎹 AFTER (method 1):  keySelect.value =', globalKeySelect.value);
+
+                // Method 2: Find and set selectedIndex (more reliable for UI update)
+                const targetIndex = Array.from(globalKeySelect.options).findIndex(opt => opt.value === saved.rootNote);
+                if (targetIndex !== -1) {
+                    globalKeySelect.selectedIndex = targetIndex;
+                    console.log('🎹 AFTER (method 2): selectedIndex =', targetIndex, 'value =', globalKeySelect.value);
+
+                    // Method 3: Force UI repaint
+                    globalKeySelect.blur();
+                    globalKeySelect.focus();
+                    globalKeySelect.blur();
+
+                    this.musicEngine.setKey(saved.rootNote);
+                    console.log('✅ Song Key (Root Note): Changed from', oldKey, '→', saved.rootNote);
+                    console.log('   Dropdown text:', globalKeySelect.options[globalKeySelect.selectedIndex]?.text);
+                    console.log('   Visual update forced via focus/blur');
+                } else {
+                    console.error('❌ Option value "' + saved.rootNote + '" does not exist in keySelect dropdown!');
+                    console.log('   Available options:', Array.from(globalKeySelect.options).map(o => o.value).join(', '));
+                }
+            } else {
+                console.error('❌ Cannot update Song Key - element exists?', !!globalKeySelect, 'rootNote:', saved.rootNote);
+            }
+
             this.updateKeyDisplay();
             this.renderPianoRoll();
 
+            // 🔧 FIX: Restart sequencer if it's currently playing!
+            // This ensures the Tone.Sequence closures pick up the new pattern data
+            if (this.synthSeqState.isPlaying && this.sequencerPlaybacks) {
+                console.log('🔄 Sequencer is playing - restarting to apply pattern changes...');
+
+                // Stop old sequences
+                Object.values(this.sequencerPlaybacks).forEach(seq => {
+                    if (seq) {
+                        seq.stop();
+                        seq.dispose();
+                    }
+                });
+                this.sequencerPlaybacks = null;
+
+                // Restart with new patterns (by toggling twice)
+                this.synthSeqState.isPlaying = false;
+                this.toggleSequencerPlayback(); // Start
+
+                console.log('✅ Sequencer restarted with new patterns!');
+            }
+
             console.log('📂 Loaded pattern:', saved.name);
+            console.log('   Track:', saved.track);
+            console.log('   Key:', saved.rootNote, saved.scale);
+            console.log('   Length:', saved.length, 'steps');
+            console.log('   ✅ All other tracks cleared!');
         } catch (e) {
             console.error('Failed to load pattern:', e);
             alert('❌ Failed to load pattern');
@@ -2738,6 +3659,7 @@ class Mesmer {
                 track: 'pad',
                 scale: 'major',
                 octave: 3,
+                rootNote: 'C3', // 🔧 FIX: Add explicit root note with octave
                 length: 16,
                 pattern: [
                     { step: 0, notes: [{ note: 'C4', duration: 4, velocity: 0.7 }] },
@@ -2751,6 +3673,7 @@ class Mesmer {
                 track: 'lead',
                 scale: 'minor',
                 octave: 4,
+                rootNote: 'C3', // 🔧 FIX: Add explicit root note with octave
                 length: 16,
                 pattern: [
                     { step: 0, notes: [{ note: 'C5', duration: 1, velocity: 0.8 }] },
@@ -2766,6 +3689,7 @@ class Mesmer {
                 track: 'bass',
                 scale: 'minor',
                 octave: 2,
+                rootNote: 'C3', // 🔧 FIX: Add explicit root note with octave
                 length: 16,
                 pattern: [
                     { step: 0, notes: [{ note: 'C3', duration: 1, velocity: 0.9 }] },
@@ -2780,6 +3704,7 @@ class Mesmer {
                 track: 'arp',
                 scale: 'pentatonic',
                 octave: 4,
+                rootNote: 'C3', // 🔧 FIX: Add explicit root note with octave
                 length: 16,
                 pattern: [
                     { step: 0, notes: [{ note: 'C5', duration: 1, velocity: 0.7 }] },
@@ -2803,6 +3728,7 @@ class Mesmer {
                 track: 'lead',
                 scale: 'major',
                 octave: 4,
+                rootNote: 'C3', // 🔧 FIX: Add explicit root note with octave
                 length: 16,
                 pattern: [
                     { step: 0, notes: [{ note: 'E5', duration: 1, velocity: 0.9 }] },
@@ -2819,6 +3745,7 @@ class Mesmer {
                 track: 'lead',
                 scale: 'minor',
                 octave: 4,
+                rootNote: 'C3', // 🔧 FIX: Add explicit root note with octave
                 length: 16,
                 pattern: [
                     { step: 0, notes: [{ note: 'D5', duration: 2, velocity: 0.8 }] },
@@ -2835,6 +3762,7 @@ class Mesmer {
                 track: 'lead',
                 scale: 'major',
                 octave: 5,
+                rootNote: 'C3', // 🔧 FIX: Add explicit root note with octave
                 length: 16,
                 pattern: [
                     { step: 0, notes: [{ note: 'C5', duration: 1, velocity: 0.8 }] },
@@ -2853,6 +3781,7 @@ class Mesmer {
                 track: 'lead',
                 scale: 'minor',
                 octave: 4,
+                rootNote: 'C3', // 🔧 FIX: Add explicit root note with octave
                 length: 16,
                 pattern: [
                     { step: 0, notes: [{ note: 'E5', duration: 1, velocity: 1.0 }] },
@@ -2865,6 +3794,571 @@ class Mesmer {
                     { step: 9, notes: [{ note: 'C5', duration: 1, velocity: 0.8 }] },
                     { step: 10, notes: [{ note: 'B4', duration: 2, velocity: 0.9 }] },
                     { step: 12, notes: [{ note: 'E5', duration: 3, velocity: 1.0 }] }
+                ]
+            },
+            // 🎮 NEW GAME PATTERNS - Different Keys for Variety!
+            'game_zelda_theme': {
+                name: 'Zelda Theme',
+                track: 'lead',
+                scale: 'major',
+                octave: 4,
+                rootNote: 'F3', // F Major - adventurous!
+                length: 16,
+                pattern: [
+                    { step: 0, notes: [{ note: 'F5', duration: 1, velocity: 0.8 }] },
+                    { step: 2, notes: [{ note: 'F5', duration: 1, velocity: 0.8 }] },
+                    { step: 4, notes: [{ note: 'F5', duration: 1, velocity: 0.8 }] },
+                    { step: 5, notes: [{ note: 'G5', duration: 1, velocity: 0.7 }] },
+                    { step: 6, notes: [{ note: 'A5', duration: 2, velocity: 0.9 }] },
+                    { step: 9, notes: [{ note: 'A5', duration: 1, velocity: 0.8 }] },
+                    { step: 11, notes: [{ note: 'A5', duration: 1, velocity: 0.8 }] },
+                    { step: 13, notes: [{ note: 'A5', duration: 1, velocity: 0.8 }] },
+                    { step: 14, notes: [{ note: 'Bb5', duration: 1, velocity: 0.7 }] },
+                    { step: 15, notes: [{ note: 'C6', duration: 1, velocity: 0.9 }] }
+                ]
+            },
+            'game_mario_underground': {
+                name: 'Underground',
+                track: 'lead',
+                scale: 'minor',
+                octave: 4,
+                rootNote: 'D3', // D Minor - mysterious!
+                length: 16,
+                pattern: [
+                    { step: 0, notes: [{ note: 'D5', duration: 1, velocity: 0.8 }] },
+                    { step: 1, notes: [{ note: 'D5', duration: 1, velocity: 0.6 }] },
+                    { step: 2, notes: [{ note: 'D5', duration: 1, velocity: 0.8 }] },
+                    { step: 4, notes: [{ note: 'A4', duration: 1, velocity: 0.9 }] },
+                    { step: 5, notes: [{ note: 'Bb4', duration: 1, velocity: 0.7 }] },
+                    { step: 6, notes: [{ note: 'A4', duration: 1, velocity: 0.8 }] },
+                    { step: 8, notes: [{ note: 'G4', duration: 1, velocity: 0.8 }] },
+                    { step: 9, notes: [{ note: 'F4', duration: 1, velocity: 0.6 }] },
+                    { step: 10, notes: [{ note: 'G4', duration: 2, velocity: 0.7 }] }
+                ]
+            },
+            'game_tetris': {
+                name: 'Tetris',
+                track: 'lead',
+                scale: 'minor',
+                octave: 4,
+                rootNote: 'E3', // E Minor - energetic!
+                length: 16,
+                pattern: [
+                    { step: 0, notes: [{ note: 'E5', duration: 1, velocity: 0.8 }] },
+                    { step: 1, notes: [{ note: 'B4', duration: 0.5, velocity: 0.7 }] },
+                    { step: 2, notes: [{ note: 'C5', duration: 1, velocity: 0.8 }] },
+                    { step: 3, notes: [{ note: 'D5', duration: 1, velocity: 0.8 }] },
+                    { step: 4, notes: [{ note: 'C5', duration: 0.5, velocity: 0.7 }] },
+                    { step: 5, notes: [{ note: 'B4', duration: 1, velocity: 0.8 }] },
+                    { step: 6, notes: [{ note: 'A4', duration: 1, velocity: 0.8 }] },
+                    { step: 8, notes: [{ note: 'A4', duration: 1, velocity: 0.7 }] },
+                    { step: 9, notes: [{ note: 'C5', duration: 0.5, velocity: 0.7 }] },
+                    { step: 10, notes: [{ note: 'E5', duration: 1, velocity: 0.9 }] },
+                    { step: 11, notes: [{ note: 'D5', duration: 1, velocity: 0.7 }] },
+                    { step: 12, notes: [{ note: 'C5', duration: 1, velocity: 0.8 }] },
+                    { step: 13, notes: [{ note: 'B4', duration: 2, velocity: 0.8 }] }
+                ]
+            },
+            'game_megaman': {
+                name: 'Mega Man',
+                track: 'lead',
+                scale: 'minor',
+                octave: 4,
+                rootNote: 'A3', // A Minor - heroic!
+                length: 16,
+                pattern: [
+                    { step: 0, notes: [{ note: 'A5', duration: 1, velocity: 0.9 }] },
+                    { step: 2, notes: [{ note: 'G5', duration: 1, velocity: 0.8 }] },
+                    { step: 3, notes: [{ note: 'F5', duration: 1, velocity: 0.7 }] },
+                    { step: 4, notes: [{ note: 'E5', duration: 2, velocity: 0.9 }] },
+                    { step: 6, notes: [{ note: 'A5', duration: 1, velocity: 0.9 }] },
+                    { step: 8, notes: [{ note: 'C6', duration: 1, velocity: 1.0 }] },
+                    { step: 10, notes: [{ note: 'B5', duration: 1, velocity: 0.8 }] },
+                    { step: 11, notes: [{ note: 'A5', duration: 1, velocity: 0.7 }] },
+                    { step: 12, notes: [{ note: 'G5', duration: 2, velocity: 0.9 }] },
+                    { step: 14, notes: [{ note: 'E5', duration: 2, velocity: 0.8 }] }
+                ]
+            },
+            'game_sonic': {
+                name: 'Sonic Zone',
+                track: 'lead',
+                scale: 'major',
+                octave: 4,
+                rootNote: 'G3', // G Major - speedy!
+                length: 16,
+                pattern: [
+                    { step: 0, notes: [{ note: 'G5', duration: 0.5, velocity: 0.9 }] },
+                    { step: 1, notes: [{ note: 'A5', duration: 0.5, velocity: 0.8 }] },
+                    { step: 2, notes: [{ note: 'B5', duration: 1, velocity: 0.9 }] },
+                    { step: 3, notes: [{ note: 'D6', duration: 1, velocity: 1.0 }] },
+                    { step: 5, notes: [{ note: 'C6', duration: 0.5, velocity: 0.8 }] },
+                    { step: 6, notes: [{ note: 'B5', duration: 1, velocity: 0.9 }] },
+                    { step: 8, notes: [{ note: 'G5', duration: 1, velocity: 0.8 }] },
+                    { step: 10, notes: [{ note: 'A5', duration: 1, velocity: 0.8 }] },
+                    { step: 12, notes: [{ note: 'B5', duration: 2, velocity: 0.9 }] },
+                    { step: 15, notes: [{ note: 'G5', duration: 1, velocity: 0.7 }] }
+                ]
+            },
+            'game_metroid': {
+                name: 'Metroid',
+                track: 'pad',
+                scale: 'minor',
+                octave: 3,
+                rootNote: 'B2', // B Minor - atmospheric!
+                length: 16,
+                pattern: [
+                    { step: 0, notes: [{ note: 'B3', duration: 4, velocity: 0.6 }] },
+                    { step: 4, notes: [{ note: 'A3', duration: 4, velocity: 0.5 }] },
+                    { step: 8, notes: [{ note: 'G3', duration: 4, velocity: 0.6 }] },
+                    { step: 12, notes: [{ note: 'F#3', duration: 4, velocity: 0.5 }] }
+                ]
+            },
+            'game_castlevania': {
+                name: 'Castlevania',
+                track: 'lead',
+                scale: 'minor',
+                octave: 4,
+                rootNote: 'D3', // D Minor - gothic!
+                length: 16,
+                pattern: [
+                    { step: 0, notes: [{ note: 'D5', duration: 1, velocity: 0.9 }] },
+                    { step: 1, notes: [{ note: 'F5', duration: 1, velocity: 0.8 }] },
+                    { step: 2, notes: [{ note: 'A5', duration: 2, velocity: 1.0 }] },
+                    { step: 4, notes: [{ note: 'G5', duration: 1, velocity: 0.8 }] },
+                    { step: 5, notes: [{ note: 'F5', duration: 1, velocity: 0.7 }] },
+                    { step: 6, notes: [{ note: 'E5', duration: 2, velocity: 0.9 }] },
+                    { step: 8, notes: [{ note: 'D5', duration: 1, velocity: 0.9 }] },
+                    { step: 10, notes: [{ note: 'C5', duration: 1, velocity: 0.8 }] },
+                    { step: 12, notes: [{ note: 'D5', duration: 3, velocity: 0.9 }] }
+                ]
+            },
+            'game_pokemon': {
+                name: 'Pokémon',
+                track: 'lead',
+                scale: 'major',
+                octave: 4,
+                rootNote: 'D3', // D Major - upbeat!
+                length: 16,
+                pattern: [
+                    { step: 0, notes: [{ note: 'D5', duration: 1, velocity: 0.8 }] },
+                    { step: 2, notes: [{ note: 'F#5', duration: 1, velocity: 0.8 }] },
+                    { step: 4, notes: [{ note: 'A5', duration: 2, velocity: 0.9 }] },
+                    { step: 7, notes: [{ note: 'G5', duration: 1, velocity: 0.7 }] },
+                    { step: 8, notes: [{ note: 'F#5', duration: 1, velocity: 0.8 }] },
+                    { step: 10, notes: [{ note: 'E5', duration: 1, velocity: 0.7 }] },
+                    { step: 12, notes: [{ note: 'D5', duration: 3, velocity: 0.8 }] }
+                ]
+            },
+            // 🎸 BASS PATTERNS - Groovy low-end!
+            'game_earthbound_bass': {
+                name: 'EarthBound Groove',
+                track: 'bass',
+                scale: 'major',
+                octave: 2,
+                rootNote: 'F3', // F Major - funky!
+                length: 16,
+                pattern: [
+                    { step: 0, notes: [{ note: 'F2', duration: 2, velocity: 0.9 }] },
+                    { step: 2, notes: [{ note: 'C2', duration: 1, velocity: 0.7 }] },
+                    { step: 4, notes: [{ note: 'F2', duration: 2, velocity: 0.9 }] },
+                    { step: 6, notes: [{ note: 'C2', duration: 1, velocity: 0.7 }] },
+                    { step: 8, notes: [{ note: 'Bb2', duration: 2, velocity: 0.9 }] },
+                    { step: 10, notes: [{ note: 'F2', duration: 1, velocity: 0.7 }] },
+                    { step: 12, notes: [{ note: 'C3', duration: 2, velocity: 0.8 }] },
+                    { step: 14, notes: [{ note: 'A2', duration: 1, velocity: 0.7 }] }
+                ]
+            },
+            'game_chrono_bass': {
+                name: 'Chrono Trigger',
+                track: 'bass',
+                scale: 'minor',
+                octave: 2,
+                rootNote: 'E3', // E Minor - epic!
+                length: 32,
+                pattern: [
+                    { step: 0, notes: [{ note: 'E2', duration: 4, velocity: 0.9 }] },
+                    { step: 4, notes: [{ note: 'D2', duration: 4, velocity: 0.8 }] },
+                    { step: 8, notes: [{ note: 'C2', duration: 4, velocity: 0.9 }] },
+                    { step: 12, notes: [{ note: 'B1', duration: 4, velocity: 0.8 }] },
+                    { step: 16, notes: [{ note: 'E2', duration: 2, velocity: 0.9 }] },
+                    { step: 18, notes: [{ note: 'G2', duration: 2, velocity: 0.7 }] },
+                    { step: 20, notes: [{ note: 'A2', duration: 2, velocity: 0.8 }] },
+                    { step: 22, notes: [{ note: 'B2', duration: 2, velocity: 0.8 }] },
+                    { step: 24, notes: [{ note: 'C3', duration: 4, velocity: 0.9 }] },
+                    { step: 28, notes: [{ note: 'B2', duration: 4, velocity: 0.8 }] }
+                ]
+            },
+            'game_donkey_bass': {
+                name: 'DK Country Bass',
+                track: 'bass',
+                scale: 'minor',
+                octave: 2,
+                rootNote: 'Bb2', // Bb Minor - deep jungle!
+                length: 16,
+                pattern: [
+                    { step: 0, notes: [{ note: 'Bb1', duration: 1, velocity: 1.0 }] },
+                    { step: 2, notes: [{ note: 'Bb1', duration: 1, velocity: 0.7 }] },
+                    { step: 3, notes: [{ note: 'Db2', duration: 1, velocity: 0.6 }] },
+                    { step: 4, notes: [{ note: 'F2', duration: 2, velocity: 0.9 }] },
+                    { step: 6, notes: [{ note: 'Eb2', duration: 1, velocity: 0.7 }] },
+                    { step: 8, notes: [{ note: 'Bb1', duration: 1, velocity: 1.0 }] },
+                    { step: 10, notes: [{ note: 'Ab1', duration: 1, velocity: 0.8 }] },
+                    { step: 12, notes: [{ note: 'Gb2', duration: 2, velocity: 0.9 }] },
+                    { step: 14, notes: [{ note: 'F2', duration: 1, velocity: 0.7 }] }
+                ]
+            },
+            // 🎹 ARPEGGIO PATTERNS - Fast rhythmic patterns!
+            'game_ff7_arp': {
+                name: 'Final Fantasy VII',
+                track: 'arp',
+                scale: 'minor',
+                octave: 4,
+                rootNote: 'Ab3', // Ab Minor - emotional!
+                length: 16,
+                pattern: [
+                    { step: 0, notes: [{ note: 'Ab4', duration: 0.5, velocity: 0.7 }] },
+                    { step: 1, notes: [{ note: 'Eb5', duration: 0.5, velocity: 0.6 }] },
+                    { step: 2, notes: [{ note: 'Ab5', duration: 0.5, velocity: 0.8 }] },
+                    { step: 3, notes: [{ note: 'Cb5', duration: 0.5, velocity: 0.6 }] },
+                    { step: 4, notes: [{ note: 'Eb5', duration: 0.5, velocity: 0.7 }] },
+                    { step: 5, notes: [{ note: 'Ab4', duration: 0.5, velocity: 0.6 }] },
+                    { step: 6, notes: [{ note: 'Cb5', duration: 0.5, velocity: 0.8 }] },
+                    { step: 7, notes: [{ note: 'Eb5', duration: 0.5, velocity: 0.6 }] },
+                    { step: 8, notes: [{ note: 'Ab4', duration: 0.5, velocity: 0.7 }] },
+                    { step: 9, notes: [{ note: 'Db5', duration: 0.5, velocity: 0.6 }] },
+                    { step: 10, notes: [{ note: 'Gb5', duration: 0.5, velocity: 0.8 }] },
+                    { step: 11, notes: [{ note: 'Db5', duration: 0.5, velocity: 0.6 }] },
+                    { step: 12, notes: [{ note: 'Gb5', duration: 0.5, velocity: 0.7 }] },
+                    { step: 13, notes: [{ note: 'Db5', duration: 0.5, velocity: 0.6 }] },
+                    { step: 14, notes: [{ note: 'Ab4', duration: 0.5, velocity: 0.8 }] },
+                    { step: 15, notes: [{ note: 'Eb5', duration: 0.5, velocity: 0.6 }] }
+                ]
+            },
+            'game_kirby_arp': {
+                name: 'Kirby Dreamland',
+                track: 'arp',
+                scale: 'major',
+                octave: 5,
+                rootNote: 'Bb3', // Bb Major - cheerful!
+                length: 16,
+                pattern: [
+                    { step: 0, notes: [{ note: 'Bb5', duration: 0.5, velocity: 0.8 }] },
+                    { step: 1, notes: [{ note: 'D6', duration: 0.5, velocity: 0.7 }] },
+                    { step: 2, notes: [{ note: 'F6', duration: 0.5, velocity: 0.9 }] },
+                    { step: 3, notes: [{ note: 'D6', duration: 0.5, velocity: 0.6 }] },
+                    { step: 4, notes: [{ note: 'Bb5', duration: 0.5, velocity: 0.8 }] },
+                    { step: 5, notes: [{ note: 'F6', duration: 0.5, velocity: 0.7 }] },
+                    { step: 6, notes: [{ note: 'D6', duration: 0.5, velocity: 0.9 }] },
+                    { step: 7, notes: [{ note: 'Bb5', duration: 0.5, velocity: 0.6 }] },
+                    { step: 8, notes: [{ note: 'C6', duration: 0.5, velocity: 0.8 }] },
+                    { step: 9, notes: [{ note: 'Eb6', duration: 0.5, velocity: 0.7 }] },
+                    { step: 10, notes: [{ note: 'G6', duration: 0.5, velocity: 0.9 }] },
+                    { step: 11, notes: [{ note: 'Eb6', duration: 0.5, velocity: 0.6 }] },
+                    { step: 12, notes: [{ note: 'C6', duration: 0.5, velocity: 0.8 }] },
+                    { step: 13, notes: [{ note: 'Bb5', duration: 0.5, velocity: 0.7 }] },
+                    { step: 14, notes: [{ note: 'A5', duration: 1, velocity: 0.9 }] }
+                ]
+            },
+            // 🎼 MORE EPIC LEAD PATTERNS - 32 steps!
+            'game_secret_mana': {
+                name: 'Secret of Mana',
+                track: 'lead',
+                scale: 'major',
+                octave: 5,
+                rootNote: 'Eb3', // Eb Major - magical!
+                length: 32,
+                pattern: [
+                    { step: 0, notes: [{ note: 'Eb5', duration: 2, velocity: 0.8 }] },
+                    { step: 2, notes: [{ note: 'F5', duration: 1, velocity: 0.7 }] },
+                    { step: 3, notes: [{ note: 'G5', duration: 1, velocity: 0.8 }] },
+                    { step: 4, notes: [{ note: 'Bb5', duration: 3, velocity: 0.9 }] },
+                    { step: 8, notes: [{ note: 'Ab5', duration: 2, velocity: 0.8 }] },
+                    { step: 10, notes: [{ note: 'G5', duration: 1, velocity: 0.7 }] },
+                    { step: 11, notes: [{ note: 'F5', duration: 1, velocity: 0.7 }] },
+                    { step: 12, notes: [{ note: 'Eb5', duration: 4, velocity: 0.9 }] },
+                    { step: 16, notes: [{ note: 'Bb5', duration: 2, velocity: 0.8 }] },
+                    { step: 18, notes: [{ note: 'C6', duration: 1, velocity: 0.8 }] },
+                    { step: 19, notes: [{ note: 'D6', duration: 1, velocity: 0.7 }] },
+                    { step: 20, notes: [{ note: 'Eb6', duration: 3, velocity: 1.0 }] },
+                    { step: 24, notes: [{ note: 'D6', duration: 2, velocity: 0.8 }] },
+                    { step: 26, notes: [{ note: 'C6', duration: 2, velocity: 0.7 }] },
+                    { step: 28, notes: [{ note: 'Bb5', duration: 4, velocity: 0.9 }] }
+                ]
+            },
+            'game_kingdom_hearts': {
+                name: 'Kingdom Hearts',
+                track: 'lead',
+                scale: 'minor',
+                octave: 4,
+                rootNote: 'F#3', // F# Minor - dramatic!
+                length: 32,
+                pattern: [
+                    { step: 0, notes: [{ note: 'F#5', duration: 1, velocity: 0.8 }] },
+                    { step: 1, notes: [{ note: 'G#5', duration: 1, velocity: 0.7 }] },
+                    { step: 2, notes: [{ note: 'A5', duration: 2, velocity: 0.9 }] },
+                    { step: 4, notes: [{ note: 'C#6', duration: 3, velocity: 1.0 }] },
+                    { step: 8, notes: [{ note: 'B5', duration: 2, velocity: 0.8 }] },
+                    { step: 10, notes: [{ note: 'A5', duration: 1, velocity: 0.7 }] },
+                    { step: 11, notes: [{ note: 'G#5', duration: 1, velocity: 0.7 }] },
+                    { step: 12, notes: [{ note: 'F#5', duration: 4, velocity: 0.9 }] },
+                    { step: 16, notes: [{ note: 'E5', duration: 2, velocity: 0.8 }] },
+                    { step: 18, notes: [{ note: 'F#5', duration: 1, velocity: 0.7 }] },
+                    { step: 19, notes: [{ note: 'G#5', duration: 1, velocity: 0.8 }] },
+                    { step: 20, notes: [{ note: 'A5', duration: 4, velocity: 0.9 }] },
+                    { step: 24, notes: [{ note: 'G#5', duration: 2, velocity: 0.8 }] },
+                    { step: 26, notes: [{ note: 'F#5', duration: 2, velocity: 0.7 }] },
+                    { step: 28, notes: [{ note: 'E5', duration: 4, velocity: 0.9 }] }
+                ]
+            },
+            'game_undertale': {
+                name: 'Undertale',
+                track: 'lead',
+                scale: 'minor',
+                octave: 4,
+                rootNote: 'C#3', // C# Minor - quirky!
+                length: 16,
+                pattern: [
+                    { step: 0, notes: [{ note: 'C#5', duration: 1, velocity: 0.8 }] },
+                    { step: 1, notes: [{ note: 'D#5', duration: 1, velocity: 0.7 }] },
+                    { step: 2, notes: [{ note: 'E5', duration: 1, velocity: 0.8 }] },
+                    { step: 4, notes: [{ note: 'B4', duration: 1, velocity: 0.9 }] },
+                    { step: 5, notes: [{ note: 'C#5', duration: 1, velocity: 0.7 }] },
+                    { step: 6, notes: [{ note: 'G#4', duration: 2, velocity: 0.8 }] },
+                    { step: 8, notes: [{ note: 'F#4', duration: 1, velocity: 0.8 }] },
+                    { step: 9, notes: [{ note: 'G#4', duration: 1, velocity: 0.7 }] },
+                    { step: 10, notes: [{ note: 'A4', duration: 2, velocity: 0.9 }] },
+                    { step: 12, notes: [{ note: 'C#5', duration: 3, velocity: 0.9 }] }
+                ]
+            },
+            // 🔥 MORE LEGENDARY PATTERNS - Maximum Variety!
+            'game_streets_rage': {
+                name: 'Streets of Rage',
+                track: 'lead',
+                scale: 'minor',
+                octave: 4,
+                rootNote: 'Gb3', // Gb Minor - synth wave!
+                length: 16,
+                pattern: [
+                    { step: 0, notes: [{ note: 'Gb5', duration: 1, velocity: 0.9 }] },
+                    { step: 2, notes: [{ note: 'Ab5', duration: 1, velocity: 0.8 }] },
+                    { step: 4, notes: [{ note: 'Bb5', duration: 2, velocity: 1.0 }] },
+                    { step: 6, notes: [{ note: 'Db6', duration: 1, velocity: 0.9 }] },
+                    { step: 8, notes: [{ note: 'Bb5', duration: 1, velocity: 0.8 }] },
+                    { step: 10, notes: [{ note: 'Ab5', duration: 1, velocity: 0.7 }] },
+                    { step: 12, notes: [{ note: 'Gb5', duration: 3, velocity: 0.9 }] }
+                ]
+            },
+            'game_halo_bass': {
+                name: 'Halo Theme',
+                track: 'bass',
+                scale: 'minor',
+                octave: 2,
+                rootNote: 'Ab2', // Ab Minor - epic!
+                length: 32,
+                pattern: [
+                    { step: 0, notes: [{ note: 'Ab1', duration: 4, velocity: 1.0 }] },
+                    { step: 4, notes: [{ note: 'Eb2', duration: 4, velocity: 0.9 }] },
+                    { step: 8, notes: [{ note: 'Gb2', duration: 4, velocity: 0.9 }] },
+                    { step: 12, notes: [{ note: 'Db2', duration: 4, velocity: 0.8 }] },
+                    { step: 16, notes: [{ note: 'Ab1', duration: 2, velocity: 1.0 }] },
+                    { step: 18, notes: [{ note: 'Bb1', duration: 2, velocity: 0.8 }] },
+                    { step: 20, notes: [{ note: 'Cb2', duration: 2, velocity: 0.9 }] },
+                    { step: 22, notes: [{ note: 'Db2', duration: 2, velocity: 0.8 }] },
+                    { step: 24, notes: [{ note: 'Eb2', duration: 4, velocity: 0.9 }] },
+                    { step: 28, notes: [{ note: 'Db2', duration: 4, velocity: 0.8 }] }
+                ]
+            },
+            'game_portal': {
+                name: 'Portal',
+                track: 'arp',
+                scale: 'major',
+                octave: 5,
+                rootNote: 'Db3', // Db Major - mysterious tech!
+                length: 16,
+                pattern: [
+                    { step: 0, notes: [{ note: 'Db5', duration: 0.5, velocity: 0.7 }] },
+                    { step: 1, notes: [{ note: 'F5', duration: 0.5, velocity: 0.6 }] },
+                    { step: 2, notes: [{ note: 'Ab5', duration: 0.5, velocity: 0.8 }] },
+                    { step: 3, notes: [{ note: 'Db6', duration: 0.5, velocity: 0.7 }] },
+                    { step: 4, notes: [{ note: 'Ab5', duration: 0.5, velocity: 0.6 }] },
+                    { step: 5, notes: [{ note: 'F5', duration: 0.5, velocity: 0.7 }] },
+                    { step: 6, notes: [{ note: 'Db5', duration: 0.5, velocity: 0.8 }] },
+                    { step: 7, notes: [{ note: 'Ab5', duration: 0.5, velocity: 0.6 }] },
+                    { step: 8, notes: [{ note: 'Eb5', duration: 0.5, velocity: 0.7 }] },
+                    { step: 9, notes: [{ note: 'Gb5', duration: 0.5, velocity: 0.6 }] },
+                    { step: 10, notes: [{ note: 'Bb5', duration: 0.5, velocity: 0.8 }] },
+                    { step: 11, notes: [{ note: 'Eb6', duration: 0.5, velocity: 0.7 }] },
+                    { step: 12, notes: [{ note: 'Bb5', duration: 0.5, velocity: 0.6 }] },
+                    { step: 13, notes: [{ note: 'Gb5', duration: 0.5, velocity: 0.7 }] },
+                    { step: 14, notes: [{ note: 'Eb5', duration: 1, velocity: 0.8 }] }
+                ]
+            },
+            'game_hollow_knight': {
+                name: 'Hollow Knight',
+                track: 'pad',
+                scale: 'minor',
+                octave: 3,
+                rootNote: 'Db3', // Db Minor - haunting!
+                length: 32,
+                pattern: [
+                    { step: 0, notes: [{ note: 'Db3', duration: 8, velocity: 0.5 }] },
+                    { step: 8, notes: [{ note: 'Ab2', duration: 8, velocity: 0.4 }] },
+                    { step: 16, notes: [{ note: 'Gb3', duration: 8, velocity: 0.5 }] },
+                    { step: 24, notes: [{ note: 'Eb3', duration: 8, velocity: 0.4 }] }
+                ]
+            },
+            'game_outrun': {
+                name: 'OutRun',
+                track: 'lead',
+                scale: 'major',
+                octave: 5,
+                rootNote: 'Ab3', // Ab Major - retro wave!
+                length: 16,
+                pattern: [
+                    { step: 0, notes: [{ note: 'Ab5', duration: 1, velocity: 0.9 }] },
+                    { step: 1, notes: [{ note: 'Bb5', duration: 1, velocity: 0.8 }] },
+                    { step: 2, notes: [{ note: 'C6', duration: 2, velocity: 1.0 }] },
+                    { step: 4, notes: [{ note: 'Eb6', duration: 1, velocity: 0.9 }] },
+                    { step: 6, notes: [{ note: 'C6', duration: 1, velocity: 0.7 }] },
+                    { step: 8, notes: [{ note: 'Bb5', duration: 2, velocity: 0.9 }] },
+                    { step: 10, notes: [{ note: 'Ab5', duration: 1, velocity: 0.8 }] },
+                    { step: 12, notes: [{ note: 'Bb5', duration: 3, velocity: 0.9 }] }
+                ]
+            },
+            'game_minecraft': {
+                name: 'Minecraft',
+                track: 'lead',
+                scale: 'major',
+                octave: 4,
+                rootNote: 'Gb3', // Gb Major - calm, peaceful!
+                length: 16,
+                pattern: [
+                    { step: 0, notes: [{ note: 'Gb4', duration: 2, velocity: 0.6 }] },
+                    { step: 3, notes: [{ note: 'Ab4', duration: 1, velocity: 0.5 }] },
+                    { step: 4, notes: [{ note: 'Bb4', duration: 2, velocity: 0.7 }] },
+                    { step: 7, notes: [{ note: 'Db5', duration: 1, velocity: 0.6 }] },
+                    { step: 8, notes: [{ note: 'Eb5', duration: 3, velocity: 0.7 }] },
+                    { step: 12, notes: [{ note: 'Db5', duration: 2, velocity: 0.6 }] },
+                    { step: 14, notes: [{ note: 'Bb4', duration: 2, velocity: 0.5 }] }
+                ]
+            },
+            'game_golden_axe': {
+                name: 'Golden Axe',
+                track: 'bass',
+                scale: 'minor',
+                octave: 2,
+                rootNote: 'Gb2', // Gb Minor - powerful!
+                length: 16,
+                pattern: [
+                    { step: 0, notes: [{ note: 'Gb1', duration: 2, velocity: 1.0 }] },
+                    { step: 2, notes: [{ note: 'Gb1', duration: 1, velocity: 0.8 }] },
+                    { step: 4, notes: [{ note: 'Db2', duration: 2, velocity: 0.9 }] },
+                    { step: 6, notes: [{ note: 'Bb1', duration: 1, velocity: 0.7 }] },
+                    { step: 8, notes: [{ note: 'Ab1', duration: 2, velocity: 1.0 }] },
+                    { step: 10, notes: [{ note: 'Gb1', duration: 1, velocity: 0.8 }] },
+                    { step: 12, notes: [{ note: 'Eb2', duration: 3, velocity: 0.9 }] }
+                ]
+            },
+            'game_zelda_fairy': {
+                name: 'Zelda Fairy',
+                track: 'arp',
+                scale: 'major',
+                octave: 6,
+                rootNote: 'Eb3', // Eb Major - magical sparkle!
+                length: 16,
+                pattern: [
+                    { step: 0, notes: [{ note: 'Eb6', duration: 0.5, velocity: 0.6 }] },
+                    { step: 1, notes: [{ note: 'G6', duration: 0.5, velocity: 0.7 }] },
+                    { step: 2, notes: [{ note: 'Bb6', duration: 0.5, velocity: 0.8 }] },
+                    { step: 3, notes: [{ note: 'Eb7', duration: 0.5, velocity: 0.9 }] },
+                    { step: 4, notes: [{ note: 'D7', duration: 0.5, velocity: 0.7 }] },
+                    { step: 5, notes: [{ note: 'Bb6', duration: 0.5, velocity: 0.6 }] },
+                    { step: 6, notes: [{ note: 'G6', duration: 0.5, velocity: 0.7 }] },
+                    { step: 7, notes: [{ note: 'Eb6', duration: 0.5, velocity: 0.5 }] },
+                    { step: 8, notes: [{ note: 'F6', duration: 0.5, velocity: 0.6 }] },
+                    { step: 9, notes: [{ note: 'Ab6', duration: 0.5, velocity: 0.7 }] },
+                    { step: 10, notes: [{ note: 'C7', duration: 0.5, velocity: 0.8 }] },
+                    { step: 11, notes: [{ note: 'Eb7', duration: 0.5, velocity: 0.9 }] },
+                    { step: 12, notes: [{ note: 'Bb6', duration: 1, velocity: 0.7 }] }
+                ]
+            },
+            'game_skyrim': {
+                name: 'Skyrim',
+                track: 'pad',
+                scale: 'minor',
+                octave: 2,
+                rootNote: 'A2', // A Minor - epic nord!
+                length: 32,
+                pattern: [
+                    { step: 0, notes: [{ note: 'A2', duration: 8, velocity: 0.6 }] },
+                    { step: 8, notes: [{ note: 'G2', duration: 8, velocity: 0.5 }] },
+                    { step: 16, notes: [{ note: 'F2', duration: 8, velocity: 0.6 }] },
+                    { step: 24, notes: [{ note: 'E2', duration: 8, velocity: 0.5 }] }
+                ]
+            },
+            'game_hotline_miami': {
+                name: 'Hotline Miami',
+                track: 'bass',
+                scale: 'minor',
+                octave: 2,
+                rootNote: 'C#3', // C# Minor - synthwave aggression!
+                length: 16,
+                pattern: [
+                    { step: 0, notes: [{ note: 'C#2', duration: 1, velocity: 1.0 }] },
+                    { step: 1, notes: [{ note: 'C#2', duration: 1, velocity: 0.7 }] },
+                    { step: 2, notes: [{ note: 'C#2', duration: 1, velocity: 0.9 }] },
+                    { step: 4, notes: [{ note: 'E2', duration: 1, velocity: 0.9 }] },
+                    { step: 5, notes: [{ note: 'F#2', duration: 1, velocity: 0.7 }] },
+                    { step: 6, notes: [{ note: 'G#2', duration: 1, velocity: 0.8 }] },
+                    { step: 8, notes: [{ note: 'A2', duration: 1, velocity: 1.0 }] },
+                    { step: 9, notes: [{ note: 'A2', duration: 1, velocity: 0.7 }] },
+                    { step: 10, notes: [{ note: 'G#2', duration: 1, velocity: 0.8 }] },
+                    { step: 12, notes: [{ note: 'F#2', duration: 3, velocity: 0.9 }] }
+                ]
+            },
+            'game_celeste': {
+                name: 'Celeste',
+                track: 'arp',
+                scale: 'major',
+                octave: 5,
+                rootNote: 'B3', // B Major - pixel perfect!
+                length: 16,
+                pattern: [
+                    { step: 0, notes: [{ note: 'B5', duration: 0.5, velocity: 0.8 }] },
+                    { step: 1, notes: [{ note: 'D#6', duration: 0.5, velocity: 0.7 }] },
+                    { step: 2, notes: [{ note: 'F#6', duration: 0.5, velocity: 0.9 }] },
+                    { step: 3, notes: [{ note: 'B6', duration: 0.5, velocity: 0.8 }] },
+                    { step: 4, notes: [{ note: 'A#6', duration: 0.5, velocity: 0.7 }] },
+                    { step: 5, notes: [{ note: 'F#6', duration: 0.5, velocity: 0.8 }] },
+                    { step: 6, notes: [{ note: 'D#6', duration: 0.5, velocity: 0.7 }] },
+                    { step: 7, notes: [{ note: 'B5', duration: 0.5, velocity: 0.6 }] },
+                    { step: 8, notes: [{ note: 'C#6', duration: 0.5, velocity: 0.8 }] },
+                    { step: 9, notes: [{ note: 'E6', duration: 0.5, velocity: 0.7 }] },
+                    { step: 10, notes: [{ note: 'G#6', duration: 0.5, velocity: 0.9 }] },
+                    { step: 11, notes: [{ note: 'B6', duration: 0.5, velocity: 0.8 }] },
+                    { step: 12, notes: [{ note: 'F#6', duration: 1, velocity: 0.9 }] },
+                    { step: 14, notes: [{ note: 'D#6', duration: 1, velocity: 0.7 }] }
+                ]
+            },
+            'game_doom': {
+                name: 'DOOM',
+                track: 'lead',
+                scale: 'minor',
+                octave: 3,
+                rootNote: 'E3', // E Minor - heavy metal!
+                length: 16,
+                pattern: [
+                    { step: 0, notes: [{ note: 'E3', duration: 1, velocity: 1.0 }] },
+                    { step: 1, notes: [{ note: 'E3', duration: 1, velocity: 0.8 }] },
+                    { step: 2, notes: [{ note: 'E4', duration: 1, velocity: 0.9 }] },
+                    { step: 3, notes: [{ note: 'E3', duration: 1, velocity: 0.8 }] },
+                    { step: 4, notes: [{ note: 'D4', duration: 1, velocity: 0.9 }] },
+                    { step: 5, notes: [{ note: 'E3', duration: 1, velocity: 0.8 }] },
+                    { step: 6, notes: [{ note: 'C4', duration: 1, velocity: 0.9 }] },
+                    { step: 7, notes: [{ note: 'E3', duration: 1, velocity: 0.8 }] },
+                    { step: 8, notes: [{ note: 'B3', duration: 2, velocity: 1.0 }] },
+                    { step: 10, notes: [{ note: 'E3', duration: 1, velocity: 0.8 }] },
+                    { step: 12, notes: [{ note: 'E4', duration: 3, velocity: 1.0 }] }
                 ]
             }
         };
@@ -2900,7 +4394,8 @@ class Mesmer {
             pattern: JSON.parse(JSON.stringify(pattern)),
             length: this.synthSeqState.length,
             scale: this.synthSeqState.scale,
-            octave: this.synthSeqState.octave
+            octave: this.synthSeqState.octave,
+            rootNote: this.synthSeqState.rootNote // 🔧 FIX: Also save rootNote
         };
 
         console.log('📋 Copied pattern from', track, '(' + pattern.length + ' steps)');
@@ -2919,14 +4414,40 @@ class Mesmer {
         this.synthSeqState.patterns[track] = JSON.parse(JSON.stringify(this.patternClipboard.pattern));
 
         // Optionally update settings
-        if (confirm('Apply copied pattern settings (length, scale, octave)?')) {
+        if (confirm('Apply copied pattern settings (length, scale, octave, key)?')) {
             this.synthSeqState.length = this.patternClipboard.length;
             this.synthSeqState.scale = this.patternClipboard.scale;
             this.synthSeqState.octave = this.patternClipboard.octave;
+            this.synthSeqState.rootNote = this.patternClipboard.rootNote || 'C3'; // 🔧 FIX: Restore rootNote with octave
 
             document.getElementById('synthSeqLength').value = this.synthSeqState.length;
             document.getElementById('synthSeqScale').value = this.synthSeqState.scale;
             document.getElementById('synthSeqOctave').value = this.synthSeqState.octave;
+
+            // 🔧 FIX: Also update GLOBAL scale/key to match the pasted pattern
+            const globalScaleSelect = document.getElementById('scaleSelect');
+            const globalKeySelect = document.getElementById('keySelect');
+
+            if (globalScaleSelect && this.patternClipboard.scale) {
+                globalScaleSelect.value = this.patternClipboard.scale;
+                this.musicEngine.setScale(this.patternClipboard.scale);
+                console.log('🎼 Global scale dropdown updated to:', this.patternClipboard.scale);
+            }
+
+            if (globalKeySelect && this.patternClipboard.rootNote) {
+                // Set both value and selectedIndex for reliable UI update
+                globalKeySelect.value = this.patternClipboard.rootNote;
+                const targetIndex = Array.from(globalKeySelect.options).findIndex(opt => opt.value === this.patternClipboard.rootNote);
+                if (targetIndex !== -1) {
+                    globalKeySelect.selectedIndex = targetIndex;
+                    // Force UI refresh
+                    globalKeySelect.blur();
+                    globalKeySelect.focus();
+                    globalKeySelect.blur();
+                }
+                this.musicEngine.setKey(this.patternClipboard.rootNote);
+                console.log('🎹 Global key dropdown updated to:', this.patternClipboard.rootNote);
+            }
 
             this.updateKeyDisplay();
         }
