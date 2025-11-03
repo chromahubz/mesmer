@@ -274,6 +274,91 @@
                             • Move hands smoothly for expressive theremin control
                         </div>
                     </div>
+
+                    <!-- Piano Mode Controls -->
+                    <div style="margin-top: 10px; padding: 10px; background: rgba(0, 255, 100, 0.1); border: 1px solid rgba(0, 255, 100, 0.3); border-radius: 6px; pointer-events: auto;">
+                        <div style="color: rgba(0, 255, 100, 1); font-size: 12px; font-weight: 600; margin-bottom: 8px;">Piano Mode</div>
+
+                        <!-- Enable Piano Mode -->
+                        <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px; pointer-events: auto;">
+                            <input type="checkbox" id="pianoToggle" style="cursor: pointer; width: 18px; height: 18px; accent-color: #00ff64; position: relative; z-index: 10; pointer-events: auto; flex-shrink: 0;">
+                            <label for="pianoToggle" style="color: rgba(255, 255, 255, 0.9); font-size: 11px; cursor: pointer; user-select: none; pointer-events: auto;">
+                                Enable Piano Mode
+                            </label>
+                        </div>
+
+                        <!-- Piano Engine Selector -->
+                        <div style="margin-bottom: 5px; pointer-events: auto;">
+                            <label style="color: rgba(255, 255, 255, 0.8); font-size: 10px; margin-bottom: 3px; display: block;">Synth Engine:</label>
+                            <select id="pianoEngineSelect" style="width: 100%; background: rgba(0, 255, 100, 0.1); color: #fff; border: 1px solid rgba(0, 255, 100, 0.3); border-radius: 4px; padding: 6px; font-size: 10px; cursor: pointer; pointer-events: auto;">
+                                <option value="tonejs" selected>Celestial (Tone.js)</option>
+                                <option value="wad">Magma (WAD)</option>
+                                <option value="dirt">Chaos (Dirt)</option>
+                            </select>
+                        </div>
+
+                        <!-- Piano Sound Preset -->
+                        <div style="margin-bottom: 5px; pointer-events: auto;">
+                            <label style="color: rgba(255, 255, 255, 0.8); font-size: 10px; margin-bottom: 3px; display: block;">Sound Preset:</label>
+                            <select id="pianoPresetSelect" style="width: 100%; background: rgba(0, 255, 100, 0.1); color: #fff; border: 1px solid rgba(0, 255, 100, 0.3); border-radius: 4px; padding: 6px; font-size: 10px; cursor: pointer; pointer-events: auto;">
+                                <option value="piano" selected>Classic Piano</option>
+                                <option value="keys">Electric Keys</option>
+                                <option value="synth">Synth Piano</option>
+                            </select>
+                        </div>
+
+                        <!-- Octave Range -->
+                        <div style="margin-bottom: 5px; pointer-events: auto;">
+                            <label style="color: rgba(255, 255, 255, 0.8); font-size: 10px; margin-bottom: 3px; display: block;">Octave Range:</label>
+                            <select id="pianoOctaveRange" style="width: 100%; background: rgba(0, 255, 100, 0.1); color: #fff; border: 1px solid rgba(0, 255, 100, 0.3); border-radius: 4px; padding: 6px; font-size: 10px; cursor: pointer; pointer-events: auto;">
+                                <option value="2">2 Octaves</option>
+                                <option value="3" selected>3 Octaves</option>
+                                <option value="4">4 Octaves</option>
+                            </select>
+                        </div>
+
+                        <!-- Instructions -->
+                        <div style="font-size: 8px; color: rgba(255, 255, 255, 0.6); margin-top: 5px; line-height: 1.4;">
+                            <strong style="color: rgba(0, 255, 100, 0.8);">How to use:</strong><br>
+                            • X-axis (left to right): Selects piano key/note<br>
+                            • Y-axis (height): Controls volume/velocity<br>
+                            • Tap downward quickly to play note<br>
+                            • Uses current scale/key from right menu
+                        </div>
+                    </div>
+
+                    <!-- Drum Mode Controls -->
+                    <div style="margin-top: 10px; padding: 10px; background: rgba(255, 100, 0, 0.1); border: 1px solid rgba(255, 100, 0, 0.3); border-radius: 6px; pointer-events: auto;">
+                        <div style="color: rgba(255, 100, 0, 1); font-size: 12px; font-weight: 600; margin-bottom: 8px;">Drum Mode</div>
+
+                        <!-- Enable Drum Mode -->
+                        <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px; pointer-events: auto;">
+                            <input type="checkbox" id="drumToggle" style="cursor: pointer; width: 18px; height: 18px; accent-color: #ff6400; position: relative; z-index: 10; pointer-events: auto; flex-shrink: 0;">
+                            <label for="drumToggle" style="color: rgba(255, 255, 255, 0.9); font-size: 11px; cursor: pointer; user-select: none; pointer-events: auto;">
+                                Enable Drum Mode
+                            </label>
+                        </div>
+
+                        <!-- Drum Kit Selector -->
+                        <div style="margin-bottom: 5px; pointer-events: auto;">
+                            <label style="color: rgba(255, 255, 255, 0.8); font-size: 10px; margin-bottom: 3px; display: block;">Drum Kit:</label>
+                            <select id="drumKitSelect" style="width: 100%; background: rgba(255, 100, 0, 0.1); color: #fff; border: 1px solid rgba(255, 100, 0, 0.3); border-radius: 4px; padding: 6px; font-size: 10px; cursor: pointer; pointer-events: auto;">
+                                <option value="acoustic" selected>Acoustic Kit</option>
+                                <option value="electronic">Electronic Kit</option>
+                                <option value="808">808 Kit</option>
+                                <option value="jazz">Jazz Kit</option>
+                            </select>
+                        </div>
+
+                        <!-- Instructions -->
+                        <div style="font-size: 8px; color: rgba(255, 255, 255, 0.6); margin-top: 5px; line-height: 1.4;">
+                            <strong style="color: rgba(255, 100, 0, 0.8);">How to use:</strong><br>
+                            • 3x3 grid: Hi-hat (top-left), Snare (center), Kick (bottom)<br>
+                            • Strike downward quickly to hit drum<br>
+                            • Strike speed controls velocity/volume<br>
+                            • Position determines which drum is hit
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Controls -->
