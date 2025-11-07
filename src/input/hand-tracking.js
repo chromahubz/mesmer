@@ -57,6 +57,11 @@ class HandTracking {
         this.drumStrikeSensitivity = 0.02; // Strike detection threshold
         this.drumZoneLayout = 'standard'; // standard, compact, custom
 
+        // DJ mode settings
+        this.djMode = false; // DJ mode toggle
+        this.djModeType = 'casual'; // casual or pro
+        this.djGestureController = null; // DJ gesture controller instance
+
         // Motion tracking for tap/strike detection
         this.previousHandPositions = {
             left: null,

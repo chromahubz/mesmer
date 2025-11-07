@@ -38,10 +38,20 @@ class Mesmer {
         // Guitar input & effects
         this.guitarEffects = null;
 
+        // DJ Mode engines
+        this.djEngine = null;
+        this.djFXRack = null;
+        this.djBPMAnalyzer = null;
+        this.djControlPanel = null;
+        this.djFileLoader = null;
+        this.djGestureController = null;
+        this.djAudioViz = null;
+
         // State
         this.isPlaying = false;
         this.mainLayerEnabled = true;
         this.toyLayerEnabled = true;
+        this.djAnimationRunning = false;
 
         // FPS tracking
         this.fps = 60;
@@ -139,6 +149,25 @@ class Mesmer {
             this.guitarEffects = new GuitarEffectsChain();
             console.log('✓ Guitar effects chain ready');
             if (window.DEBUG) DEBUG.success('Guitar effects ready');
+
+            // Initialize DJ Mode
+            console.log('🎧 Setting up DJ mode...');
+            if (window.DEBUG) DEBUG.info('Setting up DJ mode...');
+            this.djEngine = new DJEngine();
+            this.djFXRack = new DJFXRack();
+            this.djBPMAnalyzer = new DJBPMAnalyzer();
+
+            const djControlCanvas = document.getElementById('djControlCanvas');
+            const djVizCanvas = document.getElementById('djVizCanvas');
+            this.djControlPanel = new DJControlPanel(djControlCanvas);
+            this.djAudioViz = new DJAudioVisualizer(djVizCanvas);
+
+            this.djEngine.connectFXRack(this.djFXRack);
+            this.djFileLoader = new DJFileLoader(this.djEngine, this.djBPMAnalyzer);
+            this.djGestureController = new DJGestureController(this.djEngine, this.djFXRack);
+
+            console.log('✓ DJ mode ready');
+            if (window.DEBUG) DEBUG.success('DJ mode ready');
 
             // Connect audio for analysis
             this.connectAudio();
@@ -2066,6 +2095,70 @@ class Mesmer {
                 console.log('🖱️ Hand Tracking Panel drag ended');
             }
         });
+
+        // DJ Mode Setup
+        const djToggle = document.getElementById('djToggle');
+        const djModeSelect = document.getElementById('djModeSelect');
+        const djControlPanel = document.getElementById('djControlPanel');
+        const djVizCanvas = document.getElementById('djVizCanvas');
+        const loadTrackButton = document.getElementById('loadTrackButton');
+        const closeDJPanel = document.getElementById('closeDJPanel');
+        const djFileInput = document.getElementById('djFileInput');
+        const djDropZone = document.getElementById('djDropZone');
+
+        if (djToggle) {
+            djToggle.addEventListener('change', (e) => {
+                this.handTracking.djMode = e.target.checked;
+                this.djGestureController.setMode(this.handTracking.djModeType);
+
+                if (e.target.checked) {
+                    console.log('🎧 DJ Mode enabled');
+                    djControlPanel.style.display = 'block';
+                    djVizCanvas.style.display = 'block';
+                    this.djFileLoader.createLoadingIndicator();
+                } else {
+                    console.log('🎧 DJ Mode disabled');
+                    djControlPanel.style.display = 'none';
+                    djVizCanvas.style.display = 'none';
+                }
+            });
+        }
+
+        if (djModeSelect) {
+            djModeSelect.addEventListener('change', (e) => {
+                const modeType = e.target.value;
+                this.handTracking.djModeType = modeType;
+                this.djGestureController.setMode(modeType);
+                console.log(`🎧 DJ Mode type: ${modeType}`);
+            });
+        }
+
+        if (loadTrackButton) {
+            loadTrackButton.addEventListener('click', () => {
+                this.djFileLoader.openFileBrowser();
+            });
+        }
+
+        if (closeDJPanel) {
+            closeDJPanel.addEventListener('click', () => {
+                djControlPanel.style.display = 'none';
+                djVizCanvas.style.display = 'none';
+                if (djToggle) djToggle.checked = false;
+                this.handTracking.djMode = false;
+            });
+        }
+
+        if (djDropZone && djFileInput) {
+            this.djFileLoader.setupDropZone(djDropZone);
+            this.djFileLoader.setupFileInput(djFileInput);
+
+            // Track loaded callback
+            this.djFileLoader.onLoad((trackInfo) => {
+                console.log('📀 Track loaded:', trackInfo);
+                // Update UI with track info
+                this.updateDJUI(trackInfo);
+            });
+        }
 
         console.log('✅ Hand tracking UI setup complete');
     }
@@ -6124,6 +6217,53 @@ class Mesmer {
         document.addEventListener('mouseup', () => {
             isDragging = false;
         });
+    }
+
+    /**
+     * Update DJ UI with track info
+     */
+    updateDJUI(trackInfo) {
+        if (!this.djEngine || !this.djControlPanel || !this.djAudioViz) return;
+
+        const activeDeck = this.djEngine.getActiveDeck();
+        const playbackState = this.djEngine.getPlaybackState(activeDeck);
+        const fxState = this.djFXRack.getActiveEffects();
+
+        // Draw control panel
+        this.djControlPanel.draw(trackInfo, playbackState, fxState);
+
+        // Start DJ visualizer animation loop if not running
+        if (!this.djAnimationRunning) {
+            this.djAnimationRunning = true;
+            this.animateDJMode();
+        }
+    }
+
+    /**
+     * DJ Mode animation loop
+     */
+    animateDJMode() {
+        if (!this.handTracking.djMode || !this.djEngine) {
+            this.djAnimationRunning = false;
+            return;
+        }
+
+        const activeDeck = this.djEngine.getActiveDeck();
+        const trackInfo = this.djEngine.getTrackInfo(activeDeck);
+        const playbackState = this.djEngine.getPlaybackState(activeDeck);
+        const fxState = this.djFXRack.getActiveEffects();
+
+        // Draw control panel
+        if (this.djControlPanel && trackInfo) {
+            this.djControlPanel.draw(trackInfo, playbackState, fxState);
+        }
+
+        // Draw audio visualizer
+        if (this.djAudioViz && this.djEngine.analyser) {
+            this.djAudioViz.draw(fxState);
+        }
+
+        requestAnimationFrame(() => this.animateDJMode());
     }
 }
 

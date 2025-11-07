@@ -40,6 +40,98 @@
             cursor: move;
             user-select: none;
         }
+
+        /* DJ Mode Styles */
+        #djControlPanel {
+            background: linear-gradient(135deg, rgba(10, 10, 10, 0.95), rgba(20, 20, 30, 0.95));
+            border: 2px solid rgba(139, 92, 246, 0.5);
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(139, 92, 246, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        #djControlPanel h3 {
+            background: linear-gradient(90deg, #8b5cf6, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 700;
+            margin: 0;
+            padding: 16px;
+            border-bottom: 1px solid rgba(139, 92, 246, 0.3);
+        }
+
+        #loadTrackButton {
+            background: rgba(139, 92, 246, 0.2);
+            border: 1px solid rgba(139, 92, 246, 0.5);
+            color: #a78bfa;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: monospace;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        #loadTrackButton:hover {
+            background: rgba(139, 92, 246, 0.4);
+            border-color: rgba(167, 139, 250, 0.8);
+            transform: translateY(-1px);
+        }
+
+        #closeDJPanel {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.5);
+            color: #fca5a5;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.2s;
+        }
+
+        #closeDJPanel:hover {
+            background: rgba(239, 68, 68, 0.4);
+            transform: scale(1.1);
+        }
+
+        #djDropZone {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(139, 92, 246, 0.1);
+            border: 3px dashed rgba(139, 92, 246, 0.5);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            transition: all 0.3s;
+        }
+
+        #djDropZone.drag-over {
+            opacity: 1 !important;
+            background: rgba(139, 92, 246, 0.3);
+            border-color: rgba(167, 139, 250, 1);
+        }
+
+        .drop-zone-text {
+            color: #a78bfa;
+            font-size: 18px;
+            font-weight: 600;
+            text-align: center;
+            font-family: monospace;
+        }
+
+        #djControlCanvas {
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        #djVizCanvas {
+            opacity: 0.6;
+        }
     </style>
 </head>
 <body>
@@ -357,6 +449,40 @@
                             • Strike downward quickly to hit drum<br>
                             • Strike speed controls velocity/volume<br>
                             • Position determines which drum is hit
+                        </div>
+                    </div>
+
+                    <!-- DJ Mode Controls -->
+                    <div style="margin-top: 10px; padding: 10px; background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 6px; pointer-events: auto;">
+                        <div style="color: rgba(139, 92, 246, 1); font-size: 12px; font-weight: 600; margin-bottom: 8px;">🎧 DJ Mode</div>
+
+                        <!-- Enable DJ Mode -->
+                        <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px; pointer-events: auto;">
+                            <input type="checkbox" id="djToggle" style="cursor: pointer; width: 18px; height: 18px; accent-color: #8b5cf6; position: relative; z-index: 10; pointer-events: auto; flex-shrink: 0;">
+                            <label for="djToggle" style="color: rgba(255, 255, 255, 0.9); font-size: 11px; cursor: pointer; user-select: none; pointer-events: auto;">
+                                Enable DJ Mode
+                            </label>
+                        </div>
+
+                        <!-- DJ Mode Selector -->
+                        <div style="margin-bottom: 5px; pointer-events: auto;">
+                            <label style="color: rgba(255, 255, 255, 0.8); font-size: 10px; margin-bottom: 3px; display: block;">Mode:</label>
+                            <select id="djModeSelect" style="width: 100%; background: rgba(139, 92, 246, 0.1); color: #fff; border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 4px; padding: 6px; font-size: 10px; cursor: pointer; pointer-events: auto;">
+                                <option value="casual" selected>Casual (Beginner)</option>
+                                <option value="pro">Pro (Advanced)</option>
+                            </select>
+                        </div>
+
+                        <!-- Instructions -->
+                        <div style="font-size: 8px; color: rgba(255, 255, 255, 0.6); margin-top: 5px; line-height: 1.4;">
+                            <strong style="color: rgba(139, 92, 246, 0.8);">Casual mode:</strong><br>
+                            • Left hand Y-axis: Filter sweep<br>
+                            • Right hand swipe up/down: Next/Previous track<br>
+                            • FIST: Play/Pause | PEACE: Toggle loop<br><br>
+                            <strong style="color: rgba(139, 92, 246, 0.8);">Pro mode:</strong><br>
+                            • Left hand X: Crossfader | Y: Filter<br>
+                            • Right hand X: Volume | Y: Echo<br>
+                            • THUMBS_UP: Cue points | PINCH: Set cue
                         </div>
                     </div>
                 </div>
@@ -1146,6 +1272,38 @@
                 </div>
             </div>
         </div>
+
+        <!-- DJ Control Panel -->
+        <div id="djControlPanel" style="position: fixed; bottom: 20px; right: 20px; width: 800px; background: rgba(10, 10, 15, 0.98); border: 2px solid rgba(139, 92, 246, 0.5); border-radius: 12px; padding: 0; z-index: 999; display: none; box-shadow: 0 0 40px rgba(139, 92, 246, 0.4); backdrop-filter: blur(12px);">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(99, 102, 241, 0.2)); border-bottom: 1px solid rgba(139, 92, 246, 0.3); border-radius: 10px 10px 0 0;">
+                <h3 style="margin: 0; color: rgba(167, 139, 250, 1); font-family: monospace; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">🎧 DJ Control</h3>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <button id="loadTrackButton" style="background: rgba(139, 92, 246, 0.6); color: #fff; border: none; border-radius: 6px; padding: 6px 12px; cursor: pointer; font-weight: 600; font-size: 11px;">📁 Load Track</button>
+                    <button id="closeDJPanel" class="btn-icon" title="Close">
+                        <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div style="padding: 16px;">
+                <!-- DJ Control Canvas -->
+                <canvas id="djControlCanvas" width="768" height="400" style="width: 100%; height: 400px; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 8px; cursor: pointer;"></canvas>
+
+                <!-- Hidden file input for track loading -->
+                <input type="file" id="djFileInput" accept="audio/mp3,audio/wav,audio/ogg,audio/m4a" style="display: none;">
+
+                <!-- Drop zone overlay -->
+                <div id="djDropZone" style="position: absolute; top: 70px; left: 16px; right: 16px; bottom: 16px; background: rgba(139, 92, 246, 0.1); border: 2px dashed rgba(139, 92, 246, 0.5); border-radius: 8px; display: flex; align-items: center; justify-content: center; pointer-events: none; opacity: 0; transition: opacity 0.3s;">
+                    <div class="drop-zone-text" style="font-family: monospace; font-size: 16px; color: rgba(167, 139, 250, 1); font-weight: 600; text-align: center; pointer-events: none;">
+                        Drop audio file here to load
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DJ Audio Visualizer Canvas (Full Screen Background) -->
+        <canvas id="djVizCanvas" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; display: none; pointer-events: none;"></canvas>
 
         <!-- Shader Editor Panel (Left Side) -->
         <div class="shader-editor-left" id="shaderEditorLeft" style="display: none;">
@@ -3577,6 +3735,16 @@
     <script src="src/audio/guitar-effects-chain.js"></script>
     <script src="src/input/voice-control.js"></script>
     <script src="src/visuals/shader-editor.js"></script>
+
+    <!-- DJ Mode -->
+    <script src="src/audio/dj-engine.js"></script>
+    <script src="src/audio/dj-fx-rack.js"></script>
+    <script src="src/audio/dj-bpm-analyzer.js"></script>
+    <script src="src/visuals/dj-control-panel.js"></script>
+    <script src="src/ui/dj-file-loader.js"></script>
+    <script src="src/input/dj-gestures.js"></script>
+    <script src="src/visuals/dj-audio-viz.js"></script>
+
     <script src="app.js"></script>
 
     <script>

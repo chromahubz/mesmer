@@ -990,6 +990,8 @@ class GestureMusicMapper {
             pianoOctaveRange: audioSettings.pianoOctaveRange || 3,
             drumMode: audioSettings.drumMode || false,
             drumKit: audioSettings.drumKit || 'acoustic',
+            djMode: audioSettings.djMode || false,
+            djModeType: audioSettings.djModeType || 'casual',
             leftPosition: audioSettings.leftPosition || null,
             rightPosition: audioSettings.rightPosition || null,
             leftTap: audioSettings.leftTap || false,
@@ -1038,6 +1040,13 @@ class GestureMusicMapper {
             console.log('[DRUM] Drum mode active - processing strikes');
             this.processDrumMode(leftGesture, rightGesture);
             return; // Skip normal gesture processing in drum mode
+        }
+
+        // Handle DJ Mode
+        if (this.audioSettings.djMode && hasPositionData) {
+            console.log('[DJ] DJ mode active - processing DJ gestures');
+            this.processDJMode(leftGesture, rightGesture);
+            return; // Skip normal gesture processing in DJ mode
         }
 
         // Handle generative music control based on interaction mode
@@ -1719,6 +1728,17 @@ class GestureMusicMapper {
         } catch (error) {
             console.error('❌ Dirt engine playback error:', error);
         }
+    }
+
+    /**
+     * Process DJ Mode gestures
+     * Routes gestures to DJ gesture controller (initialized in app.js)
+     */
+    processDJMode(leftGesture, rightGesture) {
+        // DJ gesture processing is handled by the DJGestureController
+        // which is passed hand data directly from app.js
+        // This method is just a placeholder to prevent normal gesture processing
+        console.log('[DJ] DJ mode gesture routing active');
     }
 
     /**
