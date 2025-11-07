@@ -169,7 +169,7 @@ class EmotionMusicMapper {
 
         // Apply interpolated params
         if (this.musicEngine) {
-            this.musicEngine.setTempo(Math.round(tempo));
+            this.musicEngine.setBPM(Math.round(tempo));
         }
 
         // Switch scale/mode at 50% transition point

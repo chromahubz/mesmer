@@ -44,15 +44,23 @@ class ProjectorManager {
         }
 
         console.log('✅ Projector window opened');
+        console.log('💡 TIP: Drag the projector window to your external display/projector');
+        console.log('💡 TIP: Click "Fullscreen" button in projector window for best experience');
         this.isActive = true;
 
-        // Start sending frames
-        this.startFrameSync();
+        // Wait for projector window to load, then start sending frames
+        this.projectorWindow.addEventListener('load', () => {
+            console.log('✅ Projector window loaded - starting frame sync');
+            this.startFrameSync();
+        });
 
         // Handle window close
-        this.projectorWindow.addEventListener('beforeunload', () => {
-            this.closeProjector();
-        });
+        const checkClosed = setInterval(() => {
+            if (this.projectorWindow && this.projectorWindow.closed) {
+                clearInterval(checkClosed);
+                this.closeProjector();
+            }
+        }, 1000);
     }
 
     /**
@@ -131,16 +139,35 @@ class ProjectorManager {
      */
     sendFrame() {
         if (!this.mainCanvas || !this.projectorWindow || this.projectorWindow.closed) {
+            if (!this._frameErrorLogged) {
+                console.warn('⚠️ Cannot send frame: mainCanvas or projectorWindow not available');
+                this._frameErrorLogged = true;
+            }
             return;
         }
 
         try {
             // Get canvas context
             const ctx = this.mainCanvas.getContext('2d');
-            if (!ctx) return;
+            if (!ctx) {
+                console.warn('⚠️ Cannot get canvas context');
+                return;
+            }
+
+            // Verify canvas has content (not all black)
+            const width = this.mainCanvas.width;
+            const height = this.mainCanvas.height;
+
+            if (width === 0 || height === 0) {
+                if (!this._sizeErrorLogged) {
+                    console.warn('⚠️ Canvas has zero dimensions:', width, 'x', height);
+                    this._sizeErrorLogged = true;
+                }
+                return;
+            }
 
             // Get image data from canvas
-            const imageData = ctx.getImageData(0, 0, this.mainCanvas.width, this.mainCanvas.height);
+            const imageData = ctx.getImageData(0, 0, width, height);
 
             // Send to projector window via postMessage
             // Note: Sending ImageData directly is more efficient than converting to base64
@@ -153,8 +180,15 @@ class ProjectorManager {
                 }
             }, '*');
 
+            // Log first successful frame
+            if (!this._firstFrameSent) {
+                console.log(`✅ First frame sent to projector: ${width}x${height}`);
+                this._firstFrameSent = true;
+            }
+
         } catch (error) {
             console.error('❌ Error sending frame to projector:', error);
+            console.error('   Canvas dimensions:', this.mainCanvas.width, 'x', this.mainCanvas.height);
         }
     }
 

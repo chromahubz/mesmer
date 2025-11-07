@@ -325,9 +325,30 @@ class GuitarEffectsChain {
     }
 
     /**
-     * Open audio input and start processing
+     * Get list of available audio input devices
      */
-    async start() {
+    async getAudioDevices() {
+        try {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const audioInputs = devices.filter(device => device.kind === 'audioinput');
+
+            console.log('🎤 Available audio input devices:');
+            audioInputs.forEach((device, index) => {
+                console.log(`   ${index + 1}. ${device.label || 'Unknown Device'} (${device.deviceId})`);
+            });
+
+            return audioInputs;
+        } catch (error) {
+            console.error('❌ Failed to enumerate devices:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Open audio input and start processing
+     * @param {String} deviceId - Optional specific device ID (for Scarlett or other interfaces)
+     */
+    async start(deviceId = null) {
         if (!this.isInitialized) {
             console.error('❌ Guitar effects not initialized');
             return false;
@@ -335,11 +356,45 @@ class GuitarEffectsChain {
 
         try {
             console.log('🎸 Opening audio input...');
-            await this.audioInput.open();
-            console.log('✅ Audio input active');
+
+            // If deviceId provided, use specific device
+            if (deviceId) {
+                const constraints = {
+                    audio: {
+                        deviceId: { exact: deviceId },
+                        echoCancellation: false,
+                        noiseSuppression: false,
+                        autoGainControl: false
+                    }
+                };
+
+                // Get user media with specific device
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+
+                // Close existing audio input if open
+                if (this.audioInput.state === 'started') {
+                    this.audioInput.close();
+                }
+
+                // Reconnect with new stream
+                this.audioInput = new Tone.UserMedia();
+                this.audioInput.connect(this.compressor);
+                this.audioInput.connect(this.analyzer);
+
+                // Open with the specific stream
+                await this.audioInput.open();
+
+                console.log(`✅ Audio input active (Device: ${deviceId})`);
+            } else {
+                // Use default device
+                await this.audioInput.open();
+                console.log('✅ Audio input active (default device)');
+            }
+
             return true;
         } catch (error) {
             console.error('❌ Failed to open audio input:', error);
+            console.error('   Make sure your Scarlett (or audio interface) is connected and selected');
             throw error;
         }
     }

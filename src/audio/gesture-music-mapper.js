@@ -533,7 +533,8 @@ class GestureMusicMapper {
                         const filterY = 1 - otherPosition.y;
                         const cutoff = Math.max(100, 200 + (filterY * 7800)); // Min 100Hz to avoid Tone.js error
                         if (this.thereminSynth.filter && this.thereminSynth.filter.frequency) {
-                            this.thereminSynth.filter.frequency.rampTo(cutoff, 0.05);
+                            // Use linearRampTo to avoid exponentialRamp errors when approaching 0
+                            this.thereminSynth.filter.frequency.linearRampTo(cutoff, 0.05);
                         }
                     } else if (otherHandControl === 'reverb') {
                         // Reverb: X-axis controls wet/dry mix

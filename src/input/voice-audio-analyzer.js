@@ -63,10 +63,15 @@ class VoiceAudioAnalyzer {
             // Create script processor for real-time analysis
             this.scriptProcessor = this.audioContext.createScriptProcessor(this.bufferLength, 1, 1);
 
-            // Connect nodes
-            this.microphone.connect(this.analyser);
+            // Create gain node to control input level (prevent feedback)
+            this.inputGain = this.audioContext.createGain();
+            this.inputGain.gain.value = 0.3; // Lower gain to 30% to prevent feedback
+
+            // Connect nodes (NO connection to destination to prevent feedback loop)
+            this.microphone.connect(this.inputGain);
+            this.inputGain.connect(this.analyser);
             this.analyser.connect(this.scriptProcessor);
-            this.scriptProcessor.connect(this.audioContext.destination);
+            // DO NOT connect scriptProcessor to destination - this causes feedback!
 
             // Create data arrays
             this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
@@ -407,6 +412,10 @@ class VoiceAudioAnalyzer {
 
         if (this.microphone) {
             this.microphone.disconnect();
+        }
+
+        if (this.inputGain) {
+            this.inputGain.disconnect();
         }
 
         if (this.analyser) {
