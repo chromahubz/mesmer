@@ -154,6 +154,7 @@ class Mesmer {
             console.log('🎧 Setting up DJ mode...');
             if (window.DEBUG) DEBUG.info('Setting up DJ mode...');
             this.djEngine = new DJEngine();
+            await this.djEngine.init();
             this.djFXRack = new DJFXRack();
             this.djBPMAnalyzer = new DJBPMAnalyzer();
 

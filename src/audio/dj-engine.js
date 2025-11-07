@@ -69,6 +69,10 @@ class DJEngine {
             this.masterGain.connect(this.limiter);
             this.limiter.toDestination();
 
+            // Create analyser for visualizations
+            this.analyser = new Tone.Analyser('fft', 256);
+            this.masterGain.connect(this.analyser);
+
             this.isInitialized = true;
             console.log('✅ DJ Engine ready');
             return true;
@@ -76,6 +80,15 @@ class DJEngine {
             console.error('❌ Failed to initialize DJ Engine:', error);
             return false;
         }
+    }
+
+    /**
+     * Connect FX Rack to DJ Engine
+     * @param {DJFXRack} fxRack - FX rack instance
+     */
+    connectFXRack(fxRack) {
+        this.fxRack = fxRack;
+        console.log('✅ FX Rack connected to DJ Engine');
     }
 
     /**
