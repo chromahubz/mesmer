@@ -155,7 +155,11 @@ class Mesmer {
             if (window.DEBUG) DEBUG.info('Setting up DJ mode...');
             this.djEngine = new DJEngine();
             await this.djEngine.init();
+
             this.djFXRack = new DJFXRack();
+            await this.djFXRack.init(); // Initialize FX rack to create all effects
+            console.log('✅ DJ FX Rack initialized with all effects');
+
             this.djBPMAnalyzer = new DJBPMAnalyzer();
 
             const djControlCanvas = document.getElementById('djControlCanvas');
