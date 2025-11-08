@@ -2158,6 +2158,167 @@ class Mesmer {
                 console.log('📀 Track loaded:', trackInfo);
                 // Update UI with track info
                 this.updateDJUI(trackInfo);
+
+                // Show track info
+                const djTrackInfo = document.getElementById('djTrackInfo');
+                const djTrackName = document.getElementById('djTrackName');
+                if (djTrackInfo && djTrackName) {
+                    djTrackInfo.style.display = 'block';
+                    djTrackName.textContent = trackInfo.name || 'Loaded Track';
+                }
+            });
+        }
+
+        // Playback Controls
+        const djPlayButton = document.getElementById('djPlayButton');
+        const djPauseButton = document.getElementById('djPauseButton');
+        const djStopButton = document.getElementById('djStopButton');
+        const djLoopButton = document.getElementById('djLoopButton');
+
+        if (djPlayButton) {
+            djPlayButton.addEventListener('click', () => {
+                if (this.djEngine) {
+                    this.djEngine.play();
+                    djPlayButton.style.display = 'none';
+                    if (djPauseButton) djPauseButton.style.display = 'flex';
+                    console.log('▶️ Playing track');
+                }
+            });
+        }
+
+        if (djPauseButton) {
+            djPauseButton.addEventListener('click', () => {
+                if (this.djEngine) {
+                    this.djEngine.pause();
+                    djPauseButton.style.display = 'none';
+                    if (djPlayButton) djPlayButton.style.display = 'flex';
+                    console.log('⏸️ Paused track');
+                }
+            });
+        }
+
+        if (djStopButton) {
+            djStopButton.addEventListener('click', () => {
+                if (this.djEngine) {
+                    this.djEngine.pause();
+                    this.djEngine.seek(0);
+                    if (djPauseButton) djPauseButton.style.display = 'none';
+                    if (djPlayButton) djPlayButton.style.display = 'flex';
+                    console.log('⏹️ Stopped track');
+                }
+            });
+        }
+
+        if (djLoopButton) {
+            let loopEnabled = false;
+            djLoopButton.addEventListener('click', () => {
+                if (this.djEngine) {
+                    loopEnabled = !loopEnabled;
+                    this.djEngine.toggleLoop();
+                    djLoopButton.style.background = loopEnabled ? 'rgba(139, 92, 246, 0.8)' : 'rgba(139, 92, 246, 0.3)';
+                    djLoopButton.style.borderColor = loopEnabled ? 'rgba(139, 92, 246, 0.8)' : 'rgba(139, 92, 246, 0.4)';
+                    console.log(`🔁 Loop ${loopEnabled ? 'ON' : 'OFF'}`);
+                }
+            });
+        }
+
+        // Volume Control
+        const djVolumeSlider = document.getElementById('djVolumeSlider');
+        if (djVolumeSlider) {
+            djVolumeSlider.addEventListener('input', (e) => {
+                const volume = e.target.value / 100;
+                if (this.djEngine) {
+                    this.djEngine.setVolume(volume);
+                    console.log(`🔊 Volume: ${Math.round(volume * 100)}%`);
+                }
+            });
+        }
+
+        // FX Controls
+        const djFilterButton = document.getElementById('djFilterButton');
+        const djEchoButton = document.getElementById('djEchoButton');
+        const djReverbButton = document.getElementById('djReverbButton');
+        const djPhaserButton = document.getElementById('djPhaserButton');
+
+        // Track FX states
+        let filterActive = false;
+        let echoActive = false;
+        let reverbActive = false;
+        let phaserActive = false;
+
+        if (djFilterButton) {
+            djFilterButton.addEventListener('click', () => {
+                filterActive = !filterActive;
+                if (this.djFXRack) {
+                    if (filterActive) {
+                        this.djFXRack.applyFilter(0.8); // Apply low-pass filter
+                        djFilterButton.style.background = 'rgba(139, 92, 246, 0.8)';
+                        djFilterButton.style.borderColor = 'rgba(139, 92, 246, 0.8)';
+                        console.log('🎚️ Filter ON');
+                    } else {
+                        this.djFXRack.applyFilter(0.5); // Reset to neutral
+                        djFilterButton.style.background = 'rgba(139, 92, 246, 0.3)';
+                        djFilterButton.style.borderColor = 'rgba(139, 92, 246, 0.4)';
+                        console.log('🎚️ Filter OFF');
+                    }
+                }
+            });
+        }
+
+        if (djEchoButton) {
+            djEchoButton.addEventListener('click', () => {
+                echoActive = !echoActive;
+                if (this.djFXRack) {
+                    if (echoActive) {
+                        this.djFXRack.applyEcho(0.5, '8n');
+                        djEchoButton.style.background = 'rgba(139, 92, 246, 0.8)';
+                        djEchoButton.style.borderColor = 'rgba(139, 92, 246, 0.8)';
+                        console.log('🔊 Echo ON');
+                    } else {
+                        this.djFXRack.applyEcho(0);
+                        djEchoButton.style.background = 'rgba(139, 92, 246, 0.3)';
+                        djEchoButton.style.borderColor = 'rgba(139, 92, 246, 0.4)';
+                        console.log('🔊 Echo OFF');
+                    }
+                }
+            });
+        }
+
+        if (djReverbButton) {
+            djReverbButton.addEventListener('click', () => {
+                reverbActive = !reverbActive;
+                if (this.djFXRack) {
+                    if (reverbActive) {
+                        this.djFXRack.applyReverb(0.5);
+                        djReverbButton.style.background = 'rgba(139, 92, 246, 0.8)';
+                        djReverbButton.style.borderColor = 'rgba(139, 92, 246, 0.8)';
+                        console.log('🌊 Reverb ON');
+                    } else {
+                        this.djFXRack.applyReverb(0);
+                        djReverbButton.style.background = 'rgba(139, 92, 246, 0.3)';
+                        djReverbButton.style.borderColor = 'rgba(139, 92, 246, 0.4)';
+                        console.log('🌊 Reverb OFF');
+                    }
+                }
+            });
+        }
+
+        if (djPhaserButton) {
+            djPhaserButton.addEventListener('click', () => {
+                phaserActive = !phaserActive;
+                if (this.djFXRack) {
+                    if (phaserActive) {
+                        this.djFXRack.applyPhaser(0.5, 0.7);
+                        djPhaserButton.style.background = 'rgba(139, 92, 246, 0.8)';
+                        djPhaserButton.style.borderColor = 'rgba(139, 92, 246, 0.8)';
+                        console.log('🌀 Phaser ON');
+                    } else {
+                        this.djFXRack.applyPhaser(0, 0);
+                        djPhaserButton.style.background = 'rgba(139, 92, 246, 0.3)';
+                        djPhaserButton.style.borderColor = 'rgba(139, 92, 246, 0.4)';
+                        console.log('🌀 Phaser OFF');
+                    }
+                }
             });
         }
 

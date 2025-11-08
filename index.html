@@ -1287,16 +1287,60 @@
                 </div>
             </div>
             <div style="padding: 16px;">
-                <!-- DJ Control Canvas -->
-                <canvas id="djControlCanvas" width="768" height="400" style="width: 100%; height: 400px; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 8px; cursor: pointer;"></canvas>
+                <!-- Track Info -->
+                <div id="djTrackInfo" style="margin-bottom: 12px; padding: 10px; background: rgba(0, 0, 0, 0.3); border-radius: 6px; border: 1px solid rgba(139, 92, 246, 0.2); display: none;">
+                    <div id="djTrackName" style="font-family: monospace; font-size: 12px; color: #fff; font-weight: 600; margin-bottom: 4px;">No track loaded</div>
+                    <div style="display: flex; justify-content: space-between; font-family: monospace; font-size: 11px; color: #9ca3af;">
+                        <span id="djCurrentTime">0:00</span>
+                        <span id="djDuration">0:00</span>
+                    </div>
+                </div>
+
+                <!-- Playback Controls -->
+                <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                    <button id="djPlayButton" style="flex: 1; background: rgba(34, 197, 94, 0.6); color: #fff; border: none; border-radius: 6px; padding: 10px; cursor: pointer; font-weight: 600; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                        ▶️ Play
+                    </button>
+                    <button id="djPauseButton" style="flex: 1; background: rgba(251, 191, 36, 0.6); color: #fff; border: none; border-radius: 6px; padding: 10px; cursor: pointer; font-weight: 600; font-size: 14px; display: none; align-items: center; justify-content: center; gap: 6px;">
+                        ⏸️ Pause
+                    </button>
+                    <button id="djStopButton" style="flex: 1; background: rgba(239, 68, 68, 0.6); color: #fff; border: none; border-radius: 6px; padding: 10px; cursor: pointer; font-weight: 600; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                        ⏹️ Stop
+                    </button>
+                    <button id="djLoopButton" style="flex: 1; background: rgba(139, 92, 246, 0.3); color: #fff; border: 1px solid rgba(139, 92, 246, 0.4); border-radius: 6px; padding: 10px; cursor: pointer; font-weight: 600; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                        🔁 Loop
+                    </button>
+                </div>
+
+                <!-- Volume Control -->
+                <div style="margin-bottom: 12px; padding: 10px; background: rgba(0, 0, 0, 0.3); border-radius: 6px; border: 1px solid rgba(139, 92, 246, 0.2);">
+                    <label style="display: block; font-family: monospace; font-size: 11px; color: #9ca3af; margin-bottom: 6px;">🔊 Volume</label>
+                    <input type="range" id="djVolumeSlider" min="0" max="100" value="80" style="width: 100%; cursor: pointer;">
+                </div>
+
+                <!-- FX Controls -->
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">
+                    <button id="djFilterButton" style="background: rgba(139, 92, 246, 0.3); color: #fff; border: 1px solid rgba(139, 92, 246, 0.4); border-radius: 6px; padding: 10px; cursor: pointer; font-weight: 600; font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                        🎚️ Filter
+                    </button>
+                    <button id="djEchoButton" style="background: rgba(139, 92, 246, 0.3); color: #fff; border: 1px solid rgba(139, 92, 246, 0.4); border-radius: 6px; padding: 10px; cursor: pointer; font-weight: 600; font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                        🔊 Echo
+                    </button>
+                    <button id="djReverbButton" style="background: rgba(139, 92, 246, 0.3); color: #fff; border: 1px solid rgba(139, 92, 246, 0.4); border-radius: 6px; padding: 10px; cursor: pointer; font-weight: 600; font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                        🌊 Reverb
+                    </button>
+                    <button id="djPhaserButton" style="background: rgba(139, 92, 246, 0.3); color: #fff; border: 1px solid rgba(139, 92, 246, 0.4); border-radius: 6px; padding: 10px; cursor: pointer; font-weight: 600; font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                        🌀 Phaser
+                    </button>
+                </div>
 
                 <!-- Hidden file input for track loading -->
                 <input type="file" id="djFileInput" accept="audio/mp3,audio/wav,audio/ogg,audio/m4a" style="display: none;">
 
-                <!-- Drop zone overlay -->
-                <div id="djDropZone" style="position: absolute; top: 70px; left: 16px; right: 16px; bottom: 16px; background: rgba(139, 92, 246, 0.1); border: 2px dashed rgba(139, 92, 246, 0.5); border-radius: 8px; display: flex; align-items: center; justify-content: center; pointer-events: none; opacity: 0; transition: opacity 0.3s;">
-                    <div class="drop-zone-text" style="font-family: monospace; font-size: 16px; color: rgba(167, 139, 250, 1); font-weight: 600; text-align: center; pointer-events: none;">
-                        Drop audio file here to load
+                <!-- Drop zone (clickable to load) -->
+                <div id="djDropZone" style="margin-top: 12px; padding: 30px; background: rgba(139, 92, 246, 0.1); border: 2px dashed rgba(139, 92, 246, 0.5); border-radius: 8px; text-align: center; cursor: pointer; transition: all 0.3s;">
+                    <div class="drop-zone-text" style="font-family: monospace; font-size: 14px; color: rgba(167, 139, 250, 1); font-weight: 600; pointer-events: none;">
+                        🎵 Drag & drop audio file or click to browse
                     </div>
                 </div>
             </div>
