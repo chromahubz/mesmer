@@ -449,6 +449,12 @@ button {
     border-color: var(--accent);
 }
 
+.shader-selector select option {
+    background: rgba(20, 20, 30, 0.95);
+    color: var(--text-primary);
+    padding: 8px;
+}
+
 /* Synth Instrument Group */
 .synth-instrument-group {
     background: rgba(99, 102, 241, 0.05);

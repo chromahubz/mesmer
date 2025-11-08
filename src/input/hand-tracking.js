@@ -1308,8 +1308,10 @@ class HandTracking {
             // Also show scale name if available
             if (this.musicMapper && this.musicMapper.chordEngine) {
                 const scaleName = this.musicMapper.chordEngine.currentScale;
+                const rootNote = this.musicMapper.chordEngine.currentRoot;
                 const scaleDisplayName = scaleName.charAt(0).toUpperCase() + scaleName.slice(1);
-                label = `🎹 THEREMIN - ${scaleDisplayName} Scale`;
+                const rootDisplayName = rootNote.replace(/[0-9]/g, ''); // Remove octave
+                label = `🎹 ${rootDisplayName} ${scaleDisplayName} - QUANTIZED`;
             }
         }
 

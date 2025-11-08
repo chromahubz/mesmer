@@ -69,8 +69,15 @@ class ChordEngine {
      */
     setScale(scaleName) {
         if (this.scales[scaleName]) {
+            const oldScale = this.currentScale;
             this.currentScale = scaleName;
-            console.log(`🎵 Scale changed to: ${scaleName}`);
+            console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+            console.log(`🎵 [CHORD-ENGINE] setScale() called`);
+            console.log(`🎵 [CHORD-ENGINE] Scale changed: "${oldScale}" → "${scaleName}"`);
+            console.log(`🎵 [CHORD-ENGINE] Intervals: [${this.scales[scaleName].join(',')}]`);
+            console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+        } else {
+            console.error(`❌ [CHORD-ENGINE] Invalid scale: "${scaleName}"`);
         }
     }
 
@@ -78,12 +85,14 @@ class ChordEngine {
      * Set the root note (accepts both "C" and "C3" formats)
      */
     setRoot(noteName) {
-        console.log(`🎵 setRoot() called with: "${noteName}"`);
-
+        const oldRoot = this.currentRoot;
         // Accept both "C3" and "C" formats - just store the full value with octave
         // No validation needed since HTML select controls the values
         this.currentRoot = noteName;
-        console.log(`✅ Root note changed to: ${noteName}`);
+        console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+        console.log(`🎵 [CHORD-ENGINE] setRoot() called`);
+        console.log(`🎵 [CHORD-ENGINE] Root changed: "${oldRoot}" → "${noteName}"`);
+        console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
     }
 
     /**

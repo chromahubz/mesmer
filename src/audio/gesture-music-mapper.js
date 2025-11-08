@@ -301,7 +301,8 @@ class GestureMusicMapper {
 
             // Throttle logging (only log occasionally to avoid spam)
             if (!this._lastQuantizeLog || Date.now() - this._lastQuantizeLog > 500) {
-                console.log(`🎹 Quantizing to: ${noteNameOnly} ${scaleName} (rootIndex: ${rootIndex})`);
+                console.log(`🎹 [QUANTIZE] Scale: "${scaleName}", Root: "${noteNameOnly}", Intervals: [${scaleIntervals.join(',')}]`);
+                console.log(`🎹 [QUANTIZE] Reading from chordEngine.currentScale="${this.chordEngine.currentScale}", chordEngine.currentRoot="${this.chordEngine.currentRoot}"`);
                 this._lastQuantizeLog = Date.now();
             }
 
