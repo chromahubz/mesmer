@@ -102,21 +102,18 @@ class DJFileLoader {
                 throw new Error(result.error);
             }
 
-            // Analyze BPM
+            // BPM Analysis DISABLED - using default 120 BPM for instant loading
             const trackInfo = this.djEngine.getTrackInfo(result.deck);
             if (trackInfo && trackInfo.audioBuffer) {
-                console.log('🎵 Analyzing BPM...');
-                const bpmResult = await this.bpmAnalyzer.detectBPM(trackInfo.audioBuffer);
+                console.log('🎵 BPM analysis skipped - setting default 120 BPM');
 
-                // Update track info with detected BPM
-                trackInfo.bpm = bpmResult.bpm;
-                trackInfo.beatGrid = bpmResult.beatGrid;
+                // Set default BPM for instant loading
+                trackInfo.bpm = 120;
+                trackInfo.beatGrid = null;
 
-                console.log(`✅ BPM detected: ${bpmResult.bpm}`);
-
-                // Sync effects to BPM if FX rack available
+                // Sync effects to default BPM if FX rack available
                 if (this.djEngine.fxRack) {
-                    this.djEngine.fxRack.syncToBPM(bpmResult.bpm);
+                    this.djEngine.fxRack.syncToBPM(120);
                 }
             }
 
@@ -239,7 +236,7 @@ class DJFileLoader {
                     margin: 0 auto 15px;
                 "></div>
                 <div>Loading track...</div>
-                <div style="font-size: 12px; color: #9ca3af; margin-top: 10px;">Analyzing BPM...</div>
+                <div style="font-size: 12px; color: #9ca3af; margin-top: 10px;">Decoding audio...</div>
             </div>
         `;
 
