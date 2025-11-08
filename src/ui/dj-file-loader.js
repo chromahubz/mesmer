@@ -57,6 +57,12 @@ class DJFileLoader {
             }
         });
 
+        // Handle click to open file browser
+        element.addEventListener('click', () => {
+            this.openFileBrowser();
+            console.log('📁 Drop zone clicked - opening file browser');
+        });
+
         console.log('✅ Drop zone setup complete');
     }
 
