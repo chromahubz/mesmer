@@ -406,9 +406,11 @@ class DJFXRack {
 
         Tone.Transport.bpm.value = bpm;
 
-        // Echo time syncs to beat divisions
+        // Echo time syncs to beat divisions only if echo exists
         // Default to 1/8 note at detected BPM
-        this.echo.delayTime.value = '8n';
+        if (this.echo && this.echo.delayTime) {
+            this.echo.delayTime.value = '8n';
+        }
 
         console.log(`🎵 Effects synced to ${bpm} BPM`);
     }
