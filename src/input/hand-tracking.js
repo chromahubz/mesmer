@@ -807,8 +807,19 @@ class HandTracking {
      * Start hand tracking
      */
     start() {
+        console.log('🔍 DEBUG: start() called');
+        console.log('🔍 DEBUG: isInitialized:', this.isInitialized);
+        console.log('🔍 DEBUG: handLandmarker:', this.handLandmarker);
+        console.log('🔍 DEBUG: video element:', this.video);
+        console.log('🔍 DEBUG: video readyState:', this.video ? this.video.readyState : 'no video');
+
         if (!this.isInitialized) {
             console.error('❌ Hand tracking not initialized');
+            return;
+        }
+
+        if (!this.handLandmarker) {
+            console.error('❌ Hand landmarker not created');
             return;
         }
 
@@ -819,6 +830,7 @@ class HandTracking {
 
         this.isRunning = true;
         console.log('▶️ Hand tracking started');
+        console.log('🔍 DEBUG: Starting detection loop...');
 
         // Update overlay display to show current scale/key
         setTimeout(() => {
@@ -846,7 +858,10 @@ class HandTracking {
      * Main detection loop
      */
     async detectHands() {
-        if (!this.isRunning) return;
+        if (!this.isRunning) {
+            console.log('🔍 DEBUG: detectHands called but not running');
+            return;
+        }
 
         const now = performance.now();
 
@@ -854,14 +869,27 @@ class HandTracking {
         if (this.video.currentTime !== this.lastVideoTime) {
             this.lastVideoTime = this.video.currentTime;
 
-            // Detect hands in video frame
-            this.results = this.handLandmarker.detectForVideo(this.video, now);
+            try {
+                // Detect hands in video frame
+                this.results = this.handLandmarker.detectForVideo(this.video, now);
 
-            // Process results
-            this.processResults(this.results);
+                // Debug: Log detection results occasionally
+                if (Math.random() < 0.01) { // Log 1% of frames
+                    console.log('🔍 DEBUG: Detection results:', {
+                        handsDetected: this.results?.landmarks?.length || 0,
+                        videoTime: this.video.currentTime,
+                        hasResults: !!this.results
+                    });
+                }
 
-            // Update FPS
-            this.updateFPS();
+                // Process results
+                this.processResults(this.results);
+
+                // Update FPS
+                this.updateFPS();
+            } catch (error) {
+                console.error('❌ Error in detectHands:', error);
+            }
         }
 
         // Draw visualization
