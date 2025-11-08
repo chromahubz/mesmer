@@ -411,6 +411,28 @@ class DJEngine {
     }
 
     /**
+     * Get active deck letter
+     */
+    getActiveDeck() {
+        return this.activeDeck;
+    }
+
+    /**
+     * Get playback state for UI display
+     */
+    getPlaybackState(deck = null) {
+        const targetDeck = deck || this.activeDeck;
+        const player = targetDeck === 'A' ? this.deckA : this.deckB;
+
+        return {
+            isPlaying: this.isPlaying,
+            position: this.getCurrentPosition(),
+            duration: this.trackDuration,
+            volume: this.masterGain ? this.masterGain.gain.value : 0.8
+        };
+    }
+
+    /**
      * Cleanup
      */
     dispose() {
