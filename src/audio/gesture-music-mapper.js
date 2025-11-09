@@ -471,8 +471,17 @@ class GestureMusicMapper {
 
         // Apply quantization if enabled
         const quantizeEnabled = this.audioSettings.thereminQuantize || false;
+
+        // Throttled logging to show quantization status (every 2 seconds)
+        if (!this._lastQuantizeStatusLog || Date.now() - this._lastQuantizeStatusLog > 2000) {
+            console.log(`🎛️ [CONTINUOUS] Quantize to scale: ${quantizeEnabled ? 'ON ✅' : 'OFF ❌'} (checkbox state: ${this.audioSettings.thereminQuantize})`);
+            this._lastQuantizeStatusLog = Date.now();
+        }
+
         if (quantizeEnabled) {
+            const originalFreq = frequency;
             frequency = this.quantizeFrequency(frequency);
+            // Note: quantizeFrequency() already logs the conversion
         }
 
         // Determine volume
@@ -633,18 +642,37 @@ class GestureMusicMapper {
         // Map Y position to note (0.0 to 1.0 → high to low)
         const normalizedY = 1 - pitchPosition.y;
 
-        // Use chromatic scale (all 12 notes)
-        const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+        // Get current scale and root from chord engine
+        const scaleName = this.chordEngine?.currentScale || 'minor';
+        const scaleIntervals = this.chordEngine?.scales[scaleName] || [0, 2, 3, 5, 7, 8, 10];
+        const rootNote = this.chordEngine?.currentRoot || 'C3';
 
-        // Map Y position to note (3 octaves: C2 to B4)
+        // Extract root note name (without octave)
+        const rootNoteOnly = rootNote.replace(/[0-9]/g, '');
+        const rootIndex = this.chordEngine.noteNames.indexOf(rootNoteOnly);
+
+        // Build scale notes in the root key
+        // Example: D minor = D, E, F, G, A, Bb, C
+        const scaleNotes = scaleIntervals.map(interval => {
+            const noteIndex = (rootIndex + interval) % 12;
+            return this.chordEngine.noteNames[noteIndex];
+        });
+
+        // Throttled logging of current scale (every 2 seconds)
+        if (!this._lastArpeggioScaleLog || Date.now() - this._lastArpeggioScaleLog > 2000) {
+            console.log(`🎹 [ARPEGGIO SCALE] Using: "${scaleName}" in "${rootNoteOnly}" → Notes: [${scaleNotes.join(', ')}]`);
+            this._lastArpeggioScaleLog = Date.now();
+        }
+
+        // Map Y position to note (3 octaves of the current scale)
         const octaveRange = 3;
-        const totalNotes = notes.length * octaveRange;
+        const totalNotes = scaleNotes.length * octaveRange;
         const noteIndex = Math.floor(normalizedY * totalNotes);
 
         // Calculate note and octave
         const baseOctave = 2;
-        const note = notes[noteIndex % notes.length];
-        const octave = baseOctave + Math.floor(noteIndex / notes.length);
+        const note = scaleNotes[noteIndex % scaleNotes.length];
+        const octave = baseOctave + Math.floor(noteIndex / scaleNotes.length);
         const fullNote = `${note}${octave}`;
 
         // Get engine and preset settings
