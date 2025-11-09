@@ -1745,6 +1745,7 @@ class HandTracking {
     /**
      * Get drum zone based on hand position
      * Returns the drum zone name based on 3x3 grid
+     * REDESIGNED: Uses only available samples (kick, snare, hihat, openhat, clap, cowbell)
      */
     getDrumZone(position) {
         if (!position) return null;
@@ -1752,25 +1753,25 @@ class HandTracking {
         const x = position.x;
         const y = position.y;
 
-        // 3x3 grid layout
+        // 3x3 grid layout - optimized for available drum samples
         let zone = '';
 
         // Determine row (Y-axis)
         if (y < 0.33) {
-            // Top row
-            if (x < 0.33) zone = 'hihat';
-            else if (x < 0.66) zone = 'crash';
-            else zone = 'ride';
+            // Top row - CYMBALS
+            if (x < 0.33) zone = 'hihat';       // Closed hi-hat
+            else if (x < 0.66) zone = 'openhat'; // Open hi-hat
+            else zone = 'cowbell';                // Cowbell/Crash
         } else if (y < 0.66) {
-            // Middle row
-            if (x < 0.33) zone = 'tom1';
-            else if (x < 0.66) zone = 'snare';
-            else zone = 'tom2';
+            // Middle row - SNARES
+            if (x < 0.33) zone = 'snare';        // Snare drum
+            else if (x < 0.66) zone = 'clap';    // Clap/Rim
+            else zone = 'snare_accent';           // Snare (higher velocity)
         } else {
-            // Bottom row
-            if (x < 0.33) zone = 'kick';
-            else if (x < 0.66) zone = 'floortom';
-            else zone = 'kick'; // Right kick for double bass
+            // Bottom row - KICKS
+            if (x < 0.33) zone = 'kick';         // Kick drum
+            else if (x < 0.66) zone = 'kick_soft'; // Kick (softer)
+            else zone = 'kick';                   // Kick (right foot)
         }
 
         return zone;
@@ -1810,8 +1811,9 @@ class HandTracking {
         const scaleStep = noteIndex % notesPerOctave;
         const semitone = intervals[scaleStep];
 
-        // Calculate MIDI note number
-        const rootMidi = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'].indexOf(rootNote);
+        // Calculate MIDI note number (BUG FIX: strip octave from rootNote before indexOf)
+        const rootNoteWithoutOctave = rootNote.replace(/[0-9]/g, ''); // Remove octave numbers
+        const rootMidi = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'].indexOf(rootNoteWithoutOctave);
         const midiNote = 12 + rootMidi + (octave * 12) + semitone;
 
         // Convert back to note name

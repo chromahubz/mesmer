@@ -886,27 +886,28 @@ class GestureMusicMapper {
 
     /**
      * Get drum zone from hand position (3x3 grid)
+     * REDESIGNED: Uses only available samples (kick, snare, hihat, openhat, clap, cowbell)
      */
     getDrumZoneFromPosition(position) {
         const x = position.x;
         const y = position.y;
 
-        // 3x3 grid layout
+        // 3x3 grid layout - optimized for available drum samples
         if (y < 0.33) {
-            // Top row
-            if (x < 0.33) return 'hihat';
-            else if (x < 0.66) return 'crash';
-            else return 'ride';
+            // Top row - CYMBALS
+            if (x < 0.33) return 'hihat';       // Closed hi-hat
+            else if (x < 0.66) return 'openhat'; // Open hi-hat
+            else return 'cowbell';                // Cowbell/Crash
         } else if (y < 0.66) {
-            // Middle row
-            if (x < 0.33) return 'tom1';
-            else if (x < 0.66) return 'snare';
-            else return 'tom2';
+            // Middle row - SNARES
+            if (x < 0.33) return 'snare';        // Snare drum
+            else if (x < 0.66) return 'clap';    // Clap/Rim
+            else return 'snare_accent';           // Snare (higher velocity)
         } else {
-            // Bottom row
-            if (x < 0.33) return 'kick';
-            else if (x < 0.66) return 'floortom';
-            else return 'kick';
+            // Bottom row - KICKS
+            if (x < 0.33) return 'kick';         // Kick drum
+            else if (x < 0.66) return 'kick_soft'; // Kick (softer)
+            else return 'kick';                   // Kick (right foot)
         }
     }
 
@@ -928,22 +929,36 @@ class GestureMusicMapper {
         }
         this.drumLastHitTime[zone] = now;
 
-        // Map zones to drum sample names (matching Tone.Players keys)
+        // Map zones to drum sample names with velocity modifiers
+        // REDESIGNED: Uses only available samples (kick, snare, hihat, openhat, clap, cowbell)
         const drumMap = {
-            'hihat': 'hihat',
-            'crash': 'clap',
-            'ride': 'cowbell',
-            'tom1': 'openhat',
-            'snare': 'snare',
-            'tom2': 'openhat',
-            'floortom': 'openhat',
-            'kick': 'kick'
+            // Cymbals (top row)
+            'hihat': { sample: 'hihat', velocityMod: 1.0 },
+            'openhat': { sample: 'openhat', velocityMod: 1.0 },
+            'cowbell': { sample: 'cowbell', velocityMod: 1.0, fallback: 'clap' },
+
+            // Snares (middle row)
+            'snare': { sample: 'snare', velocityMod: 1.0 },
+            'clap': { sample: 'clap', velocityMod: 1.0, fallback: 'snare' },
+            'snare_accent': { sample: 'snare', velocityMod: 1.3 }, // Louder snare
+
+            // Kicks (bottom row)
+            'kick': { sample: 'kick', velocityMod: 1.0 },
+            'kick_soft': { sample: 'kick', velocityMod: 0.6 } // Softer kick for bass patterns
         };
 
-        const sampleName = drumMap[zone] || 'kick';
+        const drumConfig = drumMap[zone] || { sample: 'kick', velocityMod: 1.0 };
+        let sampleName = drumConfig.sample;
+
+        // Check if sample exists, use fallback if not
+        if (!this.musicEngine.drumSamples.has(sampleName) && drumConfig.fallback) {
+            sampleName = drumConfig.fallback;
+        }
 
         // Normalize velocity (0-1) to (0.3-1.0) for better audibility
-        const normalizedVelocity = 0.3 + (velocity * 0.7);
+        // Apply velocity modifier from drum config
+        const baseVelocity = 0.3 + (velocity * 0.7);
+        const normalizedVelocity = Math.min(1.0, baseVelocity * drumConfig.velocityMod);
 
         // Play the drum sample using musicEngine's drumSamples
         if (this.musicEngine.drumSamples.has(sampleName)) {
@@ -958,11 +973,11 @@ class GestureMusicMapper {
                 }
             }
 
-            // Play with velocity
-            player.volume.value = -10 + (normalizedVelocity * 10); // Volume range: -10dB to 0dB
+            // Play with velocity (volume range: -10dB to 0dB)
+            player.volume.value = -10 + (normalizedVelocity * 10);
             player.start();
 
-            console.log(`[DRUM HIT] ${sampleName} at velocity ${normalizedVelocity.toFixed(2)}`);
+            console.log(`[DRUM HIT] ${zone} → ${sampleName} (velocity: ${normalizedVelocity.toFixed(2)})`);
         } else {
             console.warn(`⚠️ Drum sample "${sampleName}" not found`);
         }
