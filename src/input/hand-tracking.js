@@ -118,6 +118,9 @@ class HandTracking {
         this.fps = 0;
         this.lastFpsUpdate = Date.now();
 
+        // Hand tracking data for piano/drum modes (CRITICAL BUG FIX #1)
+        this.latestHands = null;
+
         // Setup UI controls
         this.setupHandAudioControls();
 
@@ -383,6 +386,10 @@ class HandTracking {
                 this.pianoMode = e.target.checked;
                 // Turn off other modes when piano is enabled
                 if (this.pianoMode) {
+                    // BUG FIX #4: Stop theremin audio before disabling
+                    if (this.musicMapper && this.musicMapper.stopTheremin) {
+                        this.musicMapper.stopTheremin();
+                    }
                     this.thereminMode = false;
                     this.drumMode = false;
                     const thereminToggle = document.getElementById('thereminToggle');
@@ -424,6 +431,10 @@ class HandTracking {
                 this.drumMode = e.target.checked;
                 // Turn off other modes when drum is enabled
                 if (this.drumMode) {
+                    // BUG FIX #4: Stop theremin audio before disabling
+                    if (this.musicMapper && this.musicMapper.stopTheremin) {
+                        this.musicMapper.stopTheremin();
+                    }
                     this.thereminMode = false;
                     this.pianoMode = false;
                     const thereminToggle = document.getElementById('thereminToggle');
@@ -904,8 +915,9 @@ class HandTracking {
      */
     processResults(results) {
         if (!results || !results.landmarks || results.landmarks.length === 0) {
-            // No hands detected - release all notes
-            this.musicMapper.processGestures(null, null, null);
+            // No hands detected - release all notes (BUG FIX #8: added empty settings object)
+            this.latestHands = null;
+            this.musicMapper.processGestures(null, null, null, {});
             return;
         }
 
@@ -953,6 +965,12 @@ class HandTracking {
             }
         }
 
+        // Store hand data for piano/drum modes (BUG FIX #1: populate latestHands)
+        this.latestHands = results.landmarks.map((landmarks, i) => ({
+            landmarks: landmarks,
+            handedness: results.handednesses[i][0].categoryName.toLowerCase()
+        }));
+
         // Calculate hand velocities for motion detection (for piano/drum modes)
         this.updateHandVelocities(leftPosition, rightPosition);
 
@@ -978,12 +996,14 @@ class HandTracking {
         }
 
         // Detect taps and strikes for piano/drum modes
-        const leftTap = this.pianoMode ? this.detectTap('left') : false;
-        const rightTap = this.pianoMode ? this.detectTap('right') : false;
+        // BUG FIX #7: Removed tap detection in piano mode to avoid double triggers
+        // Piano mode uses fingertip zone detection which is more accurate
+        const leftTap = false; // Disabled for piano mode
+        const rightTap = false; // Disabled for piano mode
         const leftStrike = this.drumMode ? this.detectStrike('left') : null;
         const rightStrike = this.drumMode ? this.detectStrike('right') : null;
 
-        // Detect fingertips in piano zone
+        // Detect fingertips in piano zone (primary piano input method)
         const fingertipTriggers = this.pianoMode ? this.detectFingertipsInPianoZone() : [];
 
         this.musicMapper.processGestures(leftGesture, rightGesture, velocities, {

@@ -324,12 +324,13 @@ class GestureMusicMapper {
             let minDistance = Math.abs(noteInOctave - closestInterval);
 
             for (let interval of transposedIntervals) {
-                // Check both current octave and wrapping
+                // BUG FIX #6: Check octave wrapping correctly
+                // Compare note against interval in same octave and wrapped octaves
                 const distance = Math.abs(noteInOctave - interval);
-                const wrappedDistance = Math.abs(noteInOctave - (interval + 12));
-                const wrappedDistanceDown = Math.abs(noteInOctave - (interval - 12));
+                const wrappedUp = Math.abs(noteInOctave - (interval - 12)); // interval in lower octave
+                const wrappedDown = Math.abs(noteInOctave - (interval + 12)); // interval in higher octave
 
-                const actualDistance = Math.min(distance, wrappedDistance, wrappedDistanceDown);
+                const actualDistance = Math.min(distance, wrappedUp, wrappedDown);
 
                 if (actualDistance < minDistance) {
                     minDistance = actualDistance;
@@ -814,8 +815,9 @@ class GestureMusicMapper {
         const scaleStep = noteIndex % notesPerOctave;
         const semitone = intervals[scaleStep];
 
-        // Calculate MIDI note
-        const rootMidi = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'].indexOf(rootNote);
+        // Calculate MIDI note (BUG FIX #14: strip octave from rootNote before indexOf)
+        const rootNoteWithoutOctave = rootNote.replace(/[0-9]/g, ''); // Remove octave numbers
+        const rootMidi = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'].indexOf(rootNoteWithoutOctave);
         const midiNote = 12 + rootMidi + (octave * 12) + semitone;
 
         // Convert to note name
@@ -916,6 +918,15 @@ class GestureMusicMapper {
             console.warn('Drum samples not available');
             return;
         }
+
+        // BUG FIX #9: Per-zone debouncing to prevent double hits
+        const now = Date.now();
+        const debounceTime = 100; // ms - prevent hits within 100ms on same zone
+        if (this.drumLastHitTime[zone] && (now - this.drumLastHitTime[zone]) < debounceTime) {
+            console.log(`[DRUM] Debounced ${zone} (too soon after last hit)`);
+            return;
+        }
+        this.drumLastHitTime[zone] = now;
 
         // Map zones to drum sample names (matching Tone.Players keys)
         const drumMap = {
