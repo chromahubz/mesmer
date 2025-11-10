@@ -332,7 +332,7 @@ class VoiceControl {
                 console.log('🎤 Voice: FASTER command');
                 const currentTempo = this.musicEngine.tempo || 120;
                 const newTempo = Math.min(200, currentTempo + 10);
-                this.musicEngine.setTempo(newTempo);
+                this.musicEngine.setBPM(newTempo); // FIX: Changed from setTempo to setBPM
                 this.speak(`Tempo ${newTempo}`);
                 this.showFeedback(`⏩ Tempo: ${newTempo} BPM`, 'success');
             },
@@ -340,7 +340,7 @@ class VoiceControl {
                 console.log('🎤 Voice: SLOWER command');
                 const currentTempo = this.musicEngine.tempo || 120;
                 const newTempo = Math.max(60, currentTempo - 10);
-                this.musicEngine.setTempo(newTempo);
+                this.musicEngine.setBPM(newTempo); // FIX: Changed from setTempo to setBPM
                 this.speak(`Tempo ${newTempo}`);
                 this.showFeedback(`⏪ Tempo: ${newTempo} BPM`, 'success');
             },
@@ -367,7 +367,7 @@ class VoiceControl {
             'RESET': () => {
                 // Reset to default values
                 this.musicEngine.setGenre('ambient');
-                this.musicEngine.setTempo(120);
+                this.musicEngine.setBPM(120); // FIX: Changed from setTempo to setBPM
                 const volumeSlider = document.getElementById('volumeSlider');
                 if (volumeSlider) {
                     volumeSlider.value = 70;
@@ -901,7 +901,7 @@ class VoiceControl {
                     regex: /^TEMPO\s+(\d+)$/,
                     action: (match) => {
                         const value = parseInt(match[1]);
-                        this.musicEngine.setTempo(Math.min(200, Math.max(60, value)));
+                        this.musicEngine.setBPM(Math.min(200, Math.max(60, value))); // FIX: Changed from setTempo to setBPM
                         this.speak(`Tempo ${value}`);
                         this.showFeedback(`⏱️ Tempo: ${value} BPM`, 'success');
                     }
@@ -1528,7 +1528,7 @@ class VoiceControl {
                         reverbSlider.value = 80;
                         reverbSlider.dispatchEvent(new Event('input'));
                     }
-                    this.musicEngine.setTempo(90);
+                    this.musicEngine.setBPM(90); // FIX: Changed from setTempo to setBPM
                     this.speak('Dreamy vibes');
                     this.showFeedback('✨ Dreamy Mode', 'success');
                 }
@@ -1546,7 +1546,7 @@ class VoiceControl {
             {
                 patterns: ['GIVE ME UNDERWATER VIBES', 'UNDERWATER', 'AQUATIC'],
                 action: () => {
-                    this.musicEngine.setTempo(85);
+                    this.musicEngine.setBPM(85); // FIX: Changed from setTempo to setBPM
                     const reverbSlider = document.getElementById('reverbSlider');
                     if (reverbSlider) {
                         reverbSlider.value = 90;
